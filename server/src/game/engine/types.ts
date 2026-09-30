@@ -1,0 +1,123 @@
+import type {
+  ErrorCode,
+  GameEndReason,
+  GamePhase,
+  PickResult,
+  RoomConfig,
+  Seat,
+  ServerEvent,
+  TypeName,
+} from "@pokemon-minigames/shared";
+import type { PokemonCatalog, TypePair } from "../../catalog/pokemon-catalog.js";
+import type { Rng } from "../rng.js";
+
+export const SEATS: readonly Seat[] = [1, 2];
+
+export function otherSeat(seat: Seat): Seat {
+  return seat === 1 ? 2 : 1;
+}
+
+export interface PlayerState {
+  seat: Seat;
+  userId: string;
+  username: string;
+  connected: boolean;
+  totalStats: number;
+  /** Ids de los Pokémon del equipo, en el orden en que se ganaron. */
+  team: number[];
+}
+
+export interface PickState {
+  text: string;
+  /** Timestamp del servidor en que llegó la respuesta. */
+  at: number;
+}
+
+export interface RoundState {
+  number: number;
+  typeChoices: Partial<Record<Seat, TypeName>>;
+  pair: TypePair | null;
+  deadline: number | null;
+  picks: Partial<Record<Seat, PickState>>;
+}
+
+export interface GameOutcome {
+  winnerSeat: Seat | null;
+  reason: GameEndReason;
+}
+
+export interface GameState {
+  phase: GamePhase;
+  config: RoomConfig;
+  players: Partial<Record<Seat, PlayerState>>;
+  round: RoundState | null;
+  /** Rondas ya cerradas. */
+  roundsPlayed: number;
+  /** Pokémon reclamado → asiento que lo tiene. Un Pokémon solo puede estar en un equipo. */
+  owners: Map<number, Seat>;
+  startsAt: number | null;
+  /** Si un jugador está desconectado en plena partida: hasta cuándo puede volver. */
+  graceEndsAt: Partial<Record<Seat, number>>;
+  outcome: GameOutcome | null;
+}
+
+/** Identifica un temporizador. Los datos que lleva sirven para ignorarlo si ya quedó obsoleto. */
+export type TimerId =
+  | { kind: "expire" }
+  | { kind: "start"; startsAt: number }
+  | { kind: "choose"; round: number }
+  | { kind: "round"; round: number }
+  | { kind: "result"; round: number }
+  | { kind: "grace"; seat: Seat; graceEndsAt: number };
+
+export type GameEvent =
+  | { type: "PLAYER_JOINED"; userId: string; username: string }
+  | { type: "PLAYER_CONNECTED"; seat: Seat }
+  | { type: "PLAYER_DISCONNECTED"; seat: Seat }
+  | { type: "CHOOSE_TYPE"; seat: Seat; typeName: string }
+  | { type: "SUBMIT"; seat: Seat; text: string }
+  | { type: "LEAVE"; seat: Seat }
+  | { type: "TIMER"; timer: TimerId };
+
+export interface RoundRecordPick {
+  seat: Seat;
+  userId: string;
+  text: string | null;
+  result: PickResult;
+  pokemonId: number | null;
+  submittedAt: number | null;
+}
+
+export interface RoundRecord {
+  number: number;
+  pair: TypePair;
+  picks: RoundRecordPick[];
+}
+
+export type Effect =
+  | { kind: "schedule"; at: number; timer: TimerId }
+  | { kind: "emit"; to: Seat | "all"; event: ServerEvent }
+  /** El orquestador construye el estado completo de ese jugador y se lo envía. */
+  | { kind: "send_state"; to: Seat }
+  | { kind: "persist_seat_taken"; userId: string }
+  | { kind: "persist_seat_freed" }
+  | { kind: "persist_started" }
+  | { kind: "persist_round"; record: RoundRecord }
+  | {
+      kind: "persist_end";
+      status: "completed" | "abandoned";
+      outcome: GameOutcome;
+      finalStats: Partial<Record<Seat, number>>;
+    };
+
+export interface ReduceResult {
+  state: GameState;
+  effects: Effect[];
+}
+
+export interface EngineDeps {
+  catalog: PokemonCatalog;
+  rng: Rng;
+}
+
+export type { ErrorCode };
