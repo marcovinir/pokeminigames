@@ -74,7 +74,7 @@ El motor (`game/engine/`) no importa Express, Socket.io ni Prisma. Los adaptador
 
 - Se parte de `main` con la etapa 1 completa (152 pruebas). Trabaja en una rama `etapa-2-motor`.
 - `server/.env` y `server/.env.test` ya existen de la etapa 1 (rol `pokemon_app`); si no, sigue las notas de entorno del plan de la etapa 1. Las pruebas usan `pokemon_minigames_test` y **borran datos**.
-- Antes de este plan se verificó en una copia de trabajo que TypeScript 7, Vitest 5 y `tsx` resuelven el paquete `shared/` desde el workspace (exports apuntando a `.ts`), y que Socket.io 4.8 y su cliente funcionan con esas versiones. Todo el código de este plan se ejecutó antes de incluirlo: 344 pruebas en verde y `tsc` sin errores.
+- Antes de este plan se verificó en una copia de trabajo que TypeScript 7, Vitest 5 y `tsx` resuelven el paquete `shared/` desde el workspace (exports apuntando a `.ts`), y que Socket.io 4.8 y su cliente funcionan con esas versiones. Todo el código de este plan se ejecutó antes de incluirlo: 351 pruebas en verde y `tsc` sin errores.
 - Las pruebas de tiempo real usan **tiempo simulado** (`FakeTime`): nunca esperan de verdad. Solo el script `smoke` usa temporizadores reales.
 - `server/data/catalog.snapshot.json` debe estar cargado en la base de desarrollo (`npm run db:seed -w server`) para arrancar el servidor real.
 
@@ -1151,7 +1151,7 @@ git commit -m "feat(catalog): PokemonCatalog en memoria con pares jugables y dat
 
 **Interfaces:**
 - Consumes: `PokemonCatalog`, `TypePair`, `CatalogPokemon` (Task 3), `Rng` (Task 2), `PickResult`/`Seat` (Task 1), helpers `fixtureCatalog`, `sequenceRng`.
-- Produces (`engine/types.ts`): `SEATS`, `otherSeat(seat)`, `PlayerState`, `PickState { text, at }`, `RoundState`, `GameOutcome { winnerSeat, reason }`, `GameState` (`phase`, `config`, `players`, `round`, `roundsPlayed`, `owners: Map<pokemonId, Seat>`, `startsAt`, `graceEndsAt`, `outcome`), `TimerId` (`expire`, `start`, `choose`, `round`, `result`, `grace`), `GameEvent` (`PLAYER_JOINED`, `PLAYER_CONNECTED`, `PLAYER_DISCONNECTED`, `CHOOSE_TYPE`, `SUBMIT`, `LEAVE`, `TIMER`), `RoundRecordPick`, `RoundRecord { number, pair, picks }`, `Effect` (`schedule`, `emit`, `send_state`, `persist_seat_taken`, `persist_seat_freed`, `persist_started`, `persist_round`, `persist_end`), `ReduceResult { state, effects }`, `EngineDeps { catalog, rng }`.
+- Produces (`engine/types.ts`): `SEATS`, `otherSeat(seat)`, `PlayerState`, `PickState { text, at }`, `RoundState`, `GameOutcome { winnerSeat, reason }`, `GameState` (`phase`, `config`, `players`, `round`, `roundsPlayed`, `owners: Map<pokemonId, Seat>`, `expiresAt`, `startsAt`, `graceEndsAt`, `outcome`), `TimerId` (`expire`, `start`, `choose`, `round`, `result`, `grace`), `GameEvent` (`PLAYER_JOINED`, `PLAYER_CONNECTED`, `PLAYER_DISCONNECTED`, `CHOOSE_TYPE`, `SUBMIT`, `LEAVE`, `TIMER`), `RoundRecordPick`, `RoundRecord { number, pair, picks }`, `Effect` (`schedule`, `emit`, `send_state`, `persist_seat_taken`, `persist_seat_freed`, `persist_started`, `persist_round`, `persist_end`), `ReduceResult { state, effects }`, `EngineDeps { catalog, rng }`.
 - Produces (`engine/resolve.ts`): `resolveRound({ pair, picks, owners, catalog, rng, windowMs }): Record<Seat, { result: PickResult, pokemonId: number | null }>`. Orden de comprobaciones: existe → tiene ambos tipos → no reclamado. `ALREADY_OWNED` si ya está en tu equipo; `TAKEN` si lo tiene el rival de una ronda anterior o si pierdes la carrera de esta ronda. Carrera: gana el menor timestamp; con menos de `windowMs` de diferencia decide `rng.int(2)` (0 → asiento 1). No consume azar si no hay carrera.
 
 - [ ] **Step 1: Escribir la prueba que falla**
@@ -1345,6 +1345,8 @@ export interface GameState {
   roundsPlayed: number;
   /** Pokémon reclamado → asiento que lo tiene. Un Pokémon solo puede estar en un equipo. */
   owners: Map<number, Seat>;
+  /** Hora a la que caduca la sala si sigue en espera. */
+  expiresAt: number;
   startsAt: number | null;
   /** Si un jugador está desconectado en plena partida: hasta cuándo puede volver. */
   graceEndsAt: Partial<Record<Seat, number>>;
@@ -1793,6 +1795,70 @@ describe("motor: sala y conexiones", () => {
 
       h.dispatch({ type: "PLAYER_JOINED", userId: "u3", username: "brock" });
       expect(h.state.players[2]?.username).toBe("brock");
+    });
+  });
+
+  describe("la caducidad de la sala no se pierde durante la cuenta atrás", () => {
+    const TTL = 10 * 60 * 1000;
+
+    function expiredDuringCountdown(): Harness {
+      const h = new Harness({ rng: [0] });
+      h.advance(TTL - 2000); // 9:58
+      h.seatBoth(); // cuenta atrás hasta 10:03
+      h.advance(3000); // 10:01: el temporizador `expire` venció en plena cuenta atrás y se ignoró
+      expect(h.state.phase).toBe("starting");
+      return h;
+    }
+
+    it("si alguien se cae cuando la sala ya debió caducar, termina como caducada", () => {
+      const h = expiredDuringCountdown();
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.state.phase).toBe("finished");
+      expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+      expect(h.effectsOfKind("persist_end")[0]).toMatchObject({ status: "abandoned" });
+    });
+
+    it("si quien se unió sale cuando la sala ya debió caducar, también termina como caducada", () => {
+      const h = expiredDuringCountdown();
+      h.dispatch({ type: "LEAVE", seat: 2 });
+      expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+    });
+
+    it("si la caída ocurre antes de la hora de caducidad, la sala sigue esperando y caduca a su hora", () => {
+      const h = new Harness({ rng: [0] });
+      h.advance(TTL - 10_000);
+      h.seatBoth();
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.state.phase).toBe("waiting");
+      h.advance(10_000);
+      expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+    });
+  });
+
+  describe("el rival se entera de los cambios en la sala de espera", () => {
+    it("al conectarse el segundo jugador, el primero también recibe el estado actualizado", () => {
+      const h = new Harness({ rng: [0] });
+      h.seatBoth();
+      // Conecta el 1 (estado al 1 y al 2, que ya se había unido) y luego el 2 (estado al 2 y al 1, ya con la cuenta atrás).
+      expect(h.sentState).toEqual([1, 2, 2, 1]);
+    });
+
+    it("al cancelarse la cuenta atrás por una caída, el rival recibe su estado y deja de esperar el inicio", () => {
+      const h = new Harness({ rng: [0] });
+      h.seatBoth();
+      h.sentState.length = 0;
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.state.phase).toBe("waiting");
+      expect(h.sentState).toEqual([1]);
+    });
+
+    it("una caída en la sala de espera (sin cuenta atrás) también se le comunica al otro", () => {
+      const h = new Harness();
+      h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+      h.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+      expect(h.sentState).toEqual([2, 1]);
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.sentState).toEqual([2, 1, 1]);
     });
   });
 
@@ -2698,13 +2764,14 @@ export function createGame(
     round: null,
     roundsPlayed: 0,
     owners: new Map(),
+    expiresAt: now + minutes(WAITING_ROOM_TTL_MINUTES),
     startsAt: null,
     graceEndsAt: {},
     outcome: null,
   };
   return {
     state,
-    effects: [{ kind: "schedule", at: now + minutes(WAITING_ROOM_TTL_MINUTES), timer: { kind: "expire" } }],
+    effects: [{ kind: "schedule", at: state.expiresAt, timer: { kind: "expire" } }],
   };
 }
 
@@ -2761,8 +2828,10 @@ function onConnected(c: Ctx, seat: Seat): void {
     delete c.s.graceEndsAt[seat];
     emit(c, otherSeat(seat), { name: "opponent-reconnected", payload: undefined });
   }
-  c.fx.push({ kind: "send_state", to: seat });
   tryStart(c);
+  c.fx.push({ kind: "send_state", to: seat });
+  // En la sala de espera nadie más se entera por otra vía de que este jugador llegó.
+  if (!inGame(c.s) && c.s.players[otherSeat(seat)]) c.fx.push({ kind: "send_state", to: otherSeat(seat) });
 }
 
 function tryStart(c: Ctx): void {
@@ -2777,16 +2846,26 @@ function tryStart(c: Ctx): void {
   schedule(c, s.startsAt, { kind: "start", startsAt: s.startsAt });
 }
 
+/**
+ * Vuelve a la sala de espera. Si la sala ya debió caducar mientras tanto, termina aquí: su
+ * temporizador `expire` venció en otra fase (la cuenta atrás) y se ignoró, y no queda otro.
+ */
+function backToWaiting(c: Ctx): void {
+  c.s.phase = "waiting";
+  c.s.startsAt = null;
+  if (c.now >= c.s.expiresAt) finish(c, "expired", null);
+}
+
 function onDisconnected(c: Ctx, seat: Seat): void {
   const { s } = c;
   const player = s.players[seat];
   if (!player || !player.connected) return;
   player.connected = false;
 
-  if (s.phase === "starting") {
+  if (s.phase === "starting" || s.phase === "waiting") {
     // La cuenta atrás se cancela: el temporizador `start` queda obsoleto.
-    s.phase = "waiting";
-    s.startsAt = null;
+    if (s.phase === "starting") backToWaiting(c);
+    if (s.phase === "waiting" && s.players[otherSeat(seat)]) c.fx.push({ kind: "send_state", to: otherSeat(seat) });
     return;
   }
   if (inGame(s)) {
@@ -2805,10 +2884,9 @@ function onLeave(c: Ctx, seat: Seat): void {
     } else if (s.players[2]) {
       // Quien se unió se va antes de empezar: el asiento 2 queda libre.
       delete s.players[2];
-      s.phase = "waiting";
-      s.startsAt = null;
       c.fx.push({ kind: "persist_seat_freed" });
-      c.fx.push({ kind: "send_state", to: 1 });
+      backToWaiting(c);
+      if (s.phase === "waiting") c.fx.push({ kind: "send_state", to: 1 });
     }
     return;
   }
@@ -3053,7 +3131,7 @@ npm test -w server -- test/game
 npm run typecheck
 ```
 
-Expected: PASS — `engine.lobby` 14, `engine.rounds` 14, `engine.types` 13, `engine.end` 8, `engine.disconnect` 10, `view` 6 (más `resolve` 13 y `rng` 5) y `tsc` sin errores.
+Expected: PASS — `engine.lobby` 20, `engine.rounds` 14, `engine.types` 13, `engine.end` 8, `engine.disconnect` 10, `view` 6 (más `resolve` 13 y `rng` 5) y `tsc` sin errores.
 
 - [ ] **Step 6: Comprobar que las pruebas detectan fallos (técnica de la etapa 1)**
 
@@ -4096,6 +4174,16 @@ describe("RoomManager.joinRoom", () => {
     expect(syncRejection(() => manager.joinRoom(brock, code))).toEqual({ status: 409, code: "ROOM_CLOSED" });
   });
 
+  it("ALREADY_IN_GAME si el usuario está creando una sala en ese momento: nunca queda sentado en dos", async () => {
+    const { manager, repository } = setup();
+    const first = await manager.createRoom(ash, config);
+    repository.delays.createGame = 20; // la creación de la sala de brock tarda: queda "en proceso"
+    const creating = manager.createRoom(brock, config);
+    expect(syncRejection(() => manager.joinRoom(brock, first.code))).toEqual({ status: 409, code: "ALREADY_IN_GAME" });
+    await creating;
+    expect(manager.getPublicInfo(first.code).playerCount).toBe(1);
+  });
+
   it("ALREADY_IN_GAME si el usuario participa en otra sala activa", async () => {
     const { manager } = setup();
     const first = await manager.createRoom(ash, config);
@@ -4271,7 +4359,8 @@ export class RoomManager {
       throw new AppError(409, "ROOM_CLOSED", "La sala ya no admite jugadores");
     }
     if (room.hasSeat(2)) throw new AppError(409, "ROOM_FULL", "La sala está llena");
-    if (this.deps.store.findByUser(user.userId)) throw alreadyInGame();
+    // También cuenta quien está creando una sala en este momento: si no, podría quedar sentado en dos.
+    if (this.deps.store.findByUser(user.userId) || this.pendingCreates.has(user.userId)) throw alreadyInGame();
 
     room.dispatch({ type: "PLAYER_JOINED", userId: user.userId, username: user.username });
     return { code: room.code };
@@ -4311,7 +4400,7 @@ npm test -w server -- test/game/room-manager.test.ts
 npm run typecheck
 ```
 
-Expected: PASS (19 pruebas) y `tsc` sin errores.
+Expected: PASS (20 pruebas) y `tsc` sin errores.
 
 - [ ] **Step 5: Comprobar que las pruebas detectan fallos**
 
@@ -6005,7 +6094,7 @@ npm run typecheck
 git status
 ```
 
-Expected: **344 pruebas pasan** (31 archivos); `tsc` sin errores; `git status` solo muestra `README.md`, `server/package.json`, `server/scripts/smoke-game.ts` y la spec (nada de `.env` ni `.env.test`).
+Expected: **351 pruebas pasan** (31 archivos); `tsc` sin errores; `git status` solo muestra `README.md`, `server/package.json`, `server/scripts/smoke-game.ts` y la spec (nada de `.env` ni `.env.test`).
 
 - [ ] **Step 6: Commit y publicar la rama**
 
@@ -6020,6 +6109,8 @@ Expected: rama `etapa-2-motor` en `https://github.com/marcovinir/pokemon-minigam
 ---
 
 ## Self-Review
+
+**Lo que encontró la revisión final (ya corregido en el código de este plan):** (1) una sala podía quedar en `waiting` para siempre si su temporizador de caducidad vencía durante la cuenta atrás; ahora el estado guarda `expiresAt` y `backToWaiting` la termina como `expired` si ya venció; (2) un usuario podía quedar sentado en dos salas si se unía a una mientras creaba otra; `joinRoom` también mira las creaciones en proceso; (3) el rival no se enteraba de una cuenta atrás cancelada ni de las conexiones y caídas en la sala de espera; ahora recibe su `room-state` actualizado. Cada uno tiene su prueba en `engine.lobby.test.ts` o `room-manager.test.ts`.
 
 **Cobertura de la spec de la etapa 2:**
 
@@ -6043,4 +6134,4 @@ Expected: rama `etapa-2-motor` en `https://github.com/marcovinir/pokemon-minigam
 
 **Fuera de esta etapa:** cliente React (etapa 3), estadísticas y perfil (etapa 4), despliegue, límite de intentos de login y los pendientes de endurecimiento heredados de la etapa 1 (etapa 5), Redis.
 
-**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 344 pruebas en verde, `tsc` sin errores, 10 mutaciones a propósito detectadas por las pruebas, y una partida real contra el catálogo de 1025 Pokémon con temporizadores reales.
+**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 351 pruebas en verde, `tsc` sin errores, 10 mutaciones a propósito detectadas por las pruebas, y una partida real contra el catálogo de 1025 Pokémon con temporizadores reales.
