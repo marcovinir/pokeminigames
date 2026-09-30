@@ -84,6 +84,10 @@ Como hay un solo intento, el campo de respuesta ofrece autocompletado de nombres
 
 Los equipos y los totales se derivan de `round_picks`; no se almacenan duplicados. `status` ∈ {`waiting`, `in_progress`, `completed`, `abandoned`}.
 
+Restricciones que la base de datos hace cumplir por sí misma: `username` único sin distinguir mayúsculas; `total_stats` igual a la suma de las seis stats base; `games` con rondas fijas de 3 o 5 (sin meta de stats) o personalizadas con exactamente una condición de fin; `rounds.type1_id < rounds.type2_id` (el par de tipos se guarda siempre ordenado); una sola fila de `round_picks` por jugador y ronda (un intento); una respuesta es `VALID` si y solo si tiene `pokemon_id`.
+
+Datos del catálogo (snapshot de la etapa 1): 1025 especies, de las cuales 526 tienen doble tipo, repartidas en 136 pares de tipos distintos; 21 de esos pares tienen un solo Pokémon. El sorteo de pares de la etapa 2 debe exigir un mínimo de Pokémon disponibles por par para que la ronda sea jugable.
+
 **Carga del catálogo:** un script descarga de PokéAPI las especies (1025) con sus stats, tipos y nombres en español e inglés (endpoint de especies), usando solo la forma por defecto. Genera un snapshot JSON que se commitea al repositorio. El seed de la base de datos usa ese snapshot, de modo que el despliegue nunca depende de PokéAPI. Durante las partidas no se llama a PokéAPI.
 
 ## 5. Arquitectura
@@ -116,7 +120,7 @@ Los timers viven en el servidor. El cliente muestra la cuenta atrás calculada a
 
 REST:
 
-- `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`
 - `POST /rooms`, `GET /rooms/:code`, `POST /rooms/:code/join`
 - `GET /stats`, `GET /stats/history`
 
@@ -128,7 +132,7 @@ Socket.io (los nombres definitivos se fijan en `shared/` durante la etapa 2):
 ### 5.5 Autenticación
 
 - Access token JWT de 1 h, enviado como `Authorization: Bearer`.
-- Refresh token de 7 días en cookie `httpOnly`, guardado como hash en `refresh_tokens`.
+- Refresh token de 7 días en cookie `httpOnly` con `Path=/auth`, guardado como hash en `refresh_tokens`. Cada refresco rota el token (el anterior queda revocado) y `POST /auth/logout` lo revoca y borra la cookie. Las contraseñas se limitan a 72 bytes (límite de bcrypt).
 - El socket se autentica con el access token en el handshake.
 
 ## 6. Errores y robustez
