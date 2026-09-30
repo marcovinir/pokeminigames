@@ -68,6 +68,22 @@ describe("register", () => {
     );
   });
 
+  it("trata el guion bajo del username como un carácter normal, no como comodín", async () => {
+    await service.register({ email: "a@example.com", username: "zzabc", password: "pikachu-123" });
+    await expect(
+      service.register({ email: "b@example.com", username: "zza_c", password: "pikachu-123" }),
+    ).resolves.toMatchObject({ user: { username: "zza_c" } });
+    await expect(
+      service.register({ email: "c@example.com", username: "zz___", password: "pikachu-123" }),
+    ).resolves.toMatchObject({ user: { username: "zz___" } });
+    // La comparación sigue ignorando mayúsculas.
+    await expectAppError(
+      service.register({ email: "d@example.com", username: "ZZA_C", password: "pikachu-123" }),
+      "USERNAME_TAKEN",
+      409,
+    );
+  });
+
   it("ante registros simultáneos con el mismo email, uno gana y los demás reciben EMAIL_TAKEN", async () => {
     await warmUpPool();
     const results = await Promise.allSettled(

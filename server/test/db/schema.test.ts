@@ -41,6 +41,10 @@ describe("games", () => {
     ).rejects.toThrow();
   });
 
+  it("rechaza rondas fijas sin número de rondas", async () => {
+    await expect(prisma.game.create({ data: { ...base, lengthMode: "fixed_rounds" } })).rejects.toThrow();
+  });
+
   it("rechaza rondas fijas con meta de stats", async () => {
     await expect(
       prisma.game.create({ data: { ...base, lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: 2500 } }),

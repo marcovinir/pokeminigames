@@ -129,11 +129,11 @@ export class AuthService {
     if (emailTaken) {
       throw new AppError(409, "EMAIL_TAKEN", "Ese email ya está registrado");
     }
-    const usernameTaken = await this.prisma.user.findFirst({
-      where: { username: { equals: username, mode: "insensitive" } },
-      select: { id: true },
-    });
-    if (usernameTaken) {
+    // Misma comparación que el índice único lower(username). No se usa `mode: "insensitive"`
+    // porque Prisma lo traduce a ILIKE y el guion bajo del username actuaría como comodín.
+    const usernameTaken = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM users WHERE lower(username) = lower(${username}) LIMIT 1`;
+    if (usernameTaken.length > 0) {
       throw new AppError(409, "USERNAME_TAKEN", "Ese nombre de usuario ya está en uso");
     }
   }

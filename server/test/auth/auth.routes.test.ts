@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { buildTestApp } from "../helpers/app.js";
-import { prisma, resetDatabase } from "../helpers/db.js";
+import { prisma, resetDatabase, warmUpPool } from "../helpers/db.js";
 
 const app = buildTestApp();
 const ash = { email: "ash@example.com", username: "ash", password: "pikachu-123" };
@@ -173,6 +173,25 @@ describe("POST /auth/refresh y /auth/logout", () => {
     const replay = await request(app).post("/auth/refresh").set("Cookie", oldCookie);
     expect(replay.status).toBe(401);
     expect(replay.body.error.code).toBe("INVALID_REFRESH_TOKEN");
+  });
+
+  it("con refrescos simultáneos (dos pestañas) gana uno y los demás no borran la cookie ya rotada", async () => {
+    const register = await request(app).post("/auth/register").send(ash);
+    const cookie = refreshCookie(register).split(";")[0]!;
+    await warmUpPool();
+
+    const responses = await Promise.all(
+      Array.from({ length: 6 }, () => request(app).post("/auth/refresh").set("Cookie", cookie)),
+    );
+
+    expect(responses.filter((r) => r.status === 200)).toHaveLength(1);
+    for (const loser of responses.filter((r) => r.status !== 200)) {
+      expect(loser.status).toBe(401);
+      // Si el 401 perdedor llegara al navegador después del 200 y borrara la cookie,
+      // el usuario quedaría deslogueado aunque el refresco ganador funcionó.
+      const setCookies = (loser.headers["set-cookie"] ?? []) as unknown as string[];
+      expect(setCookies.some((c) => c.startsWith("refresh_token="))).toBe(false);
+    }
   });
 
   it("responde 401 sin cookie", async () => {

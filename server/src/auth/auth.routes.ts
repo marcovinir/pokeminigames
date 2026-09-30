@@ -57,14 +57,12 @@ export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps): 
     if (typeof token !== "string" || token === "") {
       throw new AppError(401, "INVALID_REFRESH_TOKEN", "No hay una sesión activa");
     }
-    try {
-      const result = await authService.refresh(token);
-      startSession(res, result);
-      res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
-    } catch (error) {
-      endSession(res);
-      throw error;
-    }
+    // Si falla no se borra la cookie: con dos pestañas refrescando a la vez, el 401 del
+    // perdedor podría llegar después del 200 del ganador y borrar la cookie ya rotada.
+    // Un token inválido es inofensivo; cerrar sesión de verdad es cosa de /auth/logout.
+    const result = await authService.refresh(token);
+    startSession(res, result);
+    res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
   });
 
   router.post("/logout", async (req, res) => {
