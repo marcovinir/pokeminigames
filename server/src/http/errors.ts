@@ -1,15 +1,8 @@
+import type { ErrorCode } from "@pokemon-minigames/shared";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import { ZodError } from "zod";
 
-export type ErrorCode =
-  | "VALIDATION_ERROR"
-  | "EMAIL_TAKEN"
-  | "USERNAME_TAKEN"
-  | "INVALID_CREDENTIALS"
-  | "UNAUTHORIZED"
-  | "INVALID_REFRESH_TOKEN"
-  | "NOT_FOUND"
-  | "INTERNAL_ERROR";
+export type { ErrorCode };
 
 /** Error esperado de la aplicación: se convierte en una respuesta HTTP con código tipado. */
 export class AppError extends Error {

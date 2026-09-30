@@ -1,7 +1,10 @@
 {
   "name": "pokemon-minigames",
   "private": true,
-  "workspaces": ["server"],
+  "workspaces": [
+    "shared",
+    "server"
+  ],
   "scripts": {
     "dev": "npm run dev -w server",
     "test": "npm test -w server",

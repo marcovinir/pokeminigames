@@ -1,37 +1,9 @@
+import { type BaseStats, TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
 import { normalizeName } from "./normalize.js";
 
-/** Los 18 tipos del juego. El id en la base de datos es la posición + 1. */
-export const TYPE_NAMES = [
-  "normal",
-  "fighting",
-  "flying",
-  "poison",
-  "ground",
-  "rock",
-  "bug",
-  "ghost",
-  "steel",
-  "fire",
-  "water",
-  "grass",
-  "electric",
-  "psychic",
-  "ice",
-  "dragon",
-  "dark",
-  "fairy",
-] as const;
-
-export type TypeName = (typeof TYPE_NAMES)[number];
-
-export interface BaseStats {
-  hp: number;
-  attack: number;
-  defense: number;
-  spAttack: number;
-  spDefense: number;
-  speed: number;
-}
+// Los tipos y las stats base viven en `shared/` (los usa también el cliente); se re-exportan aquí.
+export { TYPE_NAMES };
+export type { BaseStats, TypeName };
 
 export interface PokemonSnapshot {
   /** Número de la Pokédex nacional. */
