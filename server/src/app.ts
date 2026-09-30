@@ -4,21 +4,22 @@ import express, { type Express } from "express";
 import { createAuthRouter } from "./auth/auth.routes.js";
 import { AuthService } from "./auth/auth.service.js";
 import { createPasswordHasher } from "./auth/password.js";
-import { createTokenService } from "./auth/tokens.js";
+import type { TokenService } from "./auth/tokens.js";
 import type { Env } from "./config/env.js";
 import type { PrismaClient } from "./db/prisma.js";
+import type { RoomManager } from "./game/room-manager.js";
 import { errorHandler, notFoundHandler } from "./http/errors.js";
+import { createRoomsRouter } from "./rooms/rooms.routes.js";
 
 export interface AppDeps {
   env: Env;
   prisma: PrismaClient;
+  /** El mismo servicio de tokens que usa Socket.io para autenticar el handshake. */
+  tokens: TokenService;
+  roomManager: RoomManager;
 }
 
-export function createApp({ env, prisma }: AppDeps): Express {
-  const tokens = createTokenService({
-    secret: env.JWT_ACCESS_SECRET,
-    accessTtlSeconds: env.ACCESS_TOKEN_TTL_SECONDS,
-  });
+export function createApp({ env, prisma, tokens, roomManager }: AppDeps): Express {
   const authService = new AuthService({
     prisma,
     hasher: createPasswordHasher(env.BCRYPT_COST),
@@ -36,6 +37,7 @@ export function createApp({ env, prisma }: AppDeps): Express {
     res.json({ status: "ok" });
   });
   app.use("/auth", createAuthRouter({ env, authService, tokens }));
+  app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
