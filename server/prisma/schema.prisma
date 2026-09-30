@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Language {
+  es
+  en
+
+  @@map("language")
+}
+
+enum TypeMode {
+  random
+  chosen
+
+  @@map("type_mode")
+}
+
+enum LengthMode {
+  fixed_rounds
+  custom
+
+  @@map("length_mode")
+}
+
+enum GameStatus {
+  waiting
+  in_progress
+  completed
+  abandoned
+
+  @@map("game_status")
+}
+
+enum PickResult {
+  VALID
+  NOT_FOUND
+  WRONG_TYPES
+  ALREADY_OWNED
+  TAKEN
+  NO_ANSWER
+
+  @@map("pick_result")
+}
+
+model Type {
+  id   Int    @id
+  name String @unique
+
+  pokemonTypes  PokemonType[]
+  roundsAsType1 Round[]       @relation("RoundType1")
+  roundsAsType2 Round[]       @relation("RoundType2")
+
+  @@map("types")
+}
+
+model Pokemon {
+  id            Int    @id
+  baseHp        Int    @map("base_hp")
+  baseAttack    Int    @map("base_attack")
+  baseDefense   Int    @map("base_defense")
+  baseSpAttack  Int    @map("base_sp_attack")
+  baseSpDefense Int    @map("base_sp_defense")
+  baseSpeed     Int    @map("base_speed")
+  totalStats    Int    @map("total_stats")
+  spriteUrl     String @map("sprite_url")
+
+  types      PokemonType[]
+  names      PokemonName[]
+  roundPicks RoundPick[]
+
+  @@map("pokemon")
+}
+
+model PokemonType {
+  pokemonId Int @map("pokemon_id")
+  typeId    Int @map("type_id")
+  slot      Int @db.SmallInt
+
+  pokemon Pokemon @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+  type    Type    @relation(fields: [typeId], references: [id])
+
+  @@id([pokemonId, slot])
+  @@unique([pokemonId, typeId])
+  @@map("pokemon_types")
+}
+
+model PokemonName {
+  pokemonId      Int      @map("pokemon_id")
+  language       Language
+  name           String
+  normalizedName String   @map("normalized_name")
+
+  pokemon Pokemon @relation(fields: [pokemonId], references: [id], onDelete: Cascade)
+
+  @@id([pokemonId, language])
+  @@unique([language, normalizedName])
+  @@map("pokemon_names")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  username     String
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  refreshTokens RefreshToken[]
+  gamePlayers   GamePlayer[]
+  wonGames      Game[]
+  roundPicks    RoundPick[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Game {
+  id          String     @id @default(uuid()) @db.Uuid
+  roomCode    String     @unique @map("room_code") @db.VarChar(10)
+  typeMode    TypeMode   @map("type_mode")
+  lengthMode  LengthMode @map("length_mode")
+  roundsLimit Int?       @map("rounds_limit")
+  statsGoal   Int?       @map("stats_goal")
+  status      GameStatus @default(waiting)
+  winnerId    String?    @map("winner_id") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  endedAt     DateTime?  @map("ended_at") @db.Timestamptz(3)
+
+  winner  User?        @relation(fields: [winnerId], references: [id])
+  players GamePlayer[]
+  rounds  Round[]
+
+  @@map("games")
+}
+
+model GamePlayer {
+  gameId     String @map("game_id") @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  seat       Int    @db.SmallInt
+  finalStats Int?   @map("final_stats")
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([gameId, seat])
+  @@unique([gameId, userId])
+  @@map("game_players")
+}
+
+model Round {
+  id      String @id @default(uuid()) @db.Uuid
+  gameId  String @map("game_id") @db.Uuid
+  number  Int
+  type1Id Int    @map("type1_id")
+  type2Id Int    @map("type2_id")
+
+  game  Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  type1 Type        @relation("RoundType1", fields: [type1Id], references: [id])
+  type2 Type        @relation("RoundType2", fields: [type2Id], references: [id])
+  picks RoundPick[]
+
+  @@unique([gameId, number])
+  @@map("rounds")
+}
+
+model RoundPick {
+  id            String     @id @default(uuid()) @db.Uuid
+  roundId       String     @map("round_id") @db.Uuid
+  userId        String     @map("user_id") @db.Uuid
+  submittedText String?    @map("submitted_text")
+  result        PickResult
+  pokemonId     Int?       @map("pokemon_id")
+  submittedAt   DateTime?  @map("submitted_at") @db.Timestamptz(3)
+
+  round   Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id])
+  pokemon Pokemon? @relation(fields: [pokemonId], references: [id])
+
+  @@unique([roundId, userId])
+  @@map("round_picks")
+}
