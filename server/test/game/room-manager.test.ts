@@ -171,6 +171,16 @@ describe("RoomManager.joinRoom", () => {
     expect(syncRejection(() => manager.joinRoom(brock, code))).toEqual({ status: 409, code: "ROOM_CLOSED" });
   });
 
+  it("ALREADY_IN_GAME si el usuario está creando una sala en ese momento: nunca queda sentado en dos", async () => {
+    const { manager, repository } = setup();
+    const first = await manager.createRoom(ash, config);
+    repository.delays.createGame = 20; // la creación de la sala de brock tarda: queda "en proceso"
+    const creating = manager.createRoom(brock, config);
+    expect(syncRejection(() => manager.joinRoom(brock, first.code))).toEqual({ status: 409, code: "ALREADY_IN_GAME" });
+    await creating;
+    expect(manager.getPublicInfo(first.code).playerCount).toBe(1);
+  });
+
   it("ALREADY_IN_GAME si el usuario participa en otra sala activa", async () => {
     const { manager } = setup();
     const first = await manager.createRoom(ash, config);

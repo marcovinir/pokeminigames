@@ -80,13 +80,14 @@ export function createGame(
     round: null,
     roundsPlayed: 0,
     owners: new Map(),
+    expiresAt: now + minutes(WAITING_ROOM_TTL_MINUTES),
     startsAt: null,
     graceEndsAt: {},
     outcome: null,
   };
   return {
     state,
-    effects: [{ kind: "schedule", at: now + minutes(WAITING_ROOM_TTL_MINUTES), timer: { kind: "expire" } }],
+    effects: [{ kind: "schedule", at: state.expiresAt, timer: { kind: "expire" } }],
   };
 }
 
@@ -143,8 +144,10 @@ function onConnected(c: Ctx, seat: Seat): void {
     delete c.s.graceEndsAt[seat];
     emit(c, otherSeat(seat), { name: "opponent-reconnected", payload: undefined });
   }
-  c.fx.push({ kind: "send_state", to: seat });
   tryStart(c);
+  c.fx.push({ kind: "send_state", to: seat });
+  // En la sala de espera nadie más se entera por otra vía de que este jugador llegó.
+  if (!inGame(c.s) && c.s.players[otherSeat(seat)]) c.fx.push({ kind: "send_state", to: otherSeat(seat) });
 }
 
 function tryStart(c: Ctx): void {
@@ -159,16 +162,26 @@ function tryStart(c: Ctx): void {
   schedule(c, s.startsAt, { kind: "start", startsAt: s.startsAt });
 }
 
+/**
+ * Vuelve a la sala de espera. Si la sala ya debió caducar mientras tanto, termina aquí: su
+ * temporizador `expire` venció en otra fase (la cuenta atrás) y se ignoró, y no queda otro.
+ */
+function backToWaiting(c: Ctx): void {
+  c.s.phase = "waiting";
+  c.s.startsAt = null;
+  if (c.now >= c.s.expiresAt) finish(c, "expired", null);
+}
+
 function onDisconnected(c: Ctx, seat: Seat): void {
   const { s } = c;
   const player = s.players[seat];
   if (!player || !player.connected) return;
   player.connected = false;
 
-  if (s.phase === "starting") {
+  if (s.phase === "starting" || s.phase === "waiting") {
     // La cuenta atrás se cancela: el temporizador `start` queda obsoleto.
-    s.phase = "waiting";
-    s.startsAt = null;
+    if (s.phase === "starting") backToWaiting(c);
+    if (s.phase === "waiting" && s.players[otherSeat(seat)]) c.fx.push({ kind: "send_state", to: otherSeat(seat) });
     return;
   }
   if (inGame(s)) {
@@ -187,10 +200,9 @@ function onLeave(c: Ctx, seat: Seat): void {
     } else if (s.players[2]) {
       // Quien se unió se va antes de empezar: el asiento 2 queda libre.
       delete s.players[2];
-      s.phase = "waiting";
-      s.startsAt = null;
       c.fx.push({ kind: "persist_seat_freed" });
-      c.fx.push({ kind: "send_state", to: 1 });
+      backToWaiting(c);
+      if (s.phase === "waiting") c.fx.push({ kind: "send_state", to: 1 });
     }
     return;
   }

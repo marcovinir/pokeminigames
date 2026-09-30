@@ -136,6 +136,70 @@ describe("motor: sala y conexiones", () => {
     });
   });
 
+  describe("la caducidad de la sala no se pierde durante la cuenta atrás", () => {
+    const TTL = 10 * 60 * 1000;
+
+    function expiredDuringCountdown(): Harness {
+      const h = new Harness({ rng: [0] });
+      h.advance(TTL - 2000); // 9:58
+      h.seatBoth(); // cuenta atrás hasta 10:03
+      h.advance(3000); // 10:01: el temporizador `expire` venció en plena cuenta atrás y se ignoró
+      expect(h.state.phase).toBe("starting");
+      return h;
+    }
+
+    it("si alguien se cae cuando la sala ya debió caducar, termina como caducada", () => {
+      const h = expiredDuringCountdown();
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.state.phase).toBe("finished");
+      expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+      expect(h.effectsOfKind("persist_end")[0]).toMatchObject({ status: "abandoned" });
+    });
+
+    it("si quien se unió sale cuando la sala ya debió caducar, también termina como caducada", () => {
+      const h = expiredDuringCountdown();
+      h.dispatch({ type: "LEAVE", seat: 2 });
+      expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+    });
+
+    it("si la caída ocurre antes de la hora de caducidad, la sala sigue esperando y caduca a su hora", () => {
+      const h = new Harness({ rng: [0] });
+      h.advance(TTL - 10_000);
+      h.seatBoth();
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.state.phase).toBe("waiting");
+      h.advance(10_000);
+      expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+    });
+  });
+
+  describe("el rival se entera de los cambios en la sala de espera", () => {
+    it("al conectarse el segundo jugador, el primero también recibe el estado actualizado", () => {
+      const h = new Harness({ rng: [0] });
+      h.seatBoth();
+      // Conecta el 1 (estado al 1 y al 2, que ya se había unido) y luego el 2 (estado al 2 y al 1, ya con la cuenta atrás).
+      expect(h.sentState).toEqual([1, 2, 2, 1]);
+    });
+
+    it("al cancelarse la cuenta atrás por una caída, el rival recibe su estado y deja de esperar el inicio", () => {
+      const h = new Harness({ rng: [0] });
+      h.seatBoth();
+      h.sentState.length = 0;
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.state.phase).toBe("waiting");
+      expect(h.sentState).toEqual([1]);
+    });
+
+    it("una caída en la sala de espera (sin cuenta atrás) también se le comunica al otro", () => {
+      const h = new Harness();
+      h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+      h.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+      expect(h.sentState).toEqual([2, 1]);
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+      expect(h.sentState).toEqual([2, 1, 1]);
+    });
+  });
+
   it("una partida terminada ignora cualquier evento posterior", () => {
     const h = new Harness();
     h.dispatch({ type: "LEAVE", seat: 1 });

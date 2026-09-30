@@ -55,6 +55,8 @@ export interface GameState {
   roundsPlayed: number;
   /** Pokémon reclamado → asiento que lo tiene. Un Pokémon solo puede estar en un equipo. */
   owners: Map<number, Seat>;
+  /** Hora a la que caduca la sala si sigue en espera. */
+  expiresAt: number;
   startsAt: number | null;
   /** Si un jugador está desconectado en plena partida: hasta cuándo puede volver. */
   graceEndsAt: Partial<Record<Seat, number>>;

@@ -75,7 +75,8 @@ export class RoomManager {
       throw new AppError(409, "ROOM_CLOSED", "La sala ya no admite jugadores");
     }
     if (room.hasSeat(2)) throw new AppError(409, "ROOM_FULL", "La sala está llena");
-    if (this.deps.store.findByUser(user.userId)) throw alreadyInGame();
+    // También cuenta quien está creando una sala en este momento: si no, podría quedar sentado en dos.
+    if (this.deps.store.findByUser(user.userId) || this.pendingCreates.has(user.userId)) throw alreadyInGame();
 
     room.dispatch({ type: "PLAYER_JOINED", userId: user.userId, username: user.username });
     return { code: room.code };
