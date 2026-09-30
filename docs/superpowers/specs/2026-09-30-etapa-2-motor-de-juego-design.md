@@ -44,6 +44,7 @@ Son constantes nombradas en un solo archivo (`game/constants.ts`), no variables 
 `waiting` (sala creada) → cuando ambos jugadores tienen socket en la sala: cuenta atrás de 5 s → por cada ronda: `choosing_types` (solo modo elegido) → `round_active` → `round_result` → siguiente ronda o `finished`.
 
 - El creador ocupa el asiento 1 y quien se une el asiento 2. La sala en espera caduca a los 10 minutos desde su creación y pasa a `abandoned`.
+- Si quien se unió sale antes de empezar (`leave-room`), su asiento queda libre y otra persona puede entrar; si sale el creador, la sala se cancela (`cancelled`). Un cliente que quiera cancelar una sala en espera se conecta por socket, hace `join-room` y luego `leave-room`; si no, la sala caduca a los 10 minutos.
 - Si el asiento 2 está reservado pero alguno no tiene socket al caducar la sala, también pasa a `abandoned` (nunca llegó a empezar).
 
 ### 4.2 Par de tipos por ronda
@@ -62,7 +63,7 @@ Como en la spec general §3.3: un solo intento por jugador, `answer-received` so
 3. Si ambos nombraron el mismo Pokémon válido, gana el de menor timestamp de servidor; si la diferencia es menor que `SIMULTANEOUS_WINDOW_MS`, se sortea (con un `Rng` inyectado). El perdedor recibe `TAKEN`.
 4. Cada Pokémon asignado suma su `total_stats` al jugador.
 
-Resultados posibles: `VALID`, `NOT_FOUND`, `WRONG_TYPES`, `ALREADY_OWNED`, `TAKEN`, `NO_ANSWER`. Las respuestas de un jugador desconectado que llegaron antes de caerse sí cuentan.
+Resultados posibles: `VALID`, `NOT_FOUND`, `WRONG_TYPES`, `ALREADY_OWNED`, `TAKEN`, `NO_ANSWER`. `ALREADY_OWNED` significa que el Pokémon ya está en tu propio equipo; `TAKEN`, que lo tiene el rival (de una ronda anterior) o que perdiste la carrera de esta ronda. Las respuestas de un jugador desconectado que llegaron antes de caerse sí cuentan.
 
 ### 4.4 Fin de partida
 
@@ -125,6 +126,7 @@ El socket se autentica con el access token en el handshake (`auth.token`); un to
 | `player-joined` | `{ username }` |
 | `game-starting` | `{ startsAt }` |
 | `choose-types` | `{ round, deadline }` |
+| `type-received` | `{ round }` (solo a quien eligió; confirma la recepción sin revelar el tipo) |
 | `round-started` | `{ round, type1, type2, deadline, typesNotice? }` |
 | `answer-received` | `{ round }` |
 | `round-result` | Por jugador: `result`, texto enviado, Pokémon obtenido (`id`, nombres, sprite, tipos, stats) si lo hay, y los totales actualizados |

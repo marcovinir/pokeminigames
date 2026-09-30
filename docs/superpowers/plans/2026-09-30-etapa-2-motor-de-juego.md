@@ -4330,7 +4330,7 @@ git commit -m "feat(game): RoomStore y RoomManager (crear, unir y conectar a sal
 
 **Files:**
 - Create: `server/src/rooms/rooms.schemas.ts`, `server/src/rooms/rooms.routes.ts`, `server/src/realtime/rate-limiter.ts`, `server/src/realtime/broadcaster.ts`, `server/src/realtime/server.ts`
-- Replace: `server/src/app.ts`, `server/src/index.ts`, `server/test/helpers/app.ts`, `server/test/app/health.test.ts`
+- Replace: `server/src/app.ts`, `server/src/index.ts`, `server/test/helpers/app.ts`, `server/test/helpers/db.ts`, `server/test/app/health.test.ts`
 - Create (pruebas): `server/test/helpers/users.ts`, `server/test/realtime/client.ts`, `server/test/realtime/rate-limiter.test.ts`, `server/test/rooms/rooms.routes.test.ts`, `server/test/realtime/realtime.test.ts`
 
 **Interfaces:**
@@ -4402,6 +4402,57 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
 
 export function buildTestApp(overrides: Record<string, string> = {}): Express {
   return buildTestContext(overrides).app;
+}
+```
+
+`server/test/helpers/db.ts` (reemplaza el de la etapa 1: `TRUNCATE` ahora reintenta ante un deadlock `40P01`. Sin esto, la escritura en vuelo de la prueba anterior —por ejemplo el guardado del final de una partida— chocaba con el `TRUNCATE` de la siguiente y hacía fallar una prueba al azar, en torno a 1 de cada 3 corridas):
+
+```ts
+import { createPrismaClient } from "../../src/db/prisma.js";
+
+export const prisma = createPrismaClient(process.env.DATABASE_URL!);
+
+const DEADLOCK_DETECTED = "40P01";
+const MAX_TRUNCATE_ATTEMPTS = 5;
+
+/**
+ * Ejecuta un TRUNCATE reintentando si PostgreSQL detecta un deadlock. Ocurre cuando la prueba
+ * anterior aún tiene una escritura en vuelo (por ejemplo, el guardado del final de una partida)
+ * que toma los mismos bloqueos en otro orden. Esa escritura pierde y se descarta, y el reintento
+ * deja las tablas vacías: no hay nada que conservar de una prueba que ya terminó.
+ */
+async function truncate(sql: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+      return;
+    } catch (error) {
+      if (attempt >= MAX_TRUNCATE_ATTEMPTS || !String(error).includes(DEADLOCK_DETECTED)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 25 * attempt));
+    }
+  }
+}
+
+/** Vacía las tablas mutables. El catálogo (tipos, Pokémon) se conserva. */
+export async function resetDatabase(): Promise<void> {
+  await truncate('TRUNCATE TABLE "round_picks", "rounds", "game_players", "games", "refresh_tokens", "users" CASCADE');
+}
+
+/**
+ * Abre varias conexiones del pool antes de una prueba de concurrencia. Sin esto, las
+ * peticiones esperan a que se abran las conexiones y terminan ejecutándose casi en serie,
+ * con lo que la carrera que se quiere probar nunca ocurre.
+ */
+export async function warmUpPool(connections = 8): Promise<void> {
+  await Promise.all(
+    Array.from({ length: connections }, () => prisma.$queryRaw`SELECT 1 AS ok FROM pg_sleep(0.2)`),
+  );
+}
+
+/** Vacía también el catálogo. Solo para las pruebas del seed. */
+export async function resetCatalog(): Promise<void> {
+  await resetDatabase();
+  await truncate('TRUNCATE TABLE "pokemon_names", "pokemon_types", "pokemon", "types" CASCADE');
 }
 ```
 

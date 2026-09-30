@@ -12,6 +12,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "catalog:fetch": "tsx scripts/fetch-catalog.ts",
+    "smoke": "tsx scripts/smoke-game.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
