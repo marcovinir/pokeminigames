@@ -13,6 +13,9 @@ export function TypePickerView() {
   const [chosen, setChosen] = useState<TypeName | null>(null);
   const round = view.round;
   const locked = round?.typeChosen ?? false;
+  // Tras tocar un tipo no se puede cambiar mientras llega la confirmación: el servidor se queda con la primera
+  // elección. Si lo rechaza (hay un error a la vista), se puede volver a elegir.
+  const waiting = chosen !== null && !view.lastError;
 
   return (
     <section className="flex flex-col gap-4">
@@ -27,7 +30,7 @@ export function TypePickerView() {
           <button
             key={type}
             type="button"
-            disabled={locked}
+            disabled={locked || waiting}
             aria-pressed={chosen === type}
             onClick={() => {
               setChosen(type);

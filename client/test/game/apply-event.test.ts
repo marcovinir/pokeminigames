@@ -188,6 +188,28 @@ describe("fin de la partida y desconexiones", () => {
   });
 });
 
+describe("errores recuperables", () => {
+  it("un error del servidor se borra en cuanto la partida avanza, para no dejar un aviso viejo a la vista", () => {
+    const withError = applyServerEvent(initialGameView, event.error("WRONG_PHASE", "x"), SERVER_NOW);
+    expect(withError.lastError).not.toBeNull();
+    const next = {
+      "choose-types": event.chooseTypes(1, SERVER_NOW + 15_000),
+      "round-started": event.roundStarted(1, SERVER_NOW + 15_000),
+      "round-result": event.roundResult(),
+      "game-ended": event.gameEnded(),
+    };
+    for (const [name, e] of Object.entries(next)) {
+      expect(applyServerEvent(withError, e, SERVER_NOW).lastError, name).toBeNull();
+    }
+  });
+
+  it("los eventos que no marcan un avance (confirmaciones, avisos del rival) no lo borran", () => {
+    const withError = applyServerEvent(initialGameView, event.error("RATE_LIMITED", "x"), SERVER_NOW);
+    expect(applyServerEvent(withError, event.answerReceived(1), SERVER_NOW).lastError).not.toBeNull();
+    expect(applyServerEvent(withError, event.opponentReconnected(), SERVER_NOW).lastError).not.toBeNull();
+  });
+});
+
 describe("pureza", () => {
   it("no modifica el estado que recibe", () => {
     const before = play([[event.roomState({ mySeat: 1, myTeam: [pokemon(9)] })], [event.roundStarted(1, SERVER_NOW + 15_000)]]);

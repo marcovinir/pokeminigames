@@ -8,7 +8,10 @@
  * Las pruebas automáticas comprueban los pares de colores de los tokens; esto comprueba lo que
  * realmente se ve (un componente con el color de texto equivocado sobre un fondo de otro tema).
  * Se desactivan las transiciones mientras se mide: a mitad de una transición los colores
- * intermedios dan falsos avisos.
+ * intermedios dan falsos avisos. Se tiene en cuenta la `opacity` del elemento y de sus
+ * ancestros (`getComputedStyle().color` no la incluye y un texto atenuado parecería cumplir).
+ * Para medir la lista de sugerencias del autocompletado, ábrela (escribe una letra y pulsa
+ * la flecha abajo) antes de ejecutar la auditoría.
  */
 (() => {
   const parse = (color) => {
@@ -28,6 +31,13 @@
     b: top.b * top.a + bottom.b * (1 - top.a),
     a: 1,
   });
+  const opacityOf = (element) => {
+    let opacity = 1;
+    for (let node = element; node && node !== document.documentElement; node = node.parentElement) {
+      opacity *= Number.parseFloat(getComputedStyle(node).opacity);
+    }
+    return opacity;
+  };
   const backgroundOf = (element) => {
     const layers = [];
     for (let node = element; node; node = node.parentElement) {
@@ -46,7 +56,8 @@
       const style = getComputedStyle(element);
       if (style.display === "none" || style.visibility === "hidden" || (element.tagName === "BUTTON" && element.disabled)) continue;
       const background = backgroundOf(element);
-      const text = over(parse(style.color), background);
+      const color = parse(style.color);
+      const text = over({ ...color, a: color.a * opacityOf(element) }, background);
       const [lighter, darker] = [luminance(text), luminance(background)].sort((a, b) => b - a);
       const ratio = (lighter + 0.05) / (darker + 0.05);
       const size = Number.parseFloat(style.fontSize);

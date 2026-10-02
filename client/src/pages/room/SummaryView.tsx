@@ -1,4 +1,4 @@
-import type { PokemonView, Seat } from "@pokemon-minigames/shared";
+import type { GameEndedPayload, PokemonView, Seat } from "@pokemon-minigames/shared";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/Button";
 import { PokemonCard } from "../../components/PokemonCard";
@@ -18,6 +18,16 @@ function TeamColumn({ title, team, total }: { title: string; team: PokemonView[]
   );
 }
 
+/** "Ganaste", "Perdiste" o "Empate", según el asiento propio. */
+export function verdictLabel(ended: GameEndedPayload, mySeat: Seat): string {
+  return ended.winnerSeat === null ? "Empate" : ended.winnerSeat === mySeat ? "Ganaste" : "Perdiste";
+}
+
+/** El marcador final leído desde el lado propio: "800 – 400". */
+export function scoreLabel(ended: GameEndedPayload, mySeat: Seat): string {
+  return `${ended.totals[mySeat]} – ${ended.totals[mySeat === 1 ? 2 : 1]}`;
+}
+
 export function SummaryView() {
   const { view, opponent } = useRoom();
   const navigate = useNavigate();
@@ -26,7 +36,7 @@ export function SummaryView() {
 
   const mySeat = view.mySeat;
   const rivalSeat: Seat = mySeat === 1 ? 2 : 1;
-  const verdict = ended.winnerSeat === null ? "Empate" : ended.winnerSeat === mySeat ? "Ganaste" : "Perdiste";
+  const verdict = verdictLabel(ended, mySeat);
 
   return (
     <section className="flex flex-col gap-5">
@@ -34,7 +44,7 @@ export function SummaryView() {
         <h1 className="text-2xl font-medium">{verdict}</h1>
         <p className="mt-1 text-sm text-muted">{END_REASON_LABELS[ended.reason]}</p>
         <p className="mt-2 font-num text-lg tabular-nums">
-          {ended.totals[mySeat]} – {ended.totals[rivalSeat]}
+          {scoreLabel(ended, mySeat)}
         </p>
       </div>
 

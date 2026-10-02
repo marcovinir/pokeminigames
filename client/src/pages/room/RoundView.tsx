@@ -50,7 +50,7 @@ export function RoundView() {
             <Notice>El par elegido no tenía suficientes Pokémon; el servidor sorteó otro.</Notice>
           ) : null}
 
-          <Autocomplete names={names} submitted={round.answered} onSubmit={(text) => client.submit(text)} />
+          <Autocomplete names={names} submitted={round.answered} autoFocus onSubmit={(text) => client.submit(text)} />
         </div>
 
         <div className="hidden md:block">

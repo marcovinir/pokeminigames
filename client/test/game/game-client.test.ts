@@ -5,6 +5,7 @@ import { SERVER_NOW, event } from "../helpers/events";
 import { FakeSocket } from "../helpers/fake-socket";
 
 function setup(options: { refreshSession?: () => Promise<unknown> } = {}) {
+  const onSessionLost = vi.fn();
   const sockets: FakeSocket[] = [];
   const store = createGameStore();
   const refreshSession = vi.fn(options.refreshSession ?? (async () => ({ accessToken: "nuevo" })));
@@ -16,9 +17,10 @@ function setup(options: { refreshSession?: () => Promise<unknown> } = {}) {
     },
     store,
     refreshSession,
+    onSessionLost,
     now: () => SERVER_NOW + 1000,
   });
-  return { client, store, sockets, refreshSession, socket: () => sockets[0]! };
+  return { client, store, sockets, refreshSession, onSessionLost, socket: () => sockets[0]! };
 }
 
 describe("GameClient.join", () => {
@@ -134,6 +136,50 @@ describe("acciones del jugador", () => {
   });
 });
 
+describe("conexión cerrada por el servidor y partida terminada", () => {
+  it("si el servidor cierra la conexión (la partida se abrió en otra pestaña) lo marca como reemplazada", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().serverDrops("io server disconnect");
+    expect(store.getState().connection).toBe("replaced");
+  });
+
+  it("una caída normal sigue siendo una desconexión que se reintenta sola", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().serverDrops("transport close");
+    expect(store.getState().connection).toBe("disconnected");
+  });
+
+  it("jugar aquí otra vez vuelve a conectar y a entrar a la sala", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().serverDrops("io server disconnect");
+    client.join("ABC234");
+    expect(store.getState().connection).toBe("connecting");
+    expect(socket().connectCalls).toBe(2);
+    socket().serverConnects();
+    expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }, { code: "ABC234" }]);
+  });
+
+  it("una vez terminada la partida, una reconexión no vuelve a entrar a la sala (así no se pierde el resumen)", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().trigger("room-state", event.roomState({ phase: "round_result" }).payload);
+    socket().trigger("game-ended", event.gameEnded().payload);
+    expect(store.getState().view.phase).toBe("finished");
+
+    socket().serverDrops();
+    socket().serverConnects();
+    expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }]);
+    expect(store.getState().view.phase).toBe("finished");
+  });
+});
+
 describe("token del socket caducado", () => {
   const unauthorized = () => Object.assign(new Error("UNAUTHORIZED"));
 
@@ -170,6 +216,21 @@ describe("token del socket caducado", () => {
     await vi.waitFor(() => expect(refreshSession).toHaveBeenCalled());
     await Promise.resolve();
     expect(socket().connectCalls).toBe(1);
+  });
+
+  it("si no se puede renovar la sesión, avisa de que se perdió para volver a /login", async () => {
+    const { client, socket, onSessionLost } = setup({ refreshSession: async () => null });
+    client.join("ABC234");
+    socket().trigger("connect_error", unauthorized());
+    await vi.waitFor(() => expect(onSessionLost).toHaveBeenCalledTimes(1));
+  });
+
+  it("si la renovación sí funciona, no avisa de ninguna pérdida", async () => {
+    const { client, socket, onSessionLost } = setup();
+    client.join("ABC234");
+    socket().trigger("connect_error", unauthorized());
+    await vi.waitFor(() => expect(socket().connectCalls).toBe(2));
+    expect(onSessionLost).not.toHaveBeenCalled();
   });
 
   it("otros errores de conexión solo marcan la conexión como caída", () => {

@@ -1,5 +1,5 @@
 import { normalizeName } from "@pokemon-minigames/shared";
-import { type KeyboardEvent, useId, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { PokemonName } from "../api/types";
 import { Button } from "./Button";
 
@@ -36,14 +36,18 @@ export interface AutocompleteProps {
   /** Ya se envió la respuesta de esta ronda: el campo queda bloqueado. */
   submitted?: boolean;
   disabled?: boolean;
+  /** Lleva el foco al campo al montarse (en la ronda hay solo 15 s para escribir). */
+  autoFocus?: boolean;
 }
 
 /**
  * Campo de respuesta con lista de sugerencias (patrón combobox accesible). Enter envía lo
  * escrito, o la sugerencia resaltada con las flechas. Solo sugiere: no corrige nada por su cuenta.
  */
-export function Autocomplete({ names, onSubmit, submitted = false, disabled = false }: AutocompleteProps) {
+export function Autocomplete({ names, onSubmit, submitted = false, disabled = false, autoFocus = false }: AutocompleteProps) {
   const [text, setText] = useState("");
+  // Se bloquea en el acto al enviar: la confirmación del servidor tarda y un doble Enter enviaría dos veces.
+  const [sent, setSent] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +58,11 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
   const index = useMemo(() => buildIndex(names), [names]);
   const suggestions = useMemo(() => suggest(index, text), [index, text]);
   const showList = open && suggestions.length > 0 && !submitted;
-  const locked = submitted || disabled;
+  const locked = submitted || disabled || sent;
+
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   function submit(value: string): void {
     const trimmed = value.trim();
@@ -65,6 +73,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
     setError(null);
     setOpen(false);
     setActive(-1);
+    setSent(true);
     onSubmit(trimmed);
   }
 
@@ -153,7 +162,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
               className={`cursor-pointer px-3 py-2 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
             >
               {name.es}
-              {name.en !== name.es ? <span className="ml-2 opacity-70">{name.en}</span> : null}
+              {name.en !== name.es ? <span className={i === active ? "ml-2" : "ml-2 text-muted"}>{name.en}</span> : null}
             </li>
           ))}
         </ul>
@@ -167,7 +176,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
           {error}
         </p>
       ) : null}
-      {submitted ? <p className="mt-2 text-sm text-muted">Respuesta enviada. Esperando el resultado…</p> : null}
+      {submitted || sent ? <p className="mt-2 text-sm text-muted">Respuesta enviada. Esperando el resultado…</p> : null}
     </form>
   );
 }

@@ -45,8 +45,9 @@ export class FakeSocket implements SocketLike {
     this.trigger("connect");
   }
 
-  serverDrops(): void {
+  /** Simula que se cae la conexión; `reason` es el de socket.io ("io server disconnect" si lo cierra el servidor). */
+  serverDrops(reason = "transport close"): void {
     this.connected = false;
-    this.trigger("disconnect");
+    this.trigger("disconnect", reason);
   }
 }

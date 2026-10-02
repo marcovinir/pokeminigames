@@ -128,6 +128,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         startsAt: null,
         round: { number: event.payload.round, pair: null, deadline: event.payload.deadline, answered: false, typeChosen: false },
         clockOffset: clockOffset(event.payload.serverNow, receivedAt),
+        lastError: null,
       };
 
     case "type-received":
@@ -149,6 +150,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         },
         lastResult: null,
         clockOffset: clockOffset(serverNow, receivedAt),
+        lastError: null,
       };
     }
 
@@ -163,6 +165,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         phase: "round_result",
         roundsPlayed: result.round,
         lastResult: result,
+        lastError: null,
         players: view.players.map((p) => ({
           ...p,
           totalStats: result.results[p.seat].totalStats,
@@ -173,7 +176,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     }
 
     case "game-ended":
-      return { ...view, phase: "finished", ended: event.payload, opponentGraceEndsAt: null };
+      return { ...view, phase: "finished", ended: event.payload, opponentGraceEndsAt: null, lastError: null };
 
     case "opponent-disconnected":
       return {

@@ -137,6 +137,25 @@ describe("elección de tipo (modo elegido)", () => {
     }
   });
 
+  it("tocar otro tipo antes de la confirmación no envía una segunda elección (el servidor se quedaría con la primera)", async () => {
+    const { services, user } = renderRoom([choosing()]);
+    await user.click(screen.getByRole("button", { name: "fuego" }));
+    await user.click(screen.getByRole("button", { name: "agua" }));
+    expect(services.client.chooseType).toHaveBeenCalledExactlyOnceWith("fire");
+    expect(screen.getByRole("button", { name: "agua" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "fuego" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("si el servidor rechaza la elección, se puede elegir otro tipo", async () => {
+    const { services, user } = renderRoom([choosing()]);
+    await user.click(screen.getByRole("button", { name: "fuego" }));
+    serverSends(services, event.error("RATE_LIMITED"));
+    expect(screen.getByRole("button", { name: "agua" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "agua" }));
+    expect(services.client.chooseType).toHaveBeenLastCalledWith("water");
+    expect(services.client.chooseType).toHaveBeenCalledTimes(2);
+  });
+
   it("tras recargar (ya había elegido) no sabe cuál fue, pero bloquea y lo dice", () => {
     renderRoom([choosing({ typeChosen: true })]);
     expect(screen.getByRole("status")).toHaveTextContent("Ya elegiste tu tipo. Esperando a tu oponente…");
@@ -185,6 +204,11 @@ describe("ronda", () => {
     expect(await screen.findAllByRole("option")).toHaveLength(2);
     await user.keyboard("{Escape}{Enter}");
     expect(services.client.submit).toHaveBeenCalledExactlyOnceWith("alf");
+  });
+
+  it("al empezar la ronda el campo de respuesta recibe el foco (quien usa teclado tiene solo 15 s)", () => {
+    renderRoom([playing()]);
+    expect(screen.getByRole("combobox")).toHaveFocus();
   });
 
   it("una respuesta ya enviada bloquea el campo hasta el resultado", async () => {
@@ -329,12 +353,52 @@ describe("resumen final", () => {
     expect(screen.getByTestId("location").dataset.state).toBe("null");
   });
 
+  it("anuncia el resultado final a los lectores de pantalla", () => {
+    renderRoom(finished(1, 1));
+    expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("Ganaste. 800 – 400");
+  });
+
+  it("si la conexión vuelve a caerse y el servidor ya cerró la sala, el resumen se queda en pantalla", () => {
+    const services = fakeServices();
+    renderRoom(finished(1, 1), services);
+    serverSends(services, event.error("ROOM_NOT_FOUND", "Esa sala no existe"));
+    expect(screen.getByRole("heading", { name: "Ganaste" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ya terminó/)).not.toBeInTheDocument();
+  });
+
   it("no muestra el aviso de conexión perdida una vez terminada la partida", () => {
     const services = fakeServices();
     renderRoom(finished(1, 1), services);
     serverSends(services, event.roomState({ phase: "finished" })); // room-state no pisa el fin si se reconecta... el aviso depende de la conexión
     act(() => services.game.store.getState().setConnection("disconnected"));
     expect(screen.queryByText(/Reconectando/)).not.toBeInTheDocument();
+  });
+});
+
+describe("anuncios para lectores de pantalla", () => {
+  const announcer = () => screen.getByRole("log", { name: "Anuncios de la partida" });
+
+  it("anuncia el par de tipos al empezar cada ronda", () => {
+    renderRoom([event.roomState({ phase: "round_active", round: roundState({ number: 2 }), players: [ash(), misty()] })]);
+    expect(announcer()).toHaveTextContent("Ronda 2: volador y fuego.");
+  });
+
+  it("anuncia que hay que elegir un tipo", () => {
+    renderRoom([
+      event.roomState({ phase: "choosing_types", config: { typeMode: "chosen", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null }, round: roundState({ pair: null }) }),
+    ]);
+    expect(announcer()).toHaveTextContent("Ronda 1: elige un tipo.");
+  });
+
+  it("anuncia el cambio de una fase a otra sin que el contenedor se vuelva a crear", () => {
+    const services = fakeServices();
+    renderRoom([event.roomState({ phase: "starting", startsAt: SERVER_NOW + 5000, players: [ash(), misty()] })], services);
+    const region = announcer();
+    expect(region).toHaveTextContent("La partida empieza.");
+    serverSends(services, event.roundStarted(1, SERVER_NOW + 15_000));
+    expect(announcer()).toBe(region);
+    expect(region).toHaveTextContent("Ronda 1: volador y fuego.");
   });
 });
 
@@ -349,6 +413,25 @@ describe("avisos de conexión y errores", () => {
     expect(screen.getByText("Conexión perdida. Reconectando…")).toBeInTheDocument();
     act(() => services.game.store.getState().setConnection("connected"));
     expect(screen.queryByText(/Reconectando/)).not.toBeInTheDocument();
+  });
+
+  it("si la partida se abrió en otra pestaña, lo dice y permite volver a jugar aquí", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([inRound()], services);
+    act(() => services.game.store.getState().setConnection("replaced"));
+    expect(screen.getByText("Abriste esta partida en otra pestaña.")).toBeInTheDocument();
+    expect(screen.queryByText(/Reconectando/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Jugar aquí" }));
+    expect(services.client.join).toHaveBeenCalledTimes(2);
+    expect(services.client.join).toHaveBeenLastCalledWith("ABC234");
+  });
+
+  it("la cuenta atrás del aviso del rival no se anuncia cada segundo a los lectores de pantalla", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(SERVER_NOW);
+    renderRoom([inRound(), event.opponentDisconnected(SERVER_NOW + 30_000)]);
+    expect(screen.getByText("misty se desconectó.")).toBeInTheDocument();
+    expect(screen.getByText(/Tiene 30 s para volver/)).toHaveAttribute("aria-hidden", "true");
   });
 
   it("si el rival se cae muestra cuánto tiempo tiene para volver, y el aviso se va cuando vuelve", () => {

@@ -145,6 +145,34 @@ describe("Autocomplete", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("tras enviar queda bloqueado en el acto, sin esperar la confirmación: un doble Enter no envía dos veces", async () => {
+    const { user, input, onSubmit } = setup();
+    await user.type(input, "Beto{Enter}");
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Enviar" })).toBeDisabled();
+    await user.keyboard("{Enter}{Enter}");
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith("Beto");
+  });
+
+  it("las sugerencias no usan opacidad (el texto bajaría de 4,5:1 sin que la auditoría lo viera)", async () => {
+    const { user, input } = setup();
+    await user.type(input, "alf");
+    const list = screen.getByRole("listbox");
+    expect(list.innerHTML).not.toMatch(/opacity/);
+    await user.keyboard("{ArrowDown}");
+    expect(list.innerHTML).not.toMatch(/opacity/);
+  });
+
+  it("con autoFocus el campo recibe el foco al montarse; por defecto no", () => {
+    const first = setup({ autoFocus: true });
+    expect(first.input).toHaveFocus();
+  });
+
+  it("sin autoFocus el campo no roba el foco", () => {
+    const { input } = setup();
+    expect(input).not.toHaveFocus();
+  });
+
   it("funciona aunque todavía no haya llegado la lista de nombres: solo no sugiere", async () => {
     const onSubmit = vi.fn();
     const user = userEvent.setup();

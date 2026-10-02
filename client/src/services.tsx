@@ -58,6 +58,7 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
   const client = new GameClient({
     store: gameStore,
     refreshSession: () => endpoints.auth.refresh(),
+    onSessionLost: () => sessionHolder.store?.getState().expire(),
     // `auth` como función: cada (re)conexión usa el access token vigente.
     createSocket: () =>
       io(baseUrl || undefined, { autoConnect: false, auth: (cb) => cb({ token: api.getToken() }) }) as unknown as SocketLike,

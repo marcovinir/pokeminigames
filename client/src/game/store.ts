@@ -2,7 +2,8 @@ import type { ServerEvent } from "@pokemon-minigames/shared";
 import { type StoreApi, createStore } from "zustand";
 import { type GameView, applyServerEvent, initialGameView } from "./apply-event";
 
-export type ConnectionStatus = "idle" | "connecting" | "connected" | "disconnected";
+/** `replaced`: el servidor cerró esta conexión porque la partida se abrió en otra pestaña (no se reconecta sola). */
+export type ConnectionStatus = "idle" | "connecting" | "connected" | "disconnected" | "replaced";
 
 export interface GameStoreState {
   view: GameView;

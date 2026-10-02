@@ -28,6 +28,8 @@ export interface GameClientDeps {
   store: StoreApi<GameStoreState>;
   /** Renueva la sesión; se usa si el servidor rechaza el token del socket por caducado. */
   refreshSession(): Promise<unknown>;
+  /** Se llama si la sesión no se pudo renovar: hay que volver a iniciar sesión. */
+  onSessionLost?(): void;
   /** Hora actual del navegador; se reemplaza en las pruebas. */
   now?: () => number;
 }
@@ -104,10 +106,13 @@ export class GameClient implements GameClientApi {
       this.retriedAuth = false;
       store.getState().setConnection("connected");
       // También al reconectar: el servidor responde con `room-state` y el estado se reemplaza.
-      if (this.code) socket.emit("join-room", { code: this.code });
+      // Con la partida ya terminada no se vuelve a entrar: la sala ya no existe y se perdería el resumen.
+      if (this.code && store.getState().view.phase !== "finished") socket.emit("join-room", { code: this.code });
     });
-    socket.on("disconnect", () => {
-      if (current()) store.getState().setConnection("disconnected");
+    socket.on("disconnect", (reason: string) => {
+      if (!current()) return;
+      // Si lo cierra el servidor (otra pestaña tomó la partida) socket.io no reconecta por su cuenta.
+      store.getState().setConnection(reason === "io server disconnect" ? "replaced" : "disconnected");
     });
     socket.on("connect_error", (error: Error) => {
       if (!current()) return;
@@ -116,7 +121,9 @@ export class GameClient implements GameClientApi {
       if (error.message === "UNAUTHORIZED" && !this.retriedAuth) {
         this.retriedAuth = true;
         void this.deps.refreshSession().then((session) => {
-          if (session && current()) socket.connect();
+          if (!current()) return;
+          if (session) socket.connect();
+          else this.deps.onSessionLost?.();
         });
       }
     });
