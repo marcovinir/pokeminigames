@@ -85,7 +85,7 @@ export class GameRoom {
   }
 
   view(seat: Seat): RoomStateView {
-    return buildRoomState(this.state, seat, this.code, this.ports.catalog);
+    return buildRoomState(this.state, seat, this.code, this.ports.catalog, this.ports.clock.now());
   }
 
   /** Se llama una sola vez, cuando la partida termina por cualquier motivo. */

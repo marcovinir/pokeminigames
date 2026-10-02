@@ -19,6 +19,8 @@ export interface RoomPlayerView {
 
 /** Estado completo de la partida desde el punto de vista de un jugador. */
 export interface RoomStateView {
+  /** Hora del servidor (ms) al generar este estado; sirve para calcular el desfase del reloj. */
+  serverNow: number;
   code: string;
   phase: GamePhase;
   config: RoomConfig;
@@ -54,6 +56,8 @@ export interface RoundPlayerResult {
 
 export interface RoundResultPayload {
   round: number;
+  /** Cuándo empieza la siguiente ronda (hora del servidor, ms); nulo si la partida terminó. */
+  nextRoundAt: number | null;
   type1: TypeName;
   type2: TypeName;
   results: Record<Seat, RoundPlayerResult>;
@@ -67,6 +71,7 @@ export interface GameEndedPayload {
 }
 
 export interface RoundStartedPayload {
+  serverNow: number;
   round: number;
   type1: TypeName;
   type2: TypeName;
@@ -85,14 +90,14 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   "room-state": (payload: RoomStateView) => void;
   "player-joined": (payload: { username: string }) => void;
-  "game-starting": (payload: { startsAt: number }) => void;
-  "choose-types": (payload: { round: number; deadline: number }) => void;
+  "game-starting": (payload: { startsAt: number; serverNow: number }) => void;
+  "choose-types": (payload: { round: number; deadline: number; serverNow: number }) => void;
   "type-received": (payload: { round: number }) => void;
   "round-started": (payload: RoundStartedPayload) => void;
   "answer-received": (payload: { round: number }) => void;
   "round-result": (payload: RoundResultPayload) => void;
   "game-ended": (payload: GameEndedPayload) => void;
-  "opponent-disconnected": (payload: { graceEndsAt: number }) => void;
+  "opponent-disconnected": (payload: { graceEndsAt: number; serverNow: number }) => void;
   "opponent-reconnected": () => void;
   error: (payload: { code: ErrorCode; message: string }) => void;
 }

@@ -158,7 +158,7 @@ function tryStart(c: Ctx): void {
 
   s.phase = "starting";
   s.startsAt = c.now + seconds(START_COUNTDOWN_SECONDS);
-  emit(c, "all", { name: "game-starting", payload: { startsAt: s.startsAt } });
+  emit(c, "all", { name: "game-starting", payload: { startsAt: s.startsAt, serverNow: c.now } });
   schedule(c, s.startsAt, { kind: "start", startsAt: s.startsAt });
 }
 
@@ -187,7 +187,7 @@ function onDisconnected(c: Ctx, seat: Seat): void {
   if (inGame(s)) {
     const graceEndsAt = c.now + seconds(RECONNECT_GRACE_SECONDS);
     s.graceEndsAt[seat] = graceEndsAt;
-    emit(c, otherSeat(seat), { name: "opponent-disconnected", payload: { graceEndsAt } });
+    emit(c, otherSeat(seat), { name: "opponent-disconnected", payload: { graceEndsAt, serverNow: c.now } });
     schedule(c, graceEndsAt, { kind: "grace", seat, graceEndsAt });
   }
 }
@@ -258,7 +258,10 @@ function beginRound(c: Ctx, number: number): void {
   if (s.config.typeMode === "chosen") {
     s.phase = "choosing_types";
     s.round.deadline = c.now + seconds(TYPE_CHOICE_SECONDS);
-    emit(c, "all", { name: "choose-types", payload: { round: number, deadline: s.round.deadline } });
+    emit(c, "all", {
+      name: "choose-types",
+      payload: { round: number, deadline: s.round.deadline, serverNow: c.now },
+    });
     schedule(c, s.round.deadline, { kind: "choose", round: number });
   } else {
     startActive(c, pickOne(c.deps.rng, pairs), false);
@@ -319,6 +322,7 @@ function startActive(c: Ctx, pair: TypePair, replaced: boolean): void {
   emit(c, "all", {
     name: "round-started",
     payload: {
+      serverNow: c.now,
       round: round.number,
       type1: pair[0],
       type2: pair[1],
@@ -390,10 +394,20 @@ function closeRound(c: Ctx): void {
   }
 
   s.roundsPlayed = round.number;
-  emit(c, "all", { name: "round-result", payload: { round: round.number, type1: pair[0], type2: pair[1], results } });
+  const over = gameIsOver(s);
+  emit(c, "all", {
+    name: "round-result",
+    payload: {
+      round: round.number,
+      nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),
+      type1: pair[0],
+      type2: pair[1],
+      results,
+    },
+  });
   c.fx.push({ kind: "persist_round", record: { number: round.number, pair, picks: records } });
 
-  if (gameIsOver(s)) {
+  if (over) {
     finish(c, "completed");
   } else {
     s.phase = "round_result";

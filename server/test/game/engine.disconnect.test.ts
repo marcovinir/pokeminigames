@@ -17,7 +17,7 @@ describe("motor: desconexiones", () => {
 
     expect(h.state.players[2]?.connected).toBe(false);
     const graceEndsAt = T0 + 2000 + 30_000;
-    expect(h.payloads("opponent-disconnected", 1)).toEqual([{ graceEndsAt }]);
+    expect(h.payloads("opponent-disconnected", 1)).toEqual([{ graceEndsAt, serverNow: T0 + 2000 }]);
     expect(h.pending).toContainEqual({ at: graceEndsAt, timer: { kind: "grace", seat: 2, graceEndsAt } });
   });
 

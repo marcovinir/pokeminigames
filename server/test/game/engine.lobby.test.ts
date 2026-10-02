@@ -48,7 +48,7 @@ describe("motor: sala y conexiones", () => {
       const h = new Harness();
       h.seatBoth();
       expect(h.state.phase).toBe("starting");
-      expect(h.last("game-starting")).toEqual({ startsAt: START_TIME + 5000 });
+      expect(h.last("game-starting")).toEqual({ startsAt: START_TIME + 5000, serverNow: START_TIME });
       expect(h.pending).toContainEqual({ at: START_TIME + 5000, timer: { kind: "start", startsAt: START_TIME + 5000 } });
     });
 

@@ -13,7 +13,7 @@ describe("motor: elección de tipos (modo elegido)", () => {
   it("abre la elección de tipos con un plazo de 15 segundos, sin anunciar todavía el par", () => {
     const h = chosenGame();
     expect(h.state.phase).toBe("choosing_types");
-    expect(h.last("choose-types")).toEqual({ round: 1, deadline: T0 + 15_000 });
+    expect(h.last("choose-types")).toEqual({ round: 1, deadline: T0 + 15_000, serverNow: T0 });
     expect(h.payloads("round-started")).toHaveLength(0);
     expect(h.pending).toContainEqual({ at: T0 + 15_000, timer: { kind: "choose", round: 1 } });
   });
@@ -27,7 +27,13 @@ describe("motor: elección de tipos (modo elegido)", () => {
     h.choose(2, "flying");
 
     expect(h.state.phase).toBe("round_active");
-    expect(h.last("round-started")).toEqual({ round: 1, type1: "flying", type2: "fire", deadline: T0 + 3000 + 15_000 });
+    expect(h.last("round-started")).toEqual({
+      serverNow: T0 + 3000,
+      round: 1,
+      type1: "flying",
+      type2: "fire",
+      deadline: T0 + 3000 + 15_000,
+    });
   });
 
   it("el tipo elegido es secreto: el rival no recibe confirmación de tu elección", () => {

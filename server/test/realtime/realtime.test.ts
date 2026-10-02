@@ -123,7 +123,7 @@ describe("una ronda por sockets", () => {
     server.time.advance(5000);
 
     const started = await one.next<RoundStartedPayload>("round-started");
-    expect(started).toMatchObject({ round: 1, type1: "flying", type2: "fire" });
+    expect(started).toMatchObject({ round: 1, type1: "flying", type2: "fire", serverNow: expect.any(Number) });
     await two.next("round-started");
 
     one.emit("submit-pokemon", { text: "Alfa" });

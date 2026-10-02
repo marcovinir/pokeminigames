@@ -31,7 +31,13 @@ export function teamViews(state: GameState, seat: Seat, catalog: PokemonCatalog)
  * Estado de la partida para un jugador. Del rival solo revela los totales: los nombres
  * de sus Pokémon se conocen únicamente en `round-result` y `game-ended`.
  */
-export function buildRoomState(state: GameState, seat: Seat, code: string, catalog: PokemonCatalog): RoomStateView {
+export function buildRoomState(
+  state: GameState,
+  seat: Seat,
+  code: string,
+  catalog: PokemonCatalog,
+  now: number,
+): RoomStateView {
   const players: RoomPlayerView[] = SEATS.flatMap((s) => {
     const player = state.players[s];
     return player
@@ -60,6 +66,7 @@ export function buildRoomState(state: GameState, seat: Seat, code: string, catal
       : null;
 
   return {
+    serverNow: now,
     code,
     phase: state.phase,
     config: { ...state.config },

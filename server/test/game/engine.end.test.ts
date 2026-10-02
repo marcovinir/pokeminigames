@@ -44,6 +44,17 @@ describe("motor: fin de la partida", () => {
     expect(h.effectsOfKind("persist_round")).toHaveLength(3);
   });
 
+  it("el resultado de la última ronda no anuncia una siguiente (nextRoundAt nulo)", () => {
+    const h = new Harness({ config: RANDOM_3, rng: [0, 1, 0] });
+    h.startGame();
+    playRound(h, "Alfa", "Beto");
+    expect(h.last("round-result")!.nextRoundAt).not.toBeNull();
+    playRound(h, "Delta", "Épsilon");
+    h.submit(1, "Eta");
+    h.submit(2, "Zeta");
+    expect(h.last("round-result")!.nextRoundAt).toBeNull();
+  });
+
   it("al terminar no programa más rondas y el resultado de la última sale antes del fin", () => {
     const h = new Harness({ config: RANDOM_3, rng: [0, 1, 0] });
     h.startGame();

@@ -16,7 +16,13 @@ function round1(rng: number[] = [0]): Harness {
 describe("motor: rondas (modo aleatorio)", () => {
   it("anuncia la ronda con el par ordenado y un plazo de 15 segundos", () => {
     const h = round1();
-    expect(h.last("round-started")).toEqual({ round: 1, type1: "flying", type2: "fire", deadline: T0 + 15_000 });
+    expect(h.last("round-started")).toEqual({
+      serverNow: T0,
+      round: 1,
+      type1: "flying",
+      type2: "fire",
+      deadline: T0 + 15_000,
+    });
     expect(h.pending).toContainEqual({ at: T0 + 15_000, timer: { kind: "round", round: 1 } });
   });
 
@@ -45,6 +51,16 @@ describe("motor: rondas (modo aleatorio)", () => {
     expect(h.state.players[1]?.team).toEqual([1]);
     expect(h.state.players[2]?.team).toEqual([2]);
     expect([...h.state.owners]).toEqual([[1, 1], [2, 2]]);
+  });
+
+  it("el resultado indica cuándo empieza la siguiente ronda (6 s después de cerrar)", () => {
+    const h = round1();
+    h.advance(2000);
+    h.submit(1, "Alfa");
+    h.submit(2, "Beto");
+    expect(h.last("round-result")!.nextRoundAt).toBe(T0 + 2000 + 6000);
+    h.advance(6000);
+    expect(h.last("round-started")).toMatchObject({ round: 2, serverNow: T0 + 2000 + 6000 });
   });
 
   it("guarda la ronda con las respuestas de ambos y su timestamp de servidor", () => {
