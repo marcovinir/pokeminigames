@@ -190,6 +190,24 @@ describe("RoomManager.joinRoom", () => {
   });
 });
 
+describe("RoomManager.currentFor", () => {
+  it("devuelve la sala activa del usuario o null si no tiene ninguna", async () => {
+    const { manager, time } = setup(() => "ABC234");
+    expect(manager.currentFor(ash.userId)).toBeNull();
+
+    await manager.createRoom(ash, config);
+    expect(manager.currentFor(ash.userId)).toEqual({ code: "ABC234", phase: "waiting" });
+    expect(manager.currentFor(misty.userId)).toBeNull();
+
+    manager.joinRoom(misty, "ABC234");
+    expect(manager.currentFor(misty.userId)).toEqual({ code: "ABC234", phase: "waiting" });
+
+    time.advance(10 * 60 * 1000); // la sala caduca y termina
+    expect(manager.currentFor(ash.userId)).toBeNull();
+    expect(manager.currentFor(misty.userId)).toBeNull();
+  });
+});
+
 describe("RoomManager.getPublicInfo y connect", () => {
   it("getPublicInfo describe la sala sin datos privados", async () => {
     const { manager } = setup(() => "ABC234");

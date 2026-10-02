@@ -59,6 +59,13 @@ export class PokemonCatalog {
     return this.byId.get(id);
   }
 
+  /** Nombres en español e inglés de todos los Pokémon, por id. No incluye tipos ni stats. */
+  names(): { id: number; es: string; en: string }[] {
+    return [...this.byId.values()]
+      .sort((a, b) => a.id - b.id)
+      .map((p) => ({ id: p.id, es: p.names.es, en: p.names.en }));
+  }
+
   /** Busca por nombre en español o en inglés, sin distinguir tildes, mayúsculas ni signos. */
   resolveName(text: string): CatalogPokemon | undefined {
     const key = normalizeName(text);

@@ -26,6 +26,14 @@ describe("PokemonCatalog", () => {
     });
   });
 
+  it("names devuelve id y nombres de todos los Pokémon, ordenados por id y sin otros datos", () => {
+    const names = catalog.names();
+    expect(names).toHaveLength(10);
+    expect(names[0]).toEqual({ id: 1, es: "Alfa", en: "Alpha" });
+    expect(names.map((n) => n.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(Object.keys(names[0]!).sort()).toEqual(["en", "es", "id"]);
+  });
+
   it("get devuelve el Pokémon por id", () => {
     expect(catalog.get(6)?.names.en).toBe("Zeta");
     expect(catalog.get(999)).toBeUndefined();

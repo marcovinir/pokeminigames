@@ -5,6 +5,8 @@ import { createAuthRouter } from "./auth/auth.routes.js";
 import { AuthService } from "./auth/auth.service.js";
 import { createPasswordHasher } from "./auth/password.js";
 import type { TokenService } from "./auth/tokens.js";
+import { createCatalogRouter } from "./catalog/catalog.routes.js";
+import type { PokemonCatalog } from "./catalog/pokemon-catalog.js";
 import type { Env } from "./config/env.js";
 import type { PrismaClient } from "./db/prisma.js";
 import type { RoomManager } from "./game/room-manager.js";
@@ -17,9 +19,10 @@ export interface AppDeps {
   /** El mismo servicio de tokens que usa Socket.io para autenticar el handshake. */
   tokens: TokenService;
   roomManager: RoomManager;
+  catalog: PokemonCatalog;
 }
 
-export function createApp({ env, prisma, tokens, roomManager }: AppDeps): Express {
+export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps): Express {
   const authService = new AuthService({
     prisma,
     hasher: createPasswordHasher(env.BCRYPT_COST),
@@ -38,6 +41,7 @@ export function createApp({ env, prisma, tokens, roomManager }: AppDeps): Expres
   });
   app.use("/auth", createAuthRouter({ env, authService, tokens }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
+  app.use("/pokemon", createCatalogRouter({ catalog }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

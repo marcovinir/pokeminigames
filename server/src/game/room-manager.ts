@@ -1,4 +1,4 @@
-import type { PublicRoomInfo, RoomConfig, Seat } from "@pokemon-minigames/shared";
+import type { GamePhase, PublicRoomInfo, RoomConfig, Seat } from "@pokemon-minigames/shared";
 import { Prisma } from "../generated/prisma/client.js";
 import { AppError } from "../http/errors.js";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "./constants.js";
@@ -80,6 +80,12 @@ export class RoomManager {
 
     room.dispatch({ type: "PLAYER_JOINED", userId: user.userId, username: user.username });
     return { code: room.code };
+  }
+
+  /** La sala activa del usuario, si participa en alguna. */
+  currentFor(userId: string): { code: string; phase: GamePhase } | null {
+    const room = this.deps.store.findByUser(userId);
+    return room ? { code: room.code, phase: room.phase } : null;
   }
 
   getPublicInfo(code: string): PublicRoomInfo {

@@ -43,7 +43,7 @@ const roomManager = new RoomManager({
   logger: console,
 });
 
-const app = createApp({ env, prisma, tokens, roomManager });
+const app = createApp({ env, prisma, tokens, roomManager, catalog });
 const server = createServer(app);
 const io = attachRealtime(server, { env, tokens, manager: roomManager, broadcaster, logger: console });
 

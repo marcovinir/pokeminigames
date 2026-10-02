@@ -21,6 +21,11 @@ export function createRoomsRouter({ manager, tokens }: RoomsRouterDeps): Router 
     res.status(201).json({ code });
   });
 
+  // Antes de "/:code": si no, "current" se tomaría por un código de sala.
+  router.get("/current", (_req, res) => {
+    res.json({ room: manager.currentFor(getAuth(res).userId) });
+  });
+
   router.get("/:code", (req, res) => {
     res.json(manager.getPublicInfo(req.params.code));
   });

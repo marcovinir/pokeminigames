@@ -31,19 +31,20 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
   const time = new FakeTime();
   const broadcaster = new SocketBroadcaster();
   const store = new InMemoryRoomStore();
+  const catalog = options.catalog ?? fixtureCatalog();
   const roomManager = new RoomManager({
     clock: time,
     scheduler: time,
     broadcaster,
     repository: createPrismaGameRepository(prisma),
-    catalog: options.catalog ?? fixtureCatalog(),
+    catalog,
     rng: options.rng ?? cryptoRng,
     generateCode: options.generateCode,
     store,
     persistRetryDelayMs: 0,
   });
-  const app = createApp({ env, prisma, tokens, roomManager });
-  return { app, env, tokens, time, broadcaster, store, roomManager };
+  const app = createApp({ env, prisma, tokens, roomManager, catalog });
+  return { app, env, tokens, time, broadcaster, store, roomManager, catalog };
 }
 
 export function buildTestApp(overrides: Record<string, string> = {}): Express {

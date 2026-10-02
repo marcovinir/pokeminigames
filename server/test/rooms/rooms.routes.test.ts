@@ -27,6 +27,7 @@ const createRoom = (user: TestUser, body: unknown = validBody) =>
 describe("autenticación de las rutas de salas", () => {
   it.each([
     ["POST /rooms", () => request(ctx.app).post("/rooms").send(validBody)],
+    ["GET /rooms/current", () => request(ctx.app).get("/rooms/current")],
     ["GET /rooms/:code", () => request(ctx.app).get("/rooms/ABC234")],
     ["POST /rooms/:code/join", () => request(ctx.app).post("/rooms/ABC234/join")],
   ])("%s responde 401 sin token", async (_name, call) => {
@@ -96,6 +97,36 @@ describe("POST /rooms", () => {
     const response = await createRoom(ash);
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe("ALREADY_IN_GAME");
+  });
+});
+
+describe("GET /rooms/current", () => {
+  const current = (user: TestUser) => request(ctx.app).get("/rooms/current").set(auth(user));
+
+  it("devuelve room: null (con 200) si el usuario no tiene ninguna partida activa", async () => {
+    const response = await current(ash);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ room: null });
+  });
+
+  it("devuelve el código y la fase de la sala activa, para el creador y para quien se unió", async () => {
+    const { body } = await createRoom(ash);
+    expect((await current(ash)).body).toEqual({ room: { code: body.code, phase: "waiting" } });
+    expect((await current(misty)).body).toEqual({ room: null });
+
+    await request(ctx.app).post(`/rooms/${body.code}/join`).set(auth(misty));
+    expect((await current(misty)).body).toEqual({ room: { code: body.code, phase: "waiting" } });
+  });
+
+  it("deja de devolver la sala cuando la partida termina", async () => {
+    await createRoom(ash);
+    ctx.time.advance(10 * 60 * 1000); // caduca sin que nadie se una
+    expect((await current(ash)).body).toEqual({ room: null });
+  });
+
+  it("no se confunde con un código de sala llamado current", async () => {
+    const response = await current(ash);
+    expect(response.body).not.toHaveProperty("error");
   });
 });
 
