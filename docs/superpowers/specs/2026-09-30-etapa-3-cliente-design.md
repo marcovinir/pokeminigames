@@ -77,7 +77,7 @@ Un campo de texto con lista desplegable (patrón *combobox* accesible) que sugie
 
 ## 7. Cambios en el servidor
 
-1. **`serverNow`** (milisegundos desde la época, hora del servidor) en `RoomStateView`, `game-starting`, `choose-types`, `round-started` y `opponent-disconnected`. El motor ya conoce la hora de cada evento; `buildRoomState` la recibe como argumento. Los tipos de `shared/` se actualizan y las pruebas existentes que comparan estas cargas se ajustan.
+1. **`serverNow`** (milisegundos desde la época, hora del servidor) en `RoomStateView`, `game-starting`, `choose-types`, `round-started` y `opponent-disconnected`. El motor ya conoce la hora de cada evento; `buildRoomState` la recibe como argumento. Los tipos de `shared/` se actualizan y las pruebas existentes que comparan estas cargas se ajustan. Además, `round-result` trae `nextRoundAt` (hora del servidor a la que empieza la siguiente ronda; `null` si la partida terminó) para la cuenta atrás de la pausa entre rondas.
 2. **`GET /rooms/current`** (requiere sesión): `200 { "room": { "code", "phase" } }` con la sala activa del usuario, o `200 { "room": null }` si no tiene ninguna. Sirve para recuperar la partida tras recargar y para salir de una sala en espera que se quedó abierta.
 3. **`GET /pokemon/names`** (público): `200` con `[{ "id", "es", "en" }]` de los Pokémon del `PokemonCatalog`, con `Cache-Control: public, max-age=86400`. Es solo la lista de nombres, sin tipos.
 4. **`normalizeName`** pasa a `shared/` (es una función pura); el servidor la re-exporta desde donde estaba.
@@ -87,12 +87,14 @@ Un campo de texto con lista desplegable (patrón *combobox* accesible) que sugie
 ```
 client/
 ├── index.html  vite.config.ts  package.json  tsconfig.json
+├── scripts/    contrast-audit.js  dev-bot.mjs
 └── src/
-    ├── main.tsx  App.tsx  routes.tsx
-    ├── api/        http.ts (fetch con token y renovación única)  auth.ts  rooms.ts  catalog.ts
-    ├── session/    store de sesión y arranque
-    ├── game/       game-client.ts  apply-event.ts  store.ts  clock.ts
-    ├── theme/      tokens por tema y modo  ThemeProvider  selector
+    ├── main.tsx  App.tsx  routes.tsx  services.tsx  index.css
+    ├── api/        client.ts (fetch con token y renovación única)  endpoints.ts  types.ts
+    ├── session/    session-store.ts
+    ├── catalog/    names-store.ts (lista de nombres para el autocompletado)
+    ├── game/       game-client.ts  apply-event.ts  store.ts  clock.ts  durations.ts
+    ├── theme/      tokens.css (tokens por tema y modo)  theme-store.ts  contrast.ts  type-styles.ts
     ├── i18n/       mensajes de error y nombres de tipo en español
     ├── components/ piezas de interfaz reutilizables (Button, TypeChip, Timer, PokemonCard, Autocomplete…)
     └── pages/      Login, Register, Lobby, Room/ (Waiting, Countdown, TypePicker, Round, RoundResult, Summary)
@@ -105,7 +107,7 @@ client/
 - **Cliente HTTP:** renovación única ante 401 con peticiones simultáneas, reintento y cierre de sesión si la renovación falla.
 - **Componentes (Testing Library, socket falso):** formularios con validación y errores del servidor, lobby (crear y unirse), cada vista de la partida según el estado, autocompletado (teclado y lectura de pantalla), cronómetro con reloj simulado, guardas de ruta y cambio de tema y modo.
 - **Servidor:** pruebas de los tres añadidos (`serverNow`, `/rooms/current`, `/pokemon/names`) y del `normalizeName` compartido.
-- **Verificación visual:** se recorre a mano una partida completa entre dos navegadores con el servidor real, en los dos temas y en móvil.
+- **Verificación visual:** se recorre una partida completa contra el servidor real (dos navegadores, o uno solo contra el bot `client/scripts/dev-bot.mjs`), en los dos temas y en móvil; y se ejecuta `client/scripts/contrast-audit.js` (`__contrastAuditAll()`) en las pantallas principales para medir el contraste del texto que realmente se ve, no solo el de los tokens.
 - Se sigue TDD y se repite la técnica de romper a propósito las protecciones críticas (renovación única, desfase de reloj, reemplazo de estado) para comprobar que las pruebas las detectan.
 
 ## 10. Fuera de alcance
