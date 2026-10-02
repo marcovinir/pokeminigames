@@ -30,9 +30,9 @@ Condiciones que la spec no detalla pero que muerden a una persona real; cada una
 
 1. **Reloj y desfase.** Un navegador adelantado o atrasado debe ver el mismo plazo que el servidor; los cronómetros nunca bajan de 0 ni se quedan colgados al cambiar de plazo o al desmontarse; la pausa entre rondas usa `nextRoundAt`, y tras la última ronda no se anuncia una siguiente. → Task 2 (servidor), Task 7 (`clock.test.ts`, `apply-event.test.ts`), Task 9 (`Timer`) y Task 11.
 2. **Sesión.** Varias peticiones que reciben 401 a la vez comparten una sola renovación; si la renovación falla se cierra la sesión sin bucles; el arranque consulta al servidor una sola vez (React en modo estricto); al recargar se recupera la sesión; un logout fallido igual cierra la sesión local; las guardas de ruta no muestran el formulario mientras se recupera la sesión. → Task 6 (`client.test.ts`), Task 8 (`session-store.test.ts`) y Task 12 (`routes.test.tsx`).
-3. **Reconexión y reemplazo de estado.** `room-state` reemplaza todo lo que había (es la vía de recuperación); un `round-result` repetido tras reconectar no duplica el Pokémon; el socket usa el token vigente en cada reconexión y reintenta una sola vez si el servidor rechaza el token; un socket descartado no vuelve a tocar el estado. → Task 7 (`apply-event.test.ts`, `game-client.test.ts`) y Task 11 (`room.test.tsx`).
+3. **Reconexión y reemplazo de estado.** `room-state` reemplaza todo lo que había (es la vía de recuperación); un `round-result` repetido tras reconectar no duplica el Pokémon; el socket usa el token vigente en cada reconexión y reintenta una sola vez si el servidor rechaza el token; un socket descartado no vuelve a tocar el estado; si el servidor cierra la conexión (la partida se abrió en otra pestaña) no se queda en "Reconectando…" para siempre, y una caída con la partida ya terminada no borra el resumen. → Task 7 (`apply-event.test.ts`, `game-client.test.ts`) y Task 11 (`room.test.tsx`).
 4. **Fuga de información.** El panel del rival nunca muestra nombres de Pokémon; la lista de nombres del autocompletado no trae tipos ni stats ni se filtra por tipo; el campo no corrige ni envía nada por su cuenta (un solo intento por ronda). → Task 3 (`GET /pokemon/names`), Task 9 (`basics.test.tsx`, `autocomplete.test.tsx`) y Task 11.
-5. **Accesibilidad y contraste real.** Los tokens cumplen AA por prueba; además se mide el texto que realmente se ve en el navegador (botón del encabezado, hover de los botones, los cuatro temas/modos); el combobox, los avisos y los resultados se anuncian a los lectores de pantalla; todo es operable con teclado. → Task 4 (`tokens.test.ts`), Task 9, Task 11 y Task 13 (auditoría en el navegador).
+5. **Accesibilidad y contraste real.** Los tokens cumplen AA por prueba; además se mide el texto que realmente se ve en el navegador (botón del encabezado, hover de los botones, la lista de sugerencias abierta, los cuatro temas/modos); el combobox, los avisos y los resultados se anuncian a los lectores de pantalla; todo es operable con teclado. → Task 4 (`tokens.test.ts`), Task 9, Task 11 y Task 13 (auditoría en el navegador).
 
 ---
 
@@ -68,7 +68,7 @@ La lógica del juego del cliente (`game/`) no importa React salvo `useCountdown`
 
 - Se parte de `main` con las etapas 1 y 2 completas (351 pruebas). Trabaja en una rama `etapa-3-cliente`.
 - `server/.env` y `server/.env.test` ya existen (rol `pokemon_app`). Las pruebas del servidor usan `pokemon_minigames_test` y **borran datos**; las del cliente no usan base de datos.
-- Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 366 pruebas de servidor y 281 de cliente en verde, `tsc` sin errores y `vite build` correcto. Además se recorrió una partida completa en un navegador real contra el servidor real.
+- Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 366 pruebas de servidor y 303 de cliente en verde, `tsc` sin errores y `vite build` correcto. Además se recorrió una partida completa en un navegador real contra el servidor real, y el código final incorpora lo que halló la revisión independiente de toda la rama (ver Self-Review).
 - Puertos: servidor del juego 3000, cliente (Vite) 5173. Si el 3000 está ocupado por un servidor viejo, detenlo antes de arrancar.
 - npm 12 bloquea los scripts de instalación de algunas dependencias y lo avisa: es normal, no hace falta aprobarlos.
 - En jsdom `new URL(..., import.meta.url)` no sirve con `readFileSync`; las pruebas que leen archivos usan `join(import.meta.dirname, ...)`.
@@ -1148,12 +1148,16 @@ export default defineConfig({
 });
 ```
 
-`client/test/setup.ts`:
+`client/test/setup.ts` (jest-dom, limpieza tras cada prueba y un timeout asíncrono de 4 s: con varias pruebas en paralelo el segundo que Testing Library espera por defecto no alcanza para escribir con `userEvent` y causaba fallos intermitentes):
 
 ```ts
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
+
+// Con varias pruebas en paralelo el equipo va justo de CPU y 1 s (el valor por defecto) no alcanza para escribir con
+// `userEvent` y esperar el resultado; 4 s no alarga las pruebas que pasan, solo evita falsos fallos.
+configure({ asyncUtilTimeout: 4000 });
 
 afterEach(() => cleanup());
 ```
@@ -2550,8 +2554,8 @@ git commit -m "feat(client): cliente HTTP con token en memoria y renovación ún
 - `clockOffset(serverNow, receivedAt)`, `remainingMs(deadline | null, offset, now)` (nunca baja de 0), `secondsLeft(ms)` (redondea hacia arriba), `useCountdown(deadline, offset, { now?, intervalMs? })` (actualiza unas 4 veces por segundo; se detiene en 0; recalcula al cambiar el plazo; limpia su temporizador al desmontarse).
 - `GameView` (fase, config, asiento, jugadores, equipo, ronda `RoundView`, `lastResult`, `opponentGraceEndsAt`, `ended`, `clockOffset`, `lastError`), `initialGameView`, `applyServerEvent(view, event, receivedAt)` (pura; `room-state` reemplaza el estado; `round-result` no duplica Pokémon).
 - `createGameStore()` → `GameStoreState { view, connection, receive, setConnection, clearError, reset }`.
-- `SocketLike`, `GameClientApi { join, chooseType, submit, leave, dispose }`, `GameClient({ createSocket, store, refreshSession, now? })`: envía `join-room` al conectar y reconectar, entrega cada evento al store, reintenta una sola vez si el handshake responde `UNAUTHORIZED`, e ignora los eventos de un socket ya descartado.
-- Ayudantes de prueba: `pokemon(id, total, overrides)`, `roomState(overrides)`, `roundResult(overrides)`, `gameEnded(overrides)`, `event` (fabrica `ServerEvent`), `SERVER_NOW`; `FakeSocket` (implementa `SocketLike`, con `trigger(event, ...args)` para simular lo que llega del servidor y el registro de lo emitido).
+- `SocketLike`, `GameClientApi { join, chooseType, submit, leave, dispose }`, `GameClient({ createSocket, store, refreshSession, onSessionLost?, now? })`: envía `join-room` al conectar y reconectar (salvo con la partida ya terminada: la sala ya no existe y se perdería el resumen), entrega cada evento al store, reintenta una sola vez si el handshake responde `UNAUTHORIZED` (y si la sesión no se puede renovar llama a `onSessionLost`), marca la conexión como `replaced` si el servidor la cierra (`io server disconnect`: la partida se abrió en otra pestaña y socket.io no reconecta solo), e ignora los eventos de un socket ya descartado. `ConnectionStatus` es `idle | connecting | connected | disconnected | replaced`; cualquier evento que avance la partida (`choose-types`, `round-started`, `round-result`, `game-ended`) borra el último error.
+- Ayudantes de prueba: `pokemon(id, total, overrides)`, `roomState(overrides)`, `roundResult(overrides)`, `gameEnded(overrides)`, `event` (fabrica `ServerEvent`), `SERVER_NOW`; `FakeSocket` (implementa `SocketLike`, con `trigger(event, ...args)` para simular lo que llega del servidor, `serverConnects()`, `serverDrops(reason?)` y el registro de lo emitido).
 
 - [ ] **Step 1: Escribir las pruebas que fallan**
 
@@ -2726,9 +2730,10 @@ export class FakeSocket implements SocketLike {
     this.trigger("connect");
   }
 
-  serverDrops(): void {
+  /** Simula que se cae la conexión; `reason` es el de socket.io ("io server disconnect" si lo cierra el servidor). */
+  serverDrops(reason = "transport close"): void {
     this.connected = false;
-    this.trigger("disconnect");
+    this.trigger("disconnect", reason);
   }
 }
 ```
@@ -3022,6 +3027,28 @@ describe("fin de la partida y desconexiones", () => {
   });
 });
 
+describe("errores recuperables", () => {
+  it("un error del servidor se borra en cuanto la partida avanza, para no dejar un aviso viejo a la vista", () => {
+    const withError = applyServerEvent(initialGameView, event.error("WRONG_PHASE", "x"), SERVER_NOW);
+    expect(withError.lastError).not.toBeNull();
+    const next = {
+      "choose-types": event.chooseTypes(1, SERVER_NOW + 15_000),
+      "round-started": event.roundStarted(1, SERVER_NOW + 15_000),
+      "round-result": event.roundResult(),
+      "game-ended": event.gameEnded(),
+    };
+    for (const [name, e] of Object.entries(next)) {
+      expect(applyServerEvent(withError, e, SERVER_NOW).lastError, name).toBeNull();
+    }
+  });
+
+  it("los eventos que no marcan un avance (confirmaciones, avisos del rival) no lo borran", () => {
+    const withError = applyServerEvent(initialGameView, event.error("RATE_LIMITED", "x"), SERVER_NOW);
+    expect(applyServerEvent(withError, event.answerReceived(1), SERVER_NOW).lastError).not.toBeNull();
+    expect(applyServerEvent(withError, event.opponentReconnected(), SERVER_NOW).lastError).not.toBeNull();
+  });
+});
+
 describe("pureza", () => {
   it("no modifica el estado que recibe", () => {
     const before = play([[event.roomState({ mySeat: 1, myTeam: [pokemon(9)] })], [event.roundStarted(1, SERVER_NOW + 15_000)]]);
@@ -3109,6 +3136,7 @@ import { SERVER_NOW, event } from "../helpers/events";
 import { FakeSocket } from "../helpers/fake-socket";
 
 function setup(options: { refreshSession?: () => Promise<unknown> } = {}) {
+  const onSessionLost = vi.fn();
   const sockets: FakeSocket[] = [];
   const store = createGameStore();
   const refreshSession = vi.fn(options.refreshSession ?? (async () => ({ accessToken: "nuevo" })));
@@ -3120,9 +3148,10 @@ function setup(options: { refreshSession?: () => Promise<unknown> } = {}) {
     },
     store,
     refreshSession,
+    onSessionLost,
     now: () => SERVER_NOW + 1000,
   });
-  return { client, store, sockets, refreshSession, socket: () => sockets[0]! };
+  return { client, store, sockets, refreshSession, onSessionLost, socket: () => sockets[0]! };
 }
 
 describe("GameClient.join", () => {
@@ -3238,6 +3267,50 @@ describe("acciones del jugador", () => {
   });
 });
 
+describe("conexión cerrada por el servidor y partida terminada", () => {
+  it("si el servidor cierra la conexión (la partida se abrió en otra pestaña) lo marca como reemplazada", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().serverDrops("io server disconnect");
+    expect(store.getState().connection).toBe("replaced");
+  });
+
+  it("una caída normal sigue siendo una desconexión que se reintenta sola", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().serverDrops("transport close");
+    expect(store.getState().connection).toBe("disconnected");
+  });
+
+  it("jugar aquí otra vez vuelve a conectar y a entrar a la sala", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().serverDrops("io server disconnect");
+    client.join("ABC234");
+    expect(store.getState().connection).toBe("connecting");
+    expect(socket().connectCalls).toBe(2);
+    socket().serverConnects();
+    expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }, { code: "ABC234" }]);
+  });
+
+  it("una vez terminada la partida, una reconexión no vuelve a entrar a la sala (así no se pierde el resumen)", () => {
+    const { client, store, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    socket().trigger("room-state", event.roomState({ phase: "round_result" }).payload);
+    socket().trigger("game-ended", event.gameEnded().payload);
+    expect(store.getState().view.phase).toBe("finished");
+
+    socket().serverDrops();
+    socket().serverConnects();
+    expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }]);
+    expect(store.getState().view.phase).toBe("finished");
+  });
+});
+
 describe("token del socket caducado", () => {
   const unauthorized = () => Object.assign(new Error("UNAUTHORIZED"));
 
@@ -3274,6 +3347,21 @@ describe("token del socket caducado", () => {
     await vi.waitFor(() => expect(refreshSession).toHaveBeenCalled());
     await Promise.resolve();
     expect(socket().connectCalls).toBe(1);
+  });
+
+  it("si no se puede renovar la sesión, avisa de que se perdió para volver a /login", async () => {
+    const { client, socket, onSessionLost } = setup({ refreshSession: async () => null });
+    client.join("ABC234");
+    socket().trigger("connect_error", unauthorized());
+    await vi.waitFor(() => expect(onSessionLost).toHaveBeenCalledTimes(1));
+  });
+
+  it("si la renovación sí funciona, no avisa de ninguna pérdida", async () => {
+    const { client, socket, onSessionLost } = setup();
+    client.join("ABC234");
+    socket().trigger("connect_error", unauthorized());
+    await vi.waitFor(() => expect(socket().connectCalls).toBe(2));
+    expect(onSessionLost).not.toHaveBeenCalled();
   });
 
   it("otros errores de conexión solo marcan la conexión como caída", () => {
@@ -3482,6 +3570,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         startsAt: null,
         round: { number: event.payload.round, pair: null, deadline: event.payload.deadline, answered: false, typeChosen: false },
         clockOffset: clockOffset(event.payload.serverNow, receivedAt),
+        lastError: null,
       };
 
     case "type-received":
@@ -3503,6 +3592,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         },
         lastResult: null,
         clockOffset: clockOffset(serverNow, receivedAt),
+        lastError: null,
       };
     }
 
@@ -3517,6 +3607,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         phase: "round_result",
         roundsPlayed: result.round,
         lastResult: result,
+        lastError: null,
         players: view.players.map((p) => ({
           ...p,
           totalStats: result.results[p.seat].totalStats,
@@ -3527,7 +3618,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     }
 
     case "game-ended":
-      return { ...view, phase: "finished", ended: event.payload, opponentGraceEndsAt: null };
+      return { ...view, phase: "finished", ended: event.payload, opponentGraceEndsAt: null, lastError: null };
 
     case "opponent-disconnected":
       return {
@@ -3553,7 +3644,8 @@ import type { ServerEvent } from "@pokemon-minigames/shared";
 import { type StoreApi, createStore } from "zustand";
 import { type GameView, applyServerEvent, initialGameView } from "./apply-event";
 
-export type ConnectionStatus = "idle" | "connecting" | "connected" | "disconnected";
+/** `replaced`: el servidor cerró esta conexión porque la partida se abrió en otra pestaña (no se reconecta sola). */
+export type ConnectionStatus = "idle" | "connecting" | "connected" | "disconnected" | "replaced";
 
 export interface GameStoreState {
   view: GameView;
@@ -3611,6 +3703,8 @@ export interface GameClientDeps {
   store: StoreApi<GameStoreState>;
   /** Renueva la sesión; se usa si el servidor rechaza el token del socket por caducado. */
   refreshSession(): Promise<unknown>;
+  /** Se llama si la sesión no se pudo renovar: hay que volver a iniciar sesión. */
+  onSessionLost?(): void;
   /** Hora actual del navegador; se reemplaza en las pruebas. */
   now?: () => number;
 }
@@ -3687,10 +3781,13 @@ export class GameClient implements GameClientApi {
       this.retriedAuth = false;
       store.getState().setConnection("connected");
       // También al reconectar: el servidor responde con `room-state` y el estado se reemplaza.
-      if (this.code) socket.emit("join-room", { code: this.code });
+      // Con la partida ya terminada no se vuelve a entrar: la sala ya no existe y se perdería el resumen.
+      if (this.code && store.getState().view.phase !== "finished") socket.emit("join-room", { code: this.code });
     });
-    socket.on("disconnect", () => {
-      if (current()) store.getState().setConnection("disconnected");
+    socket.on("disconnect", (reason: string) => {
+      if (!current()) return;
+      // Si lo cierra el servidor (otra pestaña tomó la partida) socket.io no reconecta por su cuenta.
+      store.getState().setConnection(reason === "io server disconnect" ? "replaced" : "disconnected");
     });
     socket.on("connect_error", (error: Error) => {
       if (!current()) return;
@@ -3699,7 +3796,9 @@ export class GameClient implements GameClientApi {
       if (error.message === "UNAUTHORIZED" && !this.retriedAuth) {
         this.retriedAuth = true;
         void this.deps.refreshSession().then((session) => {
-          if (session && current()) socket.connect();
+          if (!current()) return;
+          if (session) socket.connect();
+          else this.deps.onSessionLost?.();
         });
       }
     });
@@ -3720,7 +3819,7 @@ npm test -w client -- test/game
 npm run typecheck -w client
 ```
 
-Expected: PASS (50 pruebas: 10 de `clock`, 21 de `apply-event`, 6 de `store` y 13 de `game-client`) y `tsc` sin errores.
+Expected: PASS (58 pruebas: 10 de `clock`, 23 de `apply-event`, 6 de `store` y 19 de `game-client`) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -4056,6 +4155,7 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
   const client = new GameClient({
     store: gameStore,
     refreshSession: () => endpoints.auth.refresh(),
+    onSessionLost: () => sessionHolder.store?.getState().expire(),
     // `auth` como función: cada (re)conexión usa el access token vigente.
     createSocket: () =>
       io(baseUrl || undefined, { autoConnect: false, auth: (cb) => cb({ token: api.getToken() }) }) as unknown as SocketLike,
@@ -4216,7 +4316,7 @@ git commit -m "feat(client): almacén de sesión, lista de nombres y servicios p
 - `Button({ variant: "primary" | "secondary" | "ghost" | "header", loading? })` (por defecto `type="button"`; cargando = deshabilitado + `aria-busy`; ninguna variante baja la opacidad al pasar el ratón; el primario subraya; la variante `header` usa `text-header-fg`).
 - `TextField({ label, error?, hint? })` (etiqueta asociada; el error es `role="alert"`, marca `aria-invalid` y queda vinculado con `aria-describedby`).
 - `TypeChip({ type })`, `PokemonCard({ pokemon, showStats? })`, `TeamPanel({ team, total })`, `OpponentPanel({ name, total, teamSize, connected })` (**nunca** muestra nombres de Pokémon del rival), `Notice({ tone, urgent? })`, `Timer({ deadline, offset, totalMs, label, now? })` (`role="timer"`), `ThemeSwitcher`, `Header` (título al lobby, usuario y botón de cerrar sesión solo con sesión).
-- `buildIndex(names)`, `suggest(index, query, limit?)` (por el comienzo del nombre en español o inglés, sin tildes ni mayúsculas) y `Autocomplete({ names, onSubmit, submitted?, disabled? })`: combobox accesible; Enter envía lo escrito o la sugerencia resaltada (siempre con el nombre en español); hacer clic en una sugerencia rellena el campo pero **no** envía; máximo 100 caracteres; vacío no envía; tras enviar queda bloqueado.
+- `buildIndex(names)`, `suggest(index, query, limit?)` (por el comienzo del nombre en español o inglés, sin tildes ni mayúsculas) y `Autocomplete({ names, onSubmit, submitted?, disabled? })`: combobox accesible; Enter envía lo escrito o la sugerencia resaltada (siempre con el nombre en español); hacer clic en una sugerencia rellena el campo pero **no** envía; máximo 100 caracteres; vacío no envía; tras enviar queda bloqueado **en el acto** (sin esperar la confirmación del servidor: un doble Enter no envía dos veces); con `autoFocus` toma el foco al montarse (en la ronda hay solo 15 s); las sugerencias no usan opacidad (el texto secundario es `text-muted`).
 
 - [ ] **Step 1: Escribir las pruebas que fallan**
 
@@ -4549,6 +4649,34 @@ describe("Autocomplete", () => {
     const { input, onSubmit } = setup({ disabled: true });
     expect(input).toBeDisabled();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("tras enviar queda bloqueado en el acto, sin esperar la confirmación: un doble Enter no envía dos veces", async () => {
+    const { user, input, onSubmit } = setup();
+    await user.type(input, "Beto{Enter}");
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Enviar" })).toBeDisabled();
+    await user.keyboard("{Enter}{Enter}");
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith("Beto");
+  });
+
+  it("las sugerencias no usan opacidad (el texto bajaría de 4,5:1 sin que la auditoría lo viera)", async () => {
+    const { user, input } = setup();
+    await user.type(input, "alf");
+    const list = screen.getByRole("listbox");
+    expect(list.innerHTML).not.toMatch(/opacity/);
+    await user.keyboard("{ArrowDown}");
+    expect(list.innerHTML).not.toMatch(/opacity/);
+  });
+
+  it("con autoFocus el campo recibe el foco al montarse; por defecto no", () => {
+    const first = setup({ autoFocus: true });
+    expect(first.input).toHaveFocus();
+  });
+
+  it("sin autoFocus el campo no roba el foco", () => {
+    const { input } = setup();
+    expect(input).not.toHaveFocus();
   });
 
   it("funciona aunque todavía no haya llegado la lista de nombres: solo no sugiere", async () => {
@@ -5016,7 +5144,7 @@ export function Header() {
 
 ```tsx
 import { normalizeName } from "@pokemon-minigames/shared";
-import { type KeyboardEvent, useId, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { PokemonName } from "../api/types";
 import { Button } from "./Button";
 
@@ -5053,14 +5181,18 @@ export interface AutocompleteProps {
   /** Ya se envió la respuesta de esta ronda: el campo queda bloqueado. */
   submitted?: boolean;
   disabled?: boolean;
+  /** Lleva el foco al campo al montarse (en la ronda hay solo 15 s para escribir). */
+  autoFocus?: boolean;
 }
 
 /**
  * Campo de respuesta con lista de sugerencias (patrón combobox accesible). Enter envía lo
  * escrito, o la sugerencia resaltada con las flechas. Solo sugiere: no corrige nada por su cuenta.
  */
-export function Autocomplete({ names, onSubmit, submitted = false, disabled = false }: AutocompleteProps) {
+export function Autocomplete({ names, onSubmit, submitted = false, disabled = false, autoFocus = false }: AutocompleteProps) {
   const [text, setText] = useState("");
+  // Se bloquea en el acto al enviar: la confirmación del servidor tarda y un doble Enter enviaría dos veces.
+  const [sent, setSent] = useState(false);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [error, setError] = useState<string | null>(null);
@@ -5071,7 +5203,11 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
   const index = useMemo(() => buildIndex(names), [names]);
   const suggestions = useMemo(() => suggest(index, text), [index, text]);
   const showList = open && suggestions.length > 0 && !submitted;
-  const locked = submitted || disabled;
+  const locked = submitted || disabled || sent;
+
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   function submit(value: string): void {
     const trimmed = value.trim();
@@ -5082,6 +5218,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
     setError(null);
     setOpen(false);
     setActive(-1);
+    setSent(true);
     onSubmit(trimmed);
   }
 
@@ -5170,7 +5307,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
               className={`cursor-pointer px-3 py-2 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
             >
               {name.es}
-              {name.en !== name.es ? <span className="ml-2 opacity-70">{name.en}</span> : null}
+              {name.en !== name.es ? <span className={i === active ? "ml-2" : "ml-2 text-muted"}>{name.en}</span> : null}
             </li>
           ))}
         </ul>
@@ -5184,7 +5321,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
           {error}
         </p>
       ) : null}
-      {submitted ? <p className="mt-2 text-sm text-muted">Respuesta enviada. Esperando el resultado…</p> : null}
+      {submitted || sent ? <p className="mt-2 text-sm text-muted">Respuesta enviada. Esperando el resultado…</p> : null}
     </form>
   );
 }
@@ -5197,7 +5334,7 @@ npm test -w client -- test/components
 npm run typecheck -w client
 ```
 
-Expected: PASS (47 pruebas: 19 de `basics`, 19 de `autocomplete` y 9 de `header-theme`) y `tsc` sin errores.
+Expected: PASS (51 pruebas: 19 de `basics`, 23 de `autocomplete` y 9 de `header-theme`) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -5837,7 +5974,7 @@ git commit -m "feat(client): lobby para crear sala, unirse con código y volver 
 
 **Interfaces:**
 - `useRoom()` → `{ view, client, me, opponent }`.
-- `RoomPage` (ruta `/sala/:code`): une al jugador a la sala (`client.join(code)`), libera el socket al salir (`dispose`), muestra la vista de la fase (`waiting` → sala de espera con el código y botón de copiar; `starting` → cuenta atrás hasta `startsAt`; `choosing_types` → 18 tipos; `round_active` → equipo propio, par de tipos, cronómetro, campo con autocompletado y panel del rival; `round_result` → resultado de cada jugador y cuenta atrás hasta `nextRoundAt` (o "Calculando el resultado final…" si es `null`); `finished` → resumen con ganador o empate, motivo, equipos completos y botones "Jugar de nuevo" y "Volver al lobby"), el aviso de rival desconectado con su cuenta atrás, los avisos de error (no bloqueantes), el estado de la conexión y, si la sala ya no existe (`ROOM_GONE_CODES`), un mensaje con la vuelta al lobby.
+- `RoomPage` (ruta `/sala/:code`): une al jugador a la sala (`client.join(code)`), libera el socket al salir (`dispose`), muestra la vista de la fase (`waiting` → sala de espera con el código y botón de copiar; `starting` → cuenta atrás hasta `startsAt`; `choosing_types` → 18 tipos; `round_active` → equipo propio, par de tipos, cronómetro, campo con autocompletado y panel del rival; `round_result` → resultado de cada jugador y cuenta atrás hasta `nextRoundAt` (o "Calculando el resultado final…" si es `null`); `finished` → resumen con ganador o empate, motivo, equipos completos y botones "Jugar de nuevo" y "Volver al lobby"), el aviso de rival desconectado con su cuenta atrás, los avisos de error (no bloqueantes), el estado de la conexión y, si la sala ya no existe (`ROOM_GONE_CODES`), un mensaje con la vuelta al lobby. Además: un `role="log"` persistente ("Anuncios de la partida") anuncia a los lectores de pantalla el inicio de la cuenta atrás, cada par de tipos y el resultado final; si el servidor cierra la conexión porque la partida se abrió en otra pestaña (`connection === "replaced"`) avisa y ofrece "Jugar aquí"; con la partida ya terminada, un error de sala inexistente no sustituye al resumen; la cuenta atrás del aviso de rival caído va con `aria-hidden` para que no se repita cada segundo. En el selector de tipo, tras tocar uno los demás se bloquean hasta la confirmación (si el servidor rechaza la elección, se puede elegir otro).
 - Las vistas no tienen lógica de juego: leen `view` y llaman a `client.chooseType`, `client.submit` y `client.leave`.
 
 - [ ] **Step 1: Escribir la prueba que falla**
@@ -5984,6 +6121,25 @@ describe("elección de tipo (modo elegido)", () => {
     }
   });
 
+  it("tocar otro tipo antes de la confirmación no envía una segunda elección (el servidor se quedaría con la primera)", async () => {
+    const { services, user } = renderRoom([choosing()]);
+    await user.click(screen.getByRole("button", { name: "fuego" }));
+    await user.click(screen.getByRole("button", { name: "agua" }));
+    expect(services.client.chooseType).toHaveBeenCalledExactlyOnceWith("fire");
+    expect(screen.getByRole("button", { name: "agua" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "fuego" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("si el servidor rechaza la elección, se puede elegir otro tipo", async () => {
+    const { services, user } = renderRoom([choosing()]);
+    await user.click(screen.getByRole("button", { name: "fuego" }));
+    serverSends(services, event.error("RATE_LIMITED"));
+    expect(screen.getByRole("button", { name: "agua" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "agua" }));
+    expect(services.client.chooseType).toHaveBeenLastCalledWith("water");
+    expect(services.client.chooseType).toHaveBeenCalledTimes(2);
+  });
+
   it("tras recargar (ya había elegido) no sabe cuál fue, pero bloquea y lo dice", () => {
     renderRoom([choosing({ typeChosen: true })]);
     expect(screen.getByRole("status")).toHaveTextContent("Ya elegiste tu tipo. Esperando a tu oponente…");
@@ -6032,6 +6188,11 @@ describe("ronda", () => {
     expect(await screen.findAllByRole("option")).toHaveLength(2);
     await user.keyboard("{Escape}{Enter}");
     expect(services.client.submit).toHaveBeenCalledExactlyOnceWith("alf");
+  });
+
+  it("al empezar la ronda el campo de respuesta recibe el foco (quien usa teclado tiene solo 15 s)", () => {
+    renderRoom([playing()]);
+    expect(screen.getByRole("combobox")).toHaveFocus();
   });
 
   it("una respuesta ya enviada bloquea el campo hasta el resultado", async () => {
@@ -6176,12 +6337,52 @@ describe("resumen final", () => {
     expect(screen.getByTestId("location").dataset.state).toBe("null");
   });
 
+  it("anuncia el resultado final a los lectores de pantalla", () => {
+    renderRoom(finished(1, 1));
+    expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("Ganaste. 800 – 400");
+  });
+
+  it("si la conexión vuelve a caerse y el servidor ya cerró la sala, el resumen se queda en pantalla", () => {
+    const services = fakeServices();
+    renderRoom(finished(1, 1), services);
+    serverSends(services, event.error("ROOM_NOT_FOUND", "Esa sala no existe"));
+    expect(screen.getByRole("heading", { name: "Ganaste" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ya terminó/)).not.toBeInTheDocument();
+  });
+
   it("no muestra el aviso de conexión perdida una vez terminada la partida", () => {
     const services = fakeServices();
     renderRoom(finished(1, 1), services);
     serverSends(services, event.roomState({ phase: "finished" })); // room-state no pisa el fin si se reconecta... el aviso depende de la conexión
     act(() => services.game.store.getState().setConnection("disconnected"));
     expect(screen.queryByText(/Reconectando/)).not.toBeInTheDocument();
+  });
+});
+
+describe("anuncios para lectores de pantalla", () => {
+  const announcer = () => screen.getByRole("log", { name: "Anuncios de la partida" });
+
+  it("anuncia el par de tipos al empezar cada ronda", () => {
+    renderRoom([event.roomState({ phase: "round_active", round: roundState({ number: 2 }), players: [ash(), misty()] })]);
+    expect(announcer()).toHaveTextContent("Ronda 2: volador y fuego.");
+  });
+
+  it("anuncia que hay que elegir un tipo", () => {
+    renderRoom([
+      event.roomState({ phase: "choosing_types", config: { typeMode: "chosen", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null }, round: roundState({ pair: null }) }),
+    ]);
+    expect(announcer()).toHaveTextContent("Ronda 1: elige un tipo.");
+  });
+
+  it("anuncia el cambio de una fase a otra sin que el contenedor se vuelva a crear", () => {
+    const services = fakeServices();
+    renderRoom([event.roomState({ phase: "starting", startsAt: SERVER_NOW + 5000, players: [ash(), misty()] })], services);
+    const region = announcer();
+    expect(region).toHaveTextContent("La partida empieza.");
+    serverSends(services, event.roundStarted(1, SERVER_NOW + 15_000));
+    expect(announcer()).toBe(region);
+    expect(region).toHaveTextContent("Ronda 1: volador y fuego.");
   });
 });
 
@@ -6196,6 +6397,25 @@ describe("avisos de conexión y errores", () => {
     expect(screen.getByText("Conexión perdida. Reconectando…")).toBeInTheDocument();
     act(() => services.game.store.getState().setConnection("connected"));
     expect(screen.queryByText(/Reconectando/)).not.toBeInTheDocument();
+  });
+
+  it("si la partida se abrió en otra pestaña, lo dice y permite volver a jugar aquí", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([inRound()], services);
+    act(() => services.game.store.getState().setConnection("replaced"));
+    expect(screen.getByText("Abriste esta partida en otra pestaña.")).toBeInTheDocument();
+    expect(screen.queryByText(/Reconectando/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Jugar aquí" }));
+    expect(services.client.join).toHaveBeenCalledTimes(2);
+    expect(services.client.join).toHaveBeenLastCalledWith("ABC234");
+  });
+
+  it("la cuenta atrás del aviso del rival no se anuncia cada segundo a los lectores de pantalla", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(SERVER_NOW);
+    renderRoom([inRound(), event.opponentDisconnected(SERVER_NOW + 30_000)]);
+    expect(screen.getByText("misty se desconectó.")).toBeInTheDocument();
+    expect(screen.getByText(/Tiene 30 s para volver/)).toHaveAttribute("aria-hidden", "true");
   });
 
   it("si el rival se cae muestra cuánto tiempo tiene para volver, y el aviso se va cuando vuelve", () => {
@@ -6402,6 +6622,9 @@ export function TypePickerView() {
   const [chosen, setChosen] = useState<TypeName | null>(null);
   const round = view.round;
   const locked = round?.typeChosen ?? false;
+  // Tras tocar un tipo no se puede cambiar mientras llega la confirmación: el servidor se queda con la primera
+  // elección. Si lo rechaza (hay un error a la vista), se puede volver a elegir.
+  const waiting = chosen !== null && !view.lastError;
 
   return (
     <section className="flex flex-col gap-4">
@@ -6416,7 +6639,7 @@ export function TypePickerView() {
           <button
             key={type}
             type="button"
-            disabled={locked}
+            disabled={locked || waiting}
             aria-pressed={chosen === type}
             onClick={() => {
               setChosen(type);
@@ -6502,7 +6725,7 @@ export function RoundView() {
             <Notice>El par elegido no tenía suficientes Pokémon; el servidor sorteó otro.</Notice>
           ) : null}
 
-          <Autocomplete names={names} submitted={round.answered} onSubmit={(text) => client.submit(text)} />
+          <Autocomplete names={names} submitted={round.answered} autoFocus onSubmit={(text) => client.submit(text)} />
         </div>
 
         <div className="hidden md:block">
@@ -6600,7 +6823,7 @@ export function RoundResultView() {
 `client/src/pages/room/SummaryView.tsx`:
 
 ```tsx
-import type { PokemonView, Seat } from "@pokemon-minigames/shared";
+import type { GameEndedPayload, PokemonView, Seat } from "@pokemon-minigames/shared";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/Button";
 import { PokemonCard } from "../../components/PokemonCard";
@@ -6620,6 +6843,16 @@ function TeamColumn({ title, team, total }: { title: string; team: PokemonView[]
   );
 }
 
+/** "Ganaste", "Perdiste" o "Empate", según el asiento propio. */
+export function verdictLabel(ended: GameEndedPayload, mySeat: Seat): string {
+  return ended.winnerSeat === null ? "Empate" : ended.winnerSeat === mySeat ? "Ganaste" : "Perdiste";
+}
+
+/** El marcador final leído desde el lado propio: "800 – 400". */
+export function scoreLabel(ended: GameEndedPayload, mySeat: Seat): string {
+  return `${ended.totals[mySeat]} – ${ended.totals[mySeat === 1 ? 2 : 1]}`;
+}
+
 export function SummaryView() {
   const { view, opponent } = useRoom();
   const navigate = useNavigate();
@@ -6628,7 +6861,7 @@ export function SummaryView() {
 
   const mySeat = view.mySeat;
   const rivalSeat: Seat = mySeat === 1 ? 2 : 1;
-  const verdict = ended.winnerSeat === null ? "Empate" : ended.winnerSeat === mySeat ? "Ganaste" : "Perdiste";
+  const verdict = verdictLabel(ended, mySeat);
 
   return (
     <section className="flex flex-col gap-5">
@@ -6636,7 +6869,7 @@ export function SummaryView() {
         <h1 className="text-2xl font-medium">{verdict}</h1>
         <p className="mt-1 text-sm text-muted">{END_REASON_LABELS[ended.reason]}</p>
         <p className="mt-2 font-num text-lg tabular-nums">
-          {ended.totals[mySeat]} – {ended.totals[rivalSeat]}
+          {scoreLabel(ended, mySeat)}
         </p>
       </div>
 
@@ -6664,12 +6897,13 @@ import { useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
 import { secondsLeft, useCountdown } from "../../game/clock";
-import { ROOM_GONE_CODES, errorMessage } from "../../i18n/es";
+import type { GameView } from "../../game/apply-event";
+import { ROOM_GONE_CODES, TYPE_LABELS, errorMessage } from "../../i18n/es";
 import { useGame, useServices } from "../../services";
 import { CountdownView } from "./CountdownView";
 import { RoundResultView } from "./RoundResultView";
 import { RoundView } from "./RoundView";
-import { SummaryView } from "./SummaryView";
+import { SummaryView, scoreLabel, verdictLabel } from "./SummaryView";
 import { TypePickerView } from "./TypePickerView";
 import { WaitingView } from "./WaitingView";
 import { useRoom } from "./use-room";
@@ -6680,10 +6914,30 @@ function OpponentAwayNotice() {
   const remaining = useCountdown(view.opponentGraceEndsAt, view.clockOffset);
   if (view.opponentGraceEndsAt === null || view.phase === "finished") return null;
   return (
+    // Lo que cambia cada segundo (la cuenta atrás) va oculto para los lectores de pantalla: si no, repetirían el aviso.
     <Notice tone="danger" urgent>
-      {opponent?.username ?? "Tu oponente"} se desconectó. Tiene {secondsLeft(remaining)} s para volver.
+      <span>{opponent?.username ?? "Tu oponente"} se desconectó.</span>{" "}
+      <span aria-hidden="true">Tiene {secondsLeft(remaining)} s para volver.</span>
     </Notice>
   );
+}
+
+/** Lo que se anuncia a los lectores de pantalla al cambiar de fase (lo visual cambia, pero no se oye). */
+function announcement(view: GameView): string {
+  switch (view.phase) {
+    case "starting":
+      return "La partida empieza.";
+    case "choosing_types":
+      return `Ronda ${view.round?.number ?? ""}: elige un tipo.`;
+    case "round_active":
+      return view.round?.pair
+        ? `Ronda ${view.round.number}: ${TYPE_LABELS[view.round.pair[0]]} y ${TYPE_LABELS[view.round.pair[1]]}.`
+        : "";
+    case "finished":
+      return view.ended && view.mySeat !== null ? `${verdictLabel(view.ended, view.mySeat)}. ${scoreLabel(view.ended, view.mySeat)}` : "";
+    default:
+      return "";
+  }
 }
 
 function RoomView() {
@@ -6717,6 +6971,8 @@ export function RoomPage() {
   const error = useGame((s) => s.view.lastError);
   const connection = useGame((s) => s.connection);
   const phase = useGame((s) => s.view.phase);
+  const ended = useGame((s) => s.view.ended);
+  const view = useGame((s) => s.view);
 
   useEffect(() => {
     game.client.join(code);
@@ -6726,7 +6982,9 @@ export function RoomPage() {
   }, [game.client, names, code]);
 
   // La sala ya no existe, terminó o no eres parte de ella: no hay nada más que hacer aquí.
-  if (error && ROOM_GONE_CODES.includes(error.code)) {
+  // Con la partida terminada el resumen se queda: el servidor ya cerró la sala y es lo esperable.
+  const gone = error !== null && ROOM_GONE_CODES.includes(error.code);
+  if (error && gone && !ended) {
     return (
       <section className="mx-auto max-w-md text-center">
         <Notice tone="danger">{errorMessage(error.code)}</Notice>
@@ -6741,9 +6999,20 @@ export function RoomPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <p role="log" aria-label="Anuncios de la partida" className="sr-only">
+        {announcement(view)}
+      </p>
       {connection === "disconnected" && phase !== "finished" ? <Notice>Conexión perdida. Reconectando…</Notice> : null}
+      {connection === "replaced" && phase !== "finished" ? (
+        <Notice className="flex flex-wrap items-center justify-between gap-2">
+          <span>Abriste esta partida en otra pestaña.</span>
+          <Button variant="primary" onClick={() => game.client.join(code)}>
+            Jugar aquí
+          </Button>
+        </Notice>
+      ) : null}
       <OpponentAwayNotice />
-      {error ? <Notice tone="danger">{errorMessage(error.code)}</Notice> : null}
+      {error && !gone ? <Notice tone="danger">{errorMessage(error.code)}</Notice> : null}
       <RoomView />
     </div>
   );
@@ -6757,7 +7026,7 @@ npm test -w client -- test/pages/room.test.tsx
 npm run typecheck -w client
 ```
 
-Expected: PASS (43 pruebas) y `tsc` sin errores.
+Expected: PASS (53 pruebas) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -7411,7 +7680,7 @@ npm run typecheck -w client
 npm run build -w client
 ```
 
-Expected: PASS (**281 pruebas** en 17 archivos, todo el cliente), `tsc` sin errores y `vite build` genera `client/dist` (no se versiona: está en `.gitignore`).
+Expected: PASS (**303 pruebas** en 17 archivos, todo el cliente), `tsc` sin errores y `vite build` genera `client/dist` (no se versiona: está en `.gitignore`).
 
 - [ ] **Step 5: Commit**
 
@@ -7430,7 +7699,7 @@ git commit -m "feat(client): inicio de sesión, registro, rutas con guardas y ar
 
 - [ ] **Step 1: Agregar las dos herramientas de verificación**
 
-`client/scripts/contrast-audit.js` (se pega en la consola del navegador; mide el contraste del texto que realmente se ve, en los cuatro temas/modos, con las transiciones desactivadas mientras mide):
+`client/scripts/contrast-audit.js` (se pega en la consola del navegador; mide el contraste del texto que realmente se ve, en los cuatro temas/modos, con las transiciones desactivadas mientras mide y teniendo en cuenta la opacidad del elemento y de sus ancestros):
 
 ```js
 /*
@@ -7443,7 +7712,10 @@ git commit -m "feat(client): inicio de sesión, registro, rutas con guardas y ar
  * Las pruebas automáticas comprueban los pares de colores de los tokens; esto comprueba lo que
  * realmente se ve (un componente con el color de texto equivocado sobre un fondo de otro tema).
  * Se desactivan las transiciones mientras se mide: a mitad de una transición los colores
- * intermedios dan falsos avisos.
+ * intermedios dan falsos avisos. Se tiene en cuenta la `opacity` del elemento y de sus
+ * ancestros (`getComputedStyle().color` no la incluye y un texto atenuado parecería cumplir).
+ * Para medir la lista de sugerencias del autocompletado, ábrela (escribe una letra y pulsa
+ * la flecha abajo) antes de ejecutar la auditoría.
  */
 (() => {
   const parse = (color) => {
@@ -7463,6 +7735,13 @@ git commit -m "feat(client): inicio de sesión, registro, rutas con guardas y ar
     b: top.b * top.a + bottom.b * (1 - top.a),
     a: 1,
   });
+  const opacityOf = (element) => {
+    let opacity = 1;
+    for (let node = element; node && node !== document.documentElement; node = node.parentElement) {
+      opacity *= Number.parseFloat(getComputedStyle(node).opacity);
+    }
+    return opacity;
+  };
   const backgroundOf = (element) => {
     const layers = [];
     for (let node = element; node; node = node.parentElement) {
@@ -7481,7 +7760,8 @@ git commit -m "feat(client): inicio de sesión, registro, rutas con guardas y ar
       const style = getComputedStyle(element);
       if (style.display === "none" || style.visibility === "hidden" || (element.tagName === "BUTTON" && element.disabled)) continue;
       const background = backgroundOf(element);
-      const text = over(parse(style.color), background);
+      const color = parse(style.color);
+      const text = over({ ...color, a: color.a * opacityOf(element) }, background);
       const [lighter, darker] = [luminance(text), luminance(background)].sort((a, b) => b - a);
       const ratio = (lighter + 0.05) / (darker + 0.05);
       const size = Number.parseFloat(style.fontSize);
@@ -7610,7 +7890,8 @@ Abre `http://localhost:5173` y comprueba, en este orden:
 6. **Reconexión:** durante la cuenta atrás o la ronda de otra partida, recarga la página de la sala: vuelve al mismo punto sin perder el equipo.
 7. **Temas:** en el encabezado cambia entre Clásico y Pokédex y entre claro/oscuro/automático; recarga: la elección se conserva y no hay destello del tema equivocado.
 8. **Móvil:** con la ventana a 375 px de ancho, los paneles de equipo pasan a una barra resumen y nada se corta ni obliga a desplazar en horizontal.
-9. **Contraste real:** en cada pantalla principal (login, lobby, sala de espera, ronda, resultado, resumen) pega `contrast-audit.js` en la consola y ejecuta `await __contrastAuditAll()`.
+9. **Contraste real:** en cada pantalla principal (login, registro, lobby, sala de espera, cuenta atrás, selector de tipos con uno elegido, ronda, resultado, resumen) pega `contrast-audit.js` en la consola y ejecuta `await __contrastAuditAll()`. En la ronda, hazlo también con la lista de sugerencias abierta y una opción resaltada (escribe una letra y pulsa la flecha abajo).
+10. **Teclado y foco:** al empezar cada ronda el campo de respuesta ya tiene el foco (escribe sin hacer clic); un doble Enter envía una sola respuesta.
 
 Expected: sin errores en la consola del navegador y `__contrastAuditAll()` devuelve una lista **vacía** para los cuatro temas/modos en cada pantalla. Al terminar, el bot imprime el SQL para borrar lo que dejó (la partida y su usuario `bot_*`); ejecútalo con `psql` (el mismo usuario de tu `server/.env`), borra también tu usuario de prueba y la sala si quedó abierta, y detén los dos servidores con Ctrl+C.
 
@@ -7797,7 +8078,7 @@ npm run build
 git status
 ```
 
-Expected: **647 pruebas pasan** (366 de servidor y 281 de cliente); `tsc` sin errores en los tres paquetes; el build genera `client/dist`; `git status` solo muestra `README.md`, la spec y los dos scripts (nada de `.env`, `.env.test` ni `client/dist`).
+Expected: **669 pruebas pasan** (366 de servidor y 303 de cliente); `tsc` sin errores en los tres paquetes; el build genera `client/dist`; `git status` solo muestra `README.md`, la spec y los dos scripts (nada de `.env`, `.env.test` ni `client/dist`).
 
 - [ ] **Step 7: Commit y publicar la rama**
 
@@ -7833,8 +8114,12 @@ Expected: rama `etapa-3-cliente` en `https://github.com/marcovinir/pokemon-minig
 
 **Decisiones tomadas al escribir el plan (la spec las recoge en la Task 13):** `round-result` trae `nextRoundAt` (la cuenta atrás de la pausa no se puede deducir del cliente y tras la última ronda no hay siguiente); la estructura real de `client/src/api/` (`client.ts`, `endpoints.ts`, `types.ts`) y de `theme/`; y la verificación visual incluye una auditoría de contraste del texto real y un bot para probar con una sola persona.
 
+**Lo que encontró la revisión final independiente de toda la rama (ya corregido en el código de este plan, cada punto con su prueba):** (1) los errores del socket no se borraban nunca y quedaban a la vista (y anunciados) el resto de la partida; ahora los borra cualquier evento que avance la partida (`apply-event.test.ts`); (2) un doble toque en el selector de tipo o un doble Enter en el campo enviaban dos veces y el servidor se quedaba con la primera, mientras la interfaz mostraba la segunda; ahora se bloquean en el acto (`room.test.tsx`, `autocomplete.test.tsx`); (3) las sugerencias del autocompletado usaban `opacity-70` y quedaban por debajo de 4,5:1, y la auditoría no lo veía porque `getComputedStyle().color` no incluye la opacidad; ahora no hay opacidad y la auditoría la multiplica por la de los ancestros; (4) accesibilidad: el campo no recibía el foco al empezar la ronda, el par de tipos y el resultado final no se anunciaban, y el aviso del rival caído repetía su cuenta atrás cada segundo; ahora hay foco automático, un `role="log"` con los anuncios y la cuenta atrás oculta a los lectores de pantalla; (5) el socket podía quedarse en "Reconectando…" para siempre (sesión no renovable o partida abierta en otra pestaña); ahora lleva a /login u ofrece "Jugar aquí" (`game-client.test.ts`, `room.test.tsx`); (6) una caída de red en la pantalla de resumen la reemplazaba por "Esa sala no existe"; ahora no se vuelve a entrar a una sala terminada. Además, una prueba de autenticación fallaba de forma intermitente con la CPU cargada (`waitFor` de 1 s por defecto); `setup.ts` sube el timeout a 4 s.
+
+**Pendientes menores de esa revisión (no se corrigen en esta etapa):** `room-state` no trae `nextRoundAt` ni el último resultado (recargar en la pausa muestra "Resultado de la ronda…" sin cuenta atrás hasta 6 s); un fallo de red al renovar tras un 401 cierra la sesión; una segunda renovación innecesaria si una petición con el token viejo recibe 401 justo después de renovar; `Header` deja una promesa rechazada sin capturar si el logout falla (la sesión local sí se cierra); la vuelta a la sala tras el login depende del orden entre `PublicOnly` y el `navigate` de `LoginPage`; el lobby navega con el código escrito sin codificar (el servidor ya lo validó); cancelar una sala en espera sin conexión deja la sala abierta hasta que caduca; al agotarse los pares se anuncia "Siguiente ronda" antes del resumen.
+
 **Hallazgos de la verificación en el navegador (ya corregidos en el código de este plan):** (1) el botón "Cerrar sesión" medía 1,98:1 sobre el encabezado del tema Pokédex porque usaba el color de texto de la página; ahora la variante `header` usa `text-header-fg`; (2) el hover de los botones primarios bajaba la opacidad y dejaba el texto por debajo de 4,5:1 en Pokédex; ahora subraya. Ambos tienen prueba en `basics.test.tsx` y `header-theme.test.tsx`, y la auditoría mide con las transiciones desactivadas (los valores intermedios de una transición dan falsos avisos).
 
 **Fuera de esta etapa:** historial, estadísticas, perfil y guardar el tema en el perfil (etapa 4); prueba E2E en navegador automatizada, despliegue, origen y cookie en producción, `COOKIE_SECURE` obligatorio, protección CSRF de refresh/logout y límite de intentos de login (etapa 5); sonido, animaciones, varios idiomas, chat, espectadores y revancha desde la misma sala.
 
-**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 366 pruebas de servidor y 281 de cliente en verde, `tsc` sin errores en los tres paquetes, `vite build` correcto, 9 mutaciones a propósito detectadas por las pruebas, y una partida real en el navegador contra el catálogo de 1025 Pokémon.
+**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 366 pruebas de servidor y 303 de cliente en verde, `tsc` sin errores en los tres paquetes, `vite build` correcto, 9 mutaciones a propósito detectadas por las pruebas, y una partida real en el navegador contra el catálogo de 1025 Pokémon.
