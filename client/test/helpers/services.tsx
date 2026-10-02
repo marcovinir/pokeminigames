@@ -1,0 +1,108 @@
+import { render } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
+import { vi } from "vitest";
+import type { Endpoints } from "../../src/api/endpoints";
+import type { AuthUser, PokemonName } from "../../src/api/types";
+import { createNamesStore } from "../../src/catalog/names-store";
+import { createGameStore } from "../../src/game/store";
+import { ServicesProvider, type Services } from "../../src/services";
+import { createSessionStore } from "../../src/session/session-store";
+import { createThemeStore } from "../../src/theme/theme-store";
+
+export const ASH: AuthUser = { id: "u1", email: "ash@example.com", username: "ash", createdAt: "2026-01-01T00:00:00.000Z" };
+
+export const NAMES: PokemonName[] = [
+  { id: 1, es: "Alfa", en: "Alpha" },
+  { id: 2, es: "Alfil", en: "Bishop" },
+  { id: 3, es: "Beto", en: "Beta" },
+  { id: 4, es: "Épsilon", en: "Epsilon" },
+  { id: 5, es: "Zeta", en: "Zeta" },
+];
+
+export interface FakeServices extends Services {
+  endpoints: Endpoints;
+  /** Acciones del juego como espías. */
+  client: { join: ReturnType<typeof vi.fn>; chooseType: ReturnType<typeof vi.fn>; submit: ReturnType<typeof vi.fn>; leave: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn> };
+  themeRoot: HTMLElement;
+}
+
+/** Servicios de mentira: los endpoints son espías y el socket no existe. */
+export function fakeServices(): FakeServices {
+  const endpoints: Endpoints = {
+    auth: {
+      register: vi.fn(async () => ({ user: ASH, accessToken: "tok" })),
+      login: vi.fn(async () => ({ user: ASH, accessToken: "tok" })),
+      refresh: vi.fn(async () => null),
+      logout: vi.fn(async () => {}),
+    },
+    rooms: {
+      create: vi.fn(async () => ({ code: "ABC234" })),
+      join: vi.fn(async () => ({ code: "ABC234" })),
+      get: vi.fn(),
+      current: vi.fn(async () => null),
+    },
+    catalog: { names: vi.fn(async () => NAMES) },
+  };
+  const client = { join: vi.fn(), chooseType: vi.fn(), submit: vi.fn(), leave: vi.fn(), dispose: vi.fn() };
+  const themeRoot = document.createElement("html");
+  return {
+    endpoints,
+    client,
+    themeRoot,
+    session: createSessionStore(endpoints),
+    names: createNamesStore(endpoints),
+    game: { store: createGameStore(), client },
+    theme: createThemeStore({
+      storage: null,
+      root: themeRoot,
+      media: { matches: false, addEventListener: () => {} },
+    }),
+  };
+}
+
+/** Deja la sesión como iniciada, sin pasar por el arranque. */
+export function signIn(services: Services, user: AuthUser = ASH): void {
+  services.session.setState({ status: "authenticated", user });
+}
+
+/** Muestra en pantalla la ruta actual; sirve para comprobar redirecciones. */
+export function LocationProbe() {
+  const location = useLocation();
+  return (
+    <p data-testid="location" data-state={JSON.stringify(location.state ?? null)}>
+      {location.pathname}
+    </p>
+  );
+}
+
+export function renderWithServices(
+  ui: ReactElement,
+  options: { services?: FakeServices; route?: string | { pathname: string; state?: unknown } } = {},
+) {
+  const services = options.services ?? fakeServices();
+  const result = render(
+    <ServicesProvider services={services}>
+      <MemoryRouter initialEntries={[options.route ?? "/"]}>{ui}</MemoryRouter>
+    </ServicesProvider>,
+  );
+  return { services, ...result };
+}
+
+/** Como renderWithServices, pero con rutas: `ui` se monta en `path` y hay una sonda de ubicación. */
+export function renderRoute(
+  path: string,
+  ui: ReactElement,
+  options: { services?: FakeServices; route: string | { pathname: string; state?: unknown } },
+) {
+  return renderWithServices(
+    <>
+      <Routes>
+        <Route path={path} element={ui} />
+        <Route path="*" element={<p>Otra pantalla</p>} />
+      </Routes>
+      <LocationProbe />
+    </>,
+    options,
+  );
+}
