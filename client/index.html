@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es" data-theme="clasico" data-mode="claro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pokémon Minigames</title>
+    <script>
+      // Aplica el tema guardado antes de pintar, para que no se vea un destello del tema equivocado.
+      (function () {
+        try {
+          var saved = JSON.parse(localStorage.getItem("pokemon-minigames:theme") || "{}") || {};
+          var theme = saved.theme === "pokedex" ? "pokedex" : "clasico";
+          var mode = saved.mode;
+          if (mode !== "claro" && mode !== "oscuro") {
+            mode = matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+          }
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.dataset.mode = mode;
+        } catch (error) {
+          document.documentElement.dataset.theme = "clasico";
+          document.documentElement.dataset.mode = "claro";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
