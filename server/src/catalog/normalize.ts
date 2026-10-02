@@ -1,13 +1,2 @@
-/**
- * Forma canónica para comparar nombres de Pokémon: minúsculas, sin tildes y sin signos.
- * "Nidoran♀" → "nidoranf", "Mr. Mime" → "mrmime", "Flabébé" → "flabebe".
- */
-export function normalizeName(input: string): string {
-  return input
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .replaceAll("♀", "f")
-    .replaceAll("♂", "m")
-    .replace(/[^a-z0-9]/g, "");
-}
+// La función vive en `shared/` porque el cliente necesita exactamente la misma normalización.
+export { normalizeName } from "@pokemon-minigames/shared";

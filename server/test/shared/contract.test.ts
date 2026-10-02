@@ -1,5 +1,6 @@
-import { ERROR_CODES, TYPE_NAMES } from "@pokemon-minigames/shared";
+import { ERROR_CODES, TYPE_NAMES, normalizeName as sharedNormalizeName } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
+import { normalizeName as serverNormalizeName } from "../../src/catalog/normalize.js";
 import { TYPE_NAMES as SNAPSHOT_TYPE_NAMES, typeId } from "../../src/catalog/snapshot.js";
 
 describe("paquete shared", () => {
@@ -9,6 +10,12 @@ describe("paquete shared", () => {
     expect(SNAPSHOT_TYPE_NAMES).toBe(TYPE_NAMES);
     expect(typeId("normal")).toBe(1);
     expect(typeId("fairy")).toBe(18);
+  });
+
+  it("normalizeName es una sola función: el servidor y el cliente normalizan igual", () => {
+    expect(serverNormalizeName).toBe(sharedNormalizeName);
+    expect(sharedNormalizeName("Nidoran♀")).toBe("nidoranf");
+    expect(sharedNormalizeName("  Épsilon ")).toBe("epsilon");
   });
 
   it("los códigos de error no se repiten e incluyen los de salas y partida", () => {
