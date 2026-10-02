@@ -3,11 +3,14 @@
   "private": true,
   "workspaces": [
     "shared",
-    "server"
+    "server",
+    "client"
   ],
   "scripts": {
     "dev": "npm run dev -w server",
-    "test": "npm test -w server",
-    "typecheck": "npm run typecheck -w server"
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client",
+    "test": "npm test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }

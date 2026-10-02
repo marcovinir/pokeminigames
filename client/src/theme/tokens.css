@@ -1,0 +1,93 @@
+/*
+ * Tokens de los dos temas (Clásico y Pokédex), cada uno en modo claro y oscuro.
+ * Los componentes solo usan estas variables (a través de las utilidades de Tailwind definidas
+ * en index.css), nunca colores literales; los 18 colores de tipo son la única excepción.
+ */
+
+:root[data-theme="clasico"][data-mode="claro"] {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #f1efe8;
+  --fg: #2c2c2a;
+  --fg-muted: #5f5e5a;
+  --line: #d3d1c7;
+  --accent: #185fa5;
+  --accent-fg: #ffffff;
+  --danger: #a32d2d;
+  --danger-bg: #fcebeb;
+  --success: #3b6d11;
+  --success-bg: #eaf3de;
+  --header-bg: #ffffff;
+  --header-fg: #2c2c2a;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --frame: 1px;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+:root[data-theme="clasico"][data-mode="oscuro"] {
+  --bg: #1d1d1b;
+  --surface: #2a2a28;
+  --surface-2: #353533;
+  --fg: #f1efe8;
+  --fg-muted: #b4b2a9;
+  --line: #4d4d4a;
+  --accent: #85b7eb;
+  --accent-fg: #042c53;
+  --danger: #f09595;
+  --danger-bg: #501313;
+  --success: #97c459;
+  --success-bg: #173404;
+  --header-bg: #2a2a28;
+  --header-fg: #f1efe8;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --frame: 1px;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+:root[data-theme="pokedex"][data-mode="claro"] {
+  --bg: #e9e4d4;
+  --surface: #f7f3e6;
+  --surface-2: #ddd6c0;
+  --fg: #2c2c2a;
+  --fg-muted: #4a4943;
+  --line: #2c2c2a;
+  --accent: #a32d2d;
+  --accent-fg: #fcebeb;
+  --danger: #791f1f;
+  --danger-bg: #f7c1c1;
+  --success: #27500a;
+  --success-bg: #c0dd97;
+  --header-bg: #a32d2d;
+  --header-fg: #fcebeb;
+  --radius: 2px;
+  --radius-lg: 4px;
+  --frame: 2px;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root[data-theme="pokedex"][data-mode="oscuro"] {
+  --bg: #1c1a17;
+  --surface: #2a2723;
+  --surface-2: #38342e;
+  --fg: #f1efe8;
+  --fg-muted: #c4c1b7;
+  --line: #9a968a;
+  --accent: #f09595;
+  --accent-fg: #501313;
+  --danger: #f09595;
+  --danger-bg: #501313;
+  --success: #97c459;
+  --success-bg: #173404;
+  --header-bg: #791f1f;
+  --header-fg: #fcebeb;
+  --radius: 2px;
+  --radius-lg: 4px;
+  --frame: 2px;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

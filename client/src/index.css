@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@import "./theme/tokens.css";
+
+@theme inline {
+  --color-page: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-header: var(--header-bg);
+  --color-header-fg: var(--header-fg);
+  --radius-ui: var(--radius);
+  --radius-card: var(--radius-lg);
+  --font-sans: var(--font-ui);
+  --font-num: var(--font-num);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+}
+
+/*
+ * El grosor del borde de los recuadros lo decide el tema (1px en Clásico, 2px en Pokédex).
+ * Va en la capa `components` para que las utilidades de Tailwind (p. ej. `border-danger`) puedan ajustarlo.
+ */
+@layer components {
+  .framed {
+    border: var(--frame) solid var(--line);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
