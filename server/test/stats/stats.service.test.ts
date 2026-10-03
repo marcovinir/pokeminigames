@@ -237,5 +237,16 @@ describe("StatsService.getHistory", () => {
         code: "VALIDATION_ERROR",
       });
     });
+
+    it("un cursor con una fecha que la base de datos no admite también es un 400, no un error del servidor", async () => {
+      const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+      for (const date of ["-271821-04-20T00:00:00.000Z", "+010000-01-01T00:00:00.000Z", "0000-01-01T00:00:00.000Z"]) {
+        const before = Buffer.from(`${date}|${id}`).toString("base64url");
+        await expect(service.getHistory(ash, { limit: 5, before })).rejects.toMatchObject({
+          status: 400,
+          code: "VALIDATION_ERROR",
+        });
+      }
+    });
   });
 });

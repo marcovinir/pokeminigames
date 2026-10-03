@@ -1,5 +1,5 @@
 import type { GameResult, HistoryEntry } from "@pokemon-minigames/shared";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
@@ -16,7 +16,8 @@ const RESULT_STYLE: Record<GameResult, string> = {
 
 function HistoryRow({ game }: { game: HistoryEntry }) {
   return (
-    <li className="framed rounded-card bg-surface p-3">
+    // tabIndex -1: se puede enfocar por código (al cargar más partidas) sin entrar en el orden de tabulación.
+    <li tabIndex={-1} className="framed rounded-card bg-surface p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className={`font-medium ${RESULT_STYLE[game.result]}`}>{RESULT_LABELS[game.result]}</span>
         <span className="font-num tabular-nums">{`${formatScore(game.myScore)} – ${formatScore(game.opponentScore)}`}</span>
@@ -44,13 +45,32 @@ export function HistoryList() {
   const [more, setMore] = useState<{ games: HistoryEntry[]; cursor: string | null } | null>(null);
   const [pending, setPending] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const list = useRef<HTMLOListElement>(null);
+  /** Posición de la primera partida de la página recién cargada, para llevarle el foco. */
+  const focusIndex = useRef<number | null>(null);
 
-  async function loadMore(cursor: string): Promise<void> {
+  // El botón "Cargar más" desaparece con la última página y con él se iría el foco: pasa a la primera partida nueva.
+  useEffect(() => {
+    if (focusIndex.current === null) return;
+    (list.current?.children[focusIndex.current] as HTMLElement | undefined)?.focus();
+    focusIndex.current = null;
+  }, [more]);
+
+  async function loadMore(cursor: string, shown: number): Promise<void> {
     if (pending) return;
     setPending(true);
     setMoreFailed(false);
     try {
       const page = await endpoints.stats.history({ before: cursor });
+      focusIndex.current = shown;
+      setAnnouncement(
+        page.games.length === 0
+          ? "No hay más partidas."
+          : page.games.length === 1
+            ? "Se cargó 1 partida más."
+            : `Se cargaron ${page.games.length} partidas más.`,
+      );
       setMore((previous) => ({ games: [...(previous?.games ?? []), ...page.games], cursor: page.nextCursor }));
     } catch {
       setMoreFailed(true);
@@ -86,15 +106,18 @@ export function HistoryList() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <ol aria-label="Historial de partidas" className="flex flex-col gap-3">
+          <ol ref={list} aria-label="Historial de partidas" className="flex flex-col gap-3">
             {games.map((game) => (
               <HistoryRow key={game.id} game={game} />
             ))}
           </ol>
+          <p role="status" className="sr-only">
+            {announcement}
+          </p>
           {moreFailed ? <Notice tone="danger">No se pudo cargar la siguiente página.</Notice> : null}
           {cursor ? (
             <div className="text-center">
-              <Button loading={pending} onClick={() => void loadMore(cursor)}>
+              <Button loading={pending} onClick={() => void loadMore(cursor, games.length)}>
                 Cargar más
               </Button>
             </div>

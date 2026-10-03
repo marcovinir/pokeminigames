@@ -23,6 +23,10 @@ describe("cursor del historial", () => {
     ["id que no es un uuid", Buffer.from("2026-10-01T12:34:56.789Z|123").toString("base64url")],
     ["sin id", Buffer.from("2026-10-01T12:34:56.789Z|").toString("base64url")],
     ["con partes de más", Buffer.from(`2026-10-01T12:34:56.789Z|${id}|x`).toString("base64url")],
+    // Fechas que JavaScript acepta y escribe igual, pero que PostgreSQL no admite en un timestamptz.
+    ["año negativo", Buffer.from(`-271821-04-20T00:00:00.000Z|${id}`).toString("base64url")],
+    ["año de seis cifras", Buffer.from(`+010000-01-01T00:00:00.000Z|${id}`).toString("base64url")],
+    ["año cero", Buffer.from(`0000-01-01T00:00:00.000Z|${id}`).toString("base64url")],
   ])("rechaza un cursor inválido: %s", (_name, text) => {
     expect(() => decodeCursor(text)).toThrow(InvalidCursorError);
   });

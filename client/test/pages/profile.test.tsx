@@ -273,6 +273,33 @@ describe("historial", () => {
     expect(screen.queryByRole("button", { name: "Cargar más" })).not.toBeInTheDocument();
   });
 
+  it("al llegar la página siguiente el foco pasa a su primera partida y se anuncia (el botón puede desaparecer)", async () => {
+    const services = withHistory(
+      { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
+      { games: [entry({ id: "g2", opponent: { username: "brock" } }), entry({ id: "g3", opponent: { username: "gary" } })], nextCursor: null },
+    );
+    const { user } = renderAt("/perfil", services);
+    await screen.findByRole("list", { name: "Historial de partidas" });
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+    await waitFor(() => expect(historyItems()).toHaveLength(3));
+    expect(screen.queryByRole("button", { name: "Cargar más" })).not.toBeInTheDocument();
+    expect(historyItems()[1]).toHaveFocus();
+    expect(within(historyItems()[1]!).getByRole("link", { name: "brock" })).toBeInTheDocument();
+    expect(screen.getByText("Se cargaron 2 partidas más.")).toBeInTheDocument();
+  });
+
+  it("si la página siguiente trae una sola partida, el anuncio va en singular", async () => {
+    const services = withHistory(
+      { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
+      { games: [entry({ id: "g2", opponent: { username: "brock" } })], nextCursor: "cursor-2" },
+    );
+    const { user } = renderAt("/perfil", services);
+    await screen.findByRole("list", { name: "Historial de partidas" });
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+    expect(await screen.findByText("Se cargó 1 partida más.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cargar más" })).toBeInTheDocument();
+  });
+
   it("no pide la misma página dos veces si se pulsa dos veces seguidas", async () => {
     let finish!: (page: { games: HistoryEntry[]; nextCursor: string | null }) => void;
     const services = withHistory({ games: [entry({ id: "g1" })], nextCursor: "cursor-1" });
