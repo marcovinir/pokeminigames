@@ -82,6 +82,74 @@ describe("endpoints de salas", () => {
   });
 });
 
+describe("endpoints de estadísticas", () => {
+  const statsResponse = { username: "ash", stats: { played: 0 } };
+
+  it("mine pide tus estadísticas con la sesión", async () => {
+    const { api, endpoints, fetchMock } = setup(() => json(200, statsResponse));
+    api.setToken("tok");
+    await expect(endpoints.stats.mine()).resolves.toEqual(statsResponse);
+    expect(lastCall(fetchMock)).toMatchObject({ url: "/stats", method: "GET" });
+    expect((fetchMock.mock.calls[0]![1]?.headers as Record<string, string>).Authorization).toBe("Bearer tok");
+  });
+
+  it("forUser codifica el nombre en la ruta", async () => {
+    const { endpoints, fetchMock } = setup(() => json(200, statsResponse));
+    await endpoints.stats.forUser("ash_99");
+    expect(lastCall(fetchMock)).toMatchObject({ url: "/users/ash_99/stats", method: "GET" });
+    await endpoints.stats.forUser("a b/c?x");
+    expect(lastCall(fetchMock).url).toBe("/users/a%20b%2Fc%3Fx/stats");
+  });
+
+  it("un jugador que no existe llega como un error con su mensaje en español", async () => {
+    const { endpoints } = setup(() => json(404, { error: { code: "USER_NOT_FOUND", message: "x" } }));
+    await expect(endpoints.stats.forUser("nadie")).rejects.toMatchObject({
+      status: 404,
+      code: "USER_NOT_FOUND",
+      message: "No encontramos a ese jugador.",
+    });
+  });
+
+  it("history sin opciones no añade parámetros", async () => {
+    const { endpoints, fetchMock } = setup(() => json(200, { games: [], nextCursor: null }));
+    await expect(endpoints.stats.history()).resolves.toEqual({ games: [], nextCursor: null });
+    expect(lastCall(fetchMock)).toMatchObject({ url: "/stats/history", method: "GET" });
+  });
+
+  it("history envía el límite y el cursor, codificado, cuando se piden", async () => {
+    const { endpoints, fetchMock } = setup(() => json(200, { games: [], nextCursor: null }));
+    await endpoints.stats.history({ limit: 10, before: "a+b/c=" });
+    expect(lastCall(fetchMock).url).toBe("/stats/history?limit=10&before=a%2Bb%2Fc%3D");
+    await endpoints.stats.history({ before: "abc" });
+    expect(lastCall(fetchMock).url).toBe("/stats/history?before=abc");
+  });
+
+  it("history ignora un cursor nulo (la primera página)", async () => {
+    const { endpoints, fetchMock } = setup(() => json(200, { games: [], nextCursor: null }));
+    await endpoints.stats.history({ before: null });
+    expect(lastCall(fetchMock).url).toBe("/stats/history");
+  });
+});
+
+describe("endpoint de preferencias", () => {
+  it("savePreferences envía tema y modo con la sesión", async () => {
+    const { api, endpoints, fetchMock } = setup(() => json(200, { preferences: { theme: "pokedex", themeMode: "oscuro" } }));
+    api.setToken("tok");
+    await expect(endpoints.auth.savePreferences({ theme: "pokedex", themeMode: "oscuro" })).resolves.toBeUndefined();
+    expect(lastCall(fetchMock)).toEqual({
+      url: "/auth/me/preferences",
+      method: "PUT",
+      body: { theme: "pokedex", themeMode: "oscuro" },
+    });
+    expect((fetchMock.mock.calls[0]![1]?.headers as Record<string, string>).Authorization).toBe("Bearer tok");
+  });
+
+  it("si el servidor la rechaza, el error llega a quien llamó", async () => {
+    const { endpoints } = setup(() => json(400, { error: { code: "VALIDATION_ERROR", message: "x" } }));
+    await expect(endpoints.auth.savePreferences({ theme: "clasico", themeMode: "auto" })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
 describe("endpoint del catálogo", () => {
   it("names pide la lista sin enviar credenciales de sesión", async () => {
     const { api, endpoints, fetchMock } = setup(() => json(200, [{ id: 1, es: "Alfa", en: "Alpha" }]));

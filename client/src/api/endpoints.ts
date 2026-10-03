@@ -1,4 +1,12 @@
-import type { CreateRoomRequest, CreateRoomResponse, GamePhase, PublicRoomInfo } from "@pokemon-minigames/shared";
+import type {
+  CreateRoomRequest,
+  CreateRoomResponse,
+  GamePhase,
+  HistoryPage,
+  PublicRoomInfo,
+  StatsResponse,
+  ThemePreferences,
+} from "@pokemon-minigames/shared";
 import type { ApiClient } from "./client";
 import type { AuthSession, PokemonName } from "./types";
 
@@ -24,6 +32,8 @@ export interface Endpoints {
     /** Renueva la sesión con la cookie de refresco; `null` si no hay sesión. */
     refresh(): Promise<AuthSession | null>;
     logout(): Promise<void>;
+    /** Guarda el tema y el modo en el perfil. */
+    savePreferences(preferences: ThemePreferences): Promise<void>;
   };
   rooms: {
     create(config: CreateRoomRequest): Promise<CreateRoomResponse>;
@@ -34,6 +44,14 @@ export interface Endpoints {
   };
   catalog: {
     names(): Promise<PokemonName[]>;
+  };
+  stats: {
+    /** Tus estadísticas. */
+    mine(): Promise<StatsResponse>;
+    /** Las estadísticas de otra persona (solo lo público: nunca su historial ni su correo). */
+    forUser(username: string): Promise<StatsResponse>;
+    /** Tus partidas completadas, de la más reciente a la más antigua; `before` es el cursor de la página anterior. */
+    history(options?: { before?: string | null; limit?: number }): Promise<HistoryPage>;
   };
 }
 
@@ -57,6 +75,9 @@ export function createEndpoints(api: ApiClient): Endpoints {
           api.setToken(null);
         }
       },
+      async savePreferences(preferences) {
+        await api.request<unknown>("PUT", "/auth/me/preferences", { body: preferences });
+      },
     },
     rooms: {
       create: (config) => api.request<CreateRoomResponse>("POST", "/rooms", { body: config }),
@@ -69,6 +90,17 @@ export function createEndpoints(api: ApiClient): Endpoints {
     },
     catalog: {
       names: () => api.request<PokemonName[]>("GET", "/pokemon/names", { auth: false }),
+    },
+    stats: {
+      mine: () => api.request<StatsResponse>("GET", "/stats"),
+      forUser: (username) => api.request<StatsResponse>("GET", `/users/${encodeURIComponent(username)}/stats`),
+      history({ before, limit } = {}) {
+        const query = new URLSearchParams();
+        if (limit !== undefined) query.set("limit", String(limit));
+        if (before) query.set("before", before);
+        const text = query.toString();
+        return api.request<HistoryPage>("GET", `/stats/history${text ? `?${text}` : ""}`);
+      },
     },
   };
 }

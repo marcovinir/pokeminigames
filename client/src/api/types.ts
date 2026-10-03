@@ -1,8 +1,12 @@
+import type { ThemePreferences } from "@pokemon-minigames/shared";
+
 export interface AuthUser {
   id: string;
   email: string;
   username: string;
   createdAt: string;
+  /** Nulo mientras la persona no haya guardado una preferencia de tema. */
+  preferences: ThemePreferences | null;
 }
 
 /** Respuesta de /auth/register, /auth/login y /auth/refresh. */

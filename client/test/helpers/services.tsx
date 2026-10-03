@@ -1,3 +1,4 @@
+import type { Stats } from "@pokemon-minigames/shared";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
@@ -10,7 +11,27 @@ import { ServicesProvider, type Services } from "../../src/services";
 import { createSessionStore } from "../../src/session/session-store";
 import { createThemeStore } from "../../src/theme/theme-store";
 
-export const ASH: AuthUser = { id: "u1", email: "ash@example.com", username: "ash", createdAt: "2026-01-01T00:00:00.000Z" };
+export const ASH: AuthUser = {
+  id: "u1",
+  email: "ash@example.com",
+  username: "ash",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  preferences: null,
+};
+
+/** Estadísticas de una persona que todavía no ha jugado. */
+export const NO_STATS: Stats = {
+  played: 0,
+  wins: 0,
+  draws: 0,
+  losses: 0,
+  winRate: null,
+  currentStreak: 0,
+  bestStreak: 0,
+  averagePower: null,
+  bestGameScore: null,
+  topPokemon: [],
+};
 
 export const NAMES: PokemonName[] = [
   { id: 1, es: "Alfa", en: "Alpha" },
@@ -35,6 +56,7 @@ export function fakeServices(): FakeServices {
       login: vi.fn(async () => ({ user: ASH, accessToken: "tok" })),
       refresh: vi.fn(async () => null),
       logout: vi.fn(async () => {}),
+      savePreferences: vi.fn(async () => {}),
     },
     rooms: {
       create: vi.fn(async () => ({ code: "ABC234" })),
@@ -43,6 +65,11 @@ export function fakeServices(): FakeServices {
       current: vi.fn(async () => null),
     },
     catalog: { names: vi.fn(async () => NAMES) },
+    stats: {
+      mine: vi.fn(async () => ({ username: "ash", stats: NO_STATS })),
+      forUser: vi.fn(async (username: string) => ({ username, stats: NO_STATS })),
+      history: vi.fn(async () => ({ games: [], nextCursor: null })),
+    },
   };
   const client = { join: vi.fn(), chooseType: vi.fn(), submit: vi.fn(), leave: vi.fn(), dispose: vi.fn() };
   const themeRoot = document.createElement("html");

@@ -13,6 +13,8 @@ export default defineConfig({
       "/auth": api,
       "/rooms": api,
       "/pokemon": api,
+      "/stats": api,
+      "/users": api,
       "/socket.io": { target: api, ws: true },
     },
   },
