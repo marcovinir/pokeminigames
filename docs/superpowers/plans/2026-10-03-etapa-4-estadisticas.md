@@ -30,7 +30,7 @@ Condiciones que la spec no detalla pero que muerden a una persona real; cada una
 
 1. **Estadísticas correctas.** Las partidas abandonadas, en espera o en curso no cuentan; un empate corta la racha; la racha sigue el orden de fin y no el de creación, ni siquiera con partidas que terminan en el mismo instante; los Pokémon de otra persona o de partidas no completadas no se mezclan; un id que ya no está en el catálogo no rompe nada. → Task 4 (`calculate.test.ts`) y Task 5 (`stats.service.test.ts`).
 2. **Privacidad.** El perfil ajeno no filtra correo, ids, historial ni códigos de sala; el guion bajo de un nombre no actúa como comodín; un usuario llamado `history` no choca con la ruta del historial; un nombre que nunca podría existir da 404, no un error del servidor. → Task 5 y Task 6 (`stats.routes.test.ts`).
-3. **Paginación del historial.** El cursor no repite ni salta partidas aunque dos terminen en el mismo instante; el límite acepta 1 y 50 y rechaza 0, 51, decimales y texto; un cursor inválido es un 400; con exactamente tantas partidas como el límite no hay página siguiente; dos pulsaciones seguidas de "Cargar más" piden la página una sola vez y un fallo conserva lo ya cargado. → Task 5, Task 6 y Task 10 (`profile.test.tsx`).
+3. **Paginación del historial.** El cursor no repite ni salta partidas aunque dos terminen en el mismo instante; el límite acepta 1 y 50 y rechaza 0, 51, decimales y texto; un cursor inválido es un 400; con exactamente tantas partidas como el límite no hay página siguiente; dos pulsaciones seguidas de "Cargar más" piden la página una sola vez, un fallo conserva lo ya cargado y, al llegar la página, el foco pasa a su primera partida (el botón puede desaparecer con la última página) y se anuncia. → Task 5, Task 6 y Task 10 (`profile.test.tsx`).
 4. **Integridad en la base de datos.** El motivo del fin no puede contradecir el estado de la partida y guardar el final es atómico (un motivo incoherente no deja la partida a medias); tema y modo no pueden guardarse por separado; los enums de la base son los mismos que los de `shared/`; la migración no se desvía del esquema de Prisma. → Task 1, Task 2 y Task 3.
 5. **Tema entre dispositivos y estados de la pantalla.** La preferencia del servidor gana al iniciar sesión; aplicarla no se vuelve a guardar (sin eco ni bucle) y un cambio del tema del sistema tampoco; los valores por defecto nunca se suben como si fueran una elección; un fallo de red al guardar se ignora; cerrar sesión conserva el tema; una respuesta que llega tarde a la pantalla de perfil no pisa a la nueva; carga, error con reintento, 404 y vacío tienen su pantalla. → Task 9 y Task 10.
 
@@ -66,7 +66,8 @@ La capa de cálculo (`calculate.ts`) no toca la base de datos ni Express: recibe
 - Se parte de `main` con las etapas 1 a 3 completas (669 pruebas). Trabaja en una rama `etapa-4-estadisticas`.
 - `server/.env` y `server/.env.test` ya existen (rol `pokemon_app`). Las pruebas del servidor usan `pokemon_minigames_test` y **borran datos**; su preparación global aplica las migraciones pendientes a esa base.
 - La migración de esta etapa es aditiva (columnas nulas, enums, índices y restricciones). Para tu base de desarrollo, aplícala con `npm run db:deploy -w server` (la Task 11 lo indica). Después de cambiar `schema.prisma` hay que regenerar el cliente de Prisma: `npm run db:generate -w server` (también lo hace `npm install`).
-- Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 483 pruebas de servidor y 390 de cliente en verde, `tsc` sin errores y `vite build` correcto; además se recorrió en un navegador real contra el servidor real con partidas de resultado controlado.
+- Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 487 pruebas de servidor y 392 de cliente en verde, `tsc` sin errores y `vite build` correcto; además se recorrió en un navegador real contra el servidor real con partidas de resultado controlado.
+- Si el equipo va justo de CPU, las pruebas de interfaz del cliente pueden agotar los 5 s por defecto: ejecútalas con `npx vitest run --testTimeout=30000 --maxWorkers=2` desde `client/` (no hace falta cambiar nada en el repositorio).
 - Puertos: servidor del juego 3000, cliente (Vite) 5173. Si el 3000 está ocupado por un servidor viejo, detenlo antes de arrancar.
 - npm 12 bloquea los scripts de instalación de algunas dependencias y lo avisa: es normal.
 - La verificación de la Task 11 deja usuarios `anfitrion_x` y `rival_y` y sus partidas en la base de **desarrollo**; el script imprime el SQL para borrarlos.
@@ -1360,7 +1361,7 @@ git commit -m "feat(stats): cálculo de estadísticas con funciones puras" -m "C
 
 **Interfaces:**
 - Consumes: `buildStats`, `resultFor`, `FinishedGame` (Task 4); `StatsResponse`, `HistoryEntry`, `HistoryPage` (Task 2); `AppError`.
-- Produces: `encodeCursor({ endedAt, id })` (texto opaco seguro para una URL), `decodeCursor(text)` (lanza `InvalidCursorError` si no es un cursor válido); `StatsService({ prisma, catalog })` con `findUserByUsername(username)` (sin distinguir mayúsculas y sin tratar `_` como comodín; `null` si no existe), `getStats(userId): Promise<StatsResponse>` (lanza `USER_NOT_FOUND` 404) y `getHistory(userId, { limit, before? }): Promise<HistoryPage>` (un cursor inválido lanza `VALIDATION_ERROR` 400; pide una fila de más para saber si hay página siguiente).
+- Produces: `encodeCursor({ endedAt, id })` (texto opaco seguro para una URL), `decodeCursor(text)` (lanza `InvalidCursorError` si no es un cursor válido, incluidas las fechas que JavaScript acepta pero PostgreSQL no: años negativos, de seis cifras o cero; así un cursor fabricado a mano da 400 y no un error del servidor); `StatsService({ prisma, catalog })` con `findUserByUsername(username)` (sin distinguir mayúsculas y sin tratar `_` como comodín; `null` si no existe), `getStats(userId): Promise<StatsResponse>` (lanza `USER_NOT_FOUND` 404) y `getHistory(userId, { limit, before? }): Promise<HistoryPage>` (un cursor inválido lanza `VALIDATION_ERROR` 400; pide una fila de más para saber si hay página siguiente).
 - Ayudante de pruebas: `seedGame({ code, endedAt, players: [SeedPlayer, SeedPlayer], winner?, status?, reason?, config? })` siembra una partida ya guardada con una ronda por cada Pokémon ganado.
 
 - [ ] **Step 1: Escribir las pruebas que fallan**
@@ -1468,6 +1469,10 @@ describe("cursor del historial", () => {
     ["id que no es un uuid", Buffer.from("2026-10-01T12:34:56.789Z|123").toString("base64url")],
     ["sin id", Buffer.from("2026-10-01T12:34:56.789Z|").toString("base64url")],
     ["con partes de más", Buffer.from(`2026-10-01T12:34:56.789Z|${id}|x`).toString("base64url")],
+    // Fechas que JavaScript acepta y escribe igual, pero que PostgreSQL no admite en un timestamptz.
+    ["año negativo", Buffer.from(`-271821-04-20T00:00:00.000Z|${id}`).toString("base64url")],
+    ["año de seis cifras", Buffer.from(`+010000-01-01T00:00:00.000Z|${id}`).toString("base64url")],
+    ["año cero", Buffer.from(`0000-01-01T00:00:00.000Z|${id}`).toString("base64url")],
   ])("rechaza un cursor inválido: %s", (_name, text) => {
     expect(() => decodeCursor(text)).toThrow(InvalidCursorError);
   });
@@ -1716,6 +1721,17 @@ describe("StatsService.getHistory", () => {
         code: "VALIDATION_ERROR",
       });
     });
+
+    it("un cursor con una fecha que la base de datos no admite también es un 400, no un error del servidor", async () => {
+      const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
+      for (const date of ["-271821-04-20T00:00:00.000Z", "+010000-01-01T00:00:00.000Z", "0000-01-01T00:00:00.000Z"]) {
+        const before = Buffer.from(`${date}|${id}`).toString("base64url");
+        await expect(service.getHistory(ash, { limit: 5, before })).rejects.toMatchObject({
+          status: 400,
+          code: "VALIDATION_ERROR",
+        });
+      }
+    });
   });
 });
 ```
@@ -1746,6 +1762,9 @@ export class InvalidCursorError extends Error {
   }
 }
 
+/** La forma que escribe `toISOString()` para años de cuatro cifras. */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Texto opaco y seguro para una URL; el cliente solo lo devuelve tal cual. */
@@ -1758,7 +1777,8 @@ export function decodeCursor(text: string): HistoryCursor {
   if (parts.length !== 2) throw new InvalidCursorError();
   const [date, id] = parts as [string, string];
   const endedAt = new Date(date);
-  if (Number.isNaN(endedAt.getTime()) || endedAt.toISOString() !== date || !UUID.test(id)) {
+  // Un año negativo, de seis cifras o el cero los acepta JavaScript pero no el timestamptz de PostgreSQL: darían un 500.
+  if (!ISO_DATE.test(date) || Number.isNaN(endedAt.getTime()) || endedAt.getUTCFullYear() < 1 || endedAt.toISOString() !== date || !UUID.test(id)) {
     throw new InvalidCursorError();
   }
   return { endedAt, id };
@@ -1907,7 +1927,7 @@ npm test -w server -- test/stats
 npm run typecheck
 ```
 
-Expected: PASS (53 pruebas: las de `calculate`, `cursor` y `stats.service`) y `tsc` sin errores.
+Expected: PASS (57 pruebas: las de `calculate`, `cursor` y `stats.service`) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -2264,7 +2284,7 @@ npm test -w server -- test/stats
 npm run typecheck
 ```
 
-Expected: PASS (83 pruebas de `test/stats`) y `tsc` sin errores.
+Expected: PASS (87 pruebas de `test/stats`) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -2582,7 +2602,7 @@ npm test -w server
 npm run typecheck
 ```
 
-Expected: PASS (**483 pruebas** en 38 archivos, todo el servidor) y `tsc` sin errores.
+Expected: PASS (**487 pruebas** en 38 archivos, todo el servidor) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -3470,11 +3490,11 @@ git commit -m "feat(client): el tema se guarda en el perfil y se sincroniza con 
 **Files:**
 - Create: `client/src/pages/profile/format.ts`, `client/src/pages/profile/use-load.ts`, `client/src/pages/profile/StatsView.tsx`, `client/src/pages/profile/HistoryList.tsx`, `client/src/pages/profile/ProfilePage.tsx`, `client/test/pages/profile.test.tsx`, `client/test/pages/profile-support.test.tsx`
 - Modify: `client/src/routes.tsx`, `client/src/components/Header.tsx`, `client/src/pages/room/SummaryView.tsx`
-- Test (modificar): `client/test/pages/routes.test.tsx`, `client/test/components/header-theme.test.tsx`, `client/test/pages/room.test.tsx`
+- Test (modificar): `client/test/pages/routes.test.tsx`, `client/test/components/header-theme.test.tsx`, `client/test/pages/room.test.tsx`, `client/test/pages/auth.test.tsx`
 
 **Interfaces:**
 - Consumes: `Endpoints.stats.*` (Task 8), `RESULT_LABELS`, `historyReason`, `describeConfig`, `errorMessage` (Task 2), `PokemonCard`, `Notice`, `Button`, `useServices`.
-- Produces: `formatPercent`, `formatPower` (un decimal con coma), `formatScore`, `winsLabel`, `formatDate` (`format.ts`); `useLoad(load, deps)` → `{ state: "loading" | "error" | "ready", reload }` (descarta las respuestas que llegan tarde o tras desmontar); `StatsView({ stats, own })`; `HistoryList()` (primera página sin cursor, "Cargar más" con el cursor, un fallo conserva lo ya cargado); `ProfilePage` (`/perfil` propio con historial; `/jugador/:username` ajeno sin historial; carga, error con reintento y 404 con vuelta al lobby). Rutas nuevas bajo sesión, enlace "Mi perfil" en el encabezado y botón "Ver perfil de {rival}" en el resumen de la partida.
+- Produces: `formatPercent`, `formatPower` (un decimal con coma), `formatScore`, `winsLabel`, `formatDate` (`format.ts`); `useLoad(load, deps)` → `{ state: "loading" | "error" | "ready", reload }` (descarta las respuestas que llegan tarde o tras desmontar); `StatsView({ stats, own })`; `HistoryList()` (primera página sin cursor, "Cargar más" con el cursor, un fallo conserva lo ya cargado; al cargar una página el foco pasa a su primera partida y un `role="status"` anuncia cuántas llegaron); `ProfilePage` (`/perfil` propio con historial; `/jugador/:username` ajeno sin historial; carga, error con reintento y 404 con vuelta al lobby). Rutas nuevas bajo sesión, enlace "Mi perfil" en el encabezado y botón "Ver perfil de {rival}" en el resumen de la partida.
 
 - [ ] **Step 1: Escribir las pruebas que fallan**
 
@@ -3756,6 +3776,33 @@ describe("historial", () => {
     expect(screen.queryByRole("button", { name: "Cargar más" })).not.toBeInTheDocument();
   });
 
+  it("al llegar la página siguiente el foco pasa a su primera partida y se anuncia (el botón puede desaparecer)", async () => {
+    const services = withHistory(
+      { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
+      { games: [entry({ id: "g2", opponent: { username: "brock" } }), entry({ id: "g3", opponent: { username: "gary" } })], nextCursor: null },
+    );
+    const { user } = renderAt("/perfil", services);
+    await screen.findByRole("list", { name: "Historial de partidas" });
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+    await waitFor(() => expect(historyItems()).toHaveLength(3));
+    expect(screen.queryByRole("button", { name: "Cargar más" })).not.toBeInTheDocument();
+    expect(historyItems()[1]).toHaveFocus();
+    expect(within(historyItems()[1]!).getByRole("link", { name: "brock" })).toBeInTheDocument();
+    expect(screen.getByText("Se cargaron 2 partidas más.")).toBeInTheDocument();
+  });
+
+  it("si la página siguiente trae una sola partida, el anuncio va en singular", async () => {
+    const services = withHistory(
+      { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
+      { games: [entry({ id: "g2", opponent: { username: "brock" } })], nextCursor: "cursor-2" },
+    );
+    const { user } = renderAt("/perfil", services);
+    await screen.findByRole("list", { name: "Historial de partidas" });
+    await user.click(screen.getByRole("button", { name: "Cargar más" }));
+    expect(await screen.findByText("Se cargó 1 partida más.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cargar más" })).toBeInTheDocument();
+  });
+
   it("no pide la misma página dos veces si se pulsa dos veces seguidas", async () => {
     let finish!: (page: { games: HistoryEntry[]; nextCursor: string | null }) => void;
     const services = withHistory({ games: [entry({ id: "g1" })], nextCursor: "cursor-1" });
@@ -3905,6 +3952,32 @@ describe("useLoad", () => {
     expect(result.current.state).toEqual({ status: "loading" });
   });
 });
+```
+
+`client/test/pages/auth.test.tsx` (dos esperas de la etapa 3 comprobaban `toHaveTextContent("/")`, que coincide por subcadena con `/login` y pasaba al instante; la comprobación siguiente competía con el inicio de sesión y fallaba con el equipo lento; ahora exigen exactamente `"/"`):
+
+```diff
+diff --git a/client/test/pages/auth.test.tsx b/client/test/pages/auth.test.tsx
+index 8a659de..b99c8e2 100644
+--- a/client/test/pages/auth.test.tsx
++++ b/client/test/pages/auth.test.tsx
+@@ -89,7 +89,7 @@ describe("página de inicio de sesión", () => {
+     await user.type(screen.getByLabelText("Contraseña"), "pikachu-123");
+     await user.click(screen.getByRole("button", { name: "Entrar" }));
+ 
+-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
++    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/"));
+     expect(services.endpoints.auth.login).toHaveBeenCalledWith({ email: "ash@example.com", password: "pikachu-123" });
+     expect(services.session.getState()).toMatchObject({ status: "authenticated", user: ASH });
+     expect(screen.getByText("Otra pantalla")).toBeInTheDocument();
+@@ -183,7 +183,7 @@ describe("página de registro", () => {
+     const { services, user } = renderRegister();
+     await fillRegistration(user);
+     await waitFor(() => expect(services.endpoints.auth.register).toHaveBeenCalledWith({ email: "ash@example.com", username: "ash", password: "pikachu-123" }));
+-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
++    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/"));
+     expect(services.session.getState().status).toBe("authenticated");
+   });
 ```
 
 `client/test/pages/routes.test.tsx`:
@@ -4140,7 +4213,7 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
 
 ```tsx
 import type { GameResult, HistoryEntry } from "@pokemon-minigames/shared";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
@@ -4157,7 +4230,8 @@ const RESULT_STYLE: Record<GameResult, string> = {
 
 function HistoryRow({ game }: { game: HistoryEntry }) {
   return (
-    <li className="framed rounded-card bg-surface p-3">
+    // tabIndex -1: se puede enfocar por código (al cargar más partidas) sin entrar en el orden de tabulación.
+    <li tabIndex={-1} className="framed rounded-card bg-surface p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className={`font-medium ${RESULT_STYLE[game.result]}`}>{RESULT_LABELS[game.result]}</span>
         <span className="font-num tabular-nums">{`${formatScore(game.myScore)} – ${formatScore(game.opponentScore)}`}</span>
@@ -4185,13 +4259,32 @@ export function HistoryList() {
   const [more, setMore] = useState<{ games: HistoryEntry[]; cursor: string | null } | null>(null);
   const [pending, setPending] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const list = useRef<HTMLOListElement>(null);
+  /** Posición de la primera partida de la página recién cargada, para llevarle el foco. */
+  const focusIndex = useRef<number | null>(null);
 
-  async function loadMore(cursor: string): Promise<void> {
+  // El botón "Cargar más" desaparece con la última página y con él se iría el foco: pasa a la primera partida nueva.
+  useEffect(() => {
+    if (focusIndex.current === null) return;
+    (list.current?.children[focusIndex.current] as HTMLElement | undefined)?.focus();
+    focusIndex.current = null;
+  }, [more]);
+
+  async function loadMore(cursor: string, shown: number): Promise<void> {
     if (pending) return;
     setPending(true);
     setMoreFailed(false);
     try {
       const page = await endpoints.stats.history({ before: cursor });
+      focusIndex.current = shown;
+      setAnnouncement(
+        page.games.length === 0
+          ? "No hay más partidas."
+          : page.games.length === 1
+            ? "Se cargó 1 partida más."
+            : `Se cargaron ${page.games.length} partidas más.`,
+      );
       setMore((previous) => ({ games: [...(previous?.games ?? []), ...page.games], cursor: page.nextCursor }));
     } catch {
       setMoreFailed(true);
@@ -4227,15 +4320,18 @@ export function HistoryList() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <ol aria-label="Historial de partidas" className="flex flex-col gap-3">
+          <ol ref={list} aria-label="Historial de partidas" className="flex flex-col gap-3">
             {games.map((game) => (
               <HistoryRow key={game.id} game={game} />
             ))}
           </ol>
+          <p role="status" className="sr-only">
+            {announcement}
+          </p>
           {moreFailed ? <Notice tone="danger">No se pudo cargar la siguiente página.</Notice> : null}
           {cursor ? (
             <div className="text-center">
-              <Button loading={pending} onClick={() => void loadMore(cursor)}>
+              <Button loading={pending} onClick={() => void loadMore(cursor, games.length)}>
                 Cargar más
               </Button>
             </div>
@@ -4398,7 +4494,7 @@ npm run typecheck
 npm run build
 ```
 
-Expected: PASS (todo el cliente: **390 pruebas** en 23 archivos), `tsc` sin errores y `vite build` correcto.
+Expected: PASS (todo el cliente: **392 pruebas** en 23 archivos), `tsc` sin errores y `vite build` correcto.
 
 - [ ] **Step 5: Commit**
 
@@ -4716,7 +4812,7 @@ npm run build
 git status
 ```
 
-Expected: **873 pruebas pasan** (483 de servidor y 390 de cliente); `tsc` sin errores en los tres paquetes; el build genera `client/dist`; `git status` solo muestra `README.md` y `client/scripts/dev-games.mjs` (nada de `.env`, `.env.test` ni `client/dist`).
+Expected: **879 pruebas pasan** (487 de servidor y 392 de cliente); `tsc` sin errores en los tres paquetes; el build genera `client/dist`; `git status` solo muestra `README.md` y `client/scripts/dev-games.mjs` (nada de `.env`, `.env.test` ni `client/dist`).
 
 - [ ] **Step 7: Commit y publicar la rama**
 
@@ -4750,8 +4846,12 @@ Expected: rama `etapa-4-estadisticas` en `https://github.com/marcovinir/pokemon-
 
 **Decisiones tomadas al escribir el plan (la spec ya las recoge o no las contradice):** `GameEndReason` pasa a salir de una lista en `shared/` para poder compararla con el enum de la base de datos; los textos del cliente (incluido el mensaje de `USER_NOT_FOUND`) van en la Task 2 porque `Record<ErrorCode, string>` obliga a traducir un código nuevo en la misma tarea que se agrega; `ThemeState.hasChoice` distingue "la persona eligió" de "valor por defecto" (sin él, un navegador nuevo subiría Clásico/Automático al servidor y pisaría la elección de otro dispositivo); y el perfil ajeno responde 404 también para nombres que nunca podrían existir.
 
+**Lo que encontró la revisión final independiente de toda la rama (ya corregido en el código de este plan, cada punto con su prueba):** (1) un cursor fabricado a mano con una fecha que JavaScript acepta pero PostgreSQL no (un año negativo, de seis cifras o cero) hacía fallar la consulta y respondía 500 en vez de 400; ahora `decodeCursor` lo rechaza (`cursor.test.ts`, `stats.service.test.ts`); (2) al cargar la última página del historial el botón "Cargar más" desaparecía con el foco y quien usa teclado o lector de pantalla perdía su lugar; ahora el foco pasa a la primera partida nueva y se anuncia cuántas llegaron (`profile.test.tsx`). Durante la ejecución, además, una prueba de autenticación de la etapa 3 resultó intermitente con el equipo lento (la espera `toHaveTextContent("/")` coincidía con `/login`); se corrigió en la Task 10.
+
+**Pendientes menores de esa revisión (no se corrigen en esta etapa):** `getStats` hace dos lecturas sin instantánea común (si una partida pasa a completada entre las dos, sus Pokémon cuentan en el top pero no en "Partidas"; transitorio; arreglo: una transacción `RepeatableRead`); cada cambio de tema lanza su propio PUT y dos cambios muy seguidos podrían llegar desordenados (arreglo: encadenar los guardados); `hasChoice` vale verdadero con un `localStorage` corrupto (se subiría el valor por defecto como si fuera una elección); y, si faltara el rival en una partida completada (teórico), el historial mostraría "?" con un enlace a un perfil inexistente.
+
 **Hallazgos de la verificación (ya corregidos en el código de este plan):** (1) una partida personalizada de un solo máximo de rondas se mostraba como "hasta 1 rondas"; ahora concuerda en singular (`es.test.ts`); (2) la prueba de privacidad confundía el `example.com` de las URL de sprite con un correo; ahora busca `@example.com`; (3) Express tipa `req.params.username` como `string | string[]` cuando hay un middleware delante; se convierte con `String(...)`.
 
 **Fuera de esta etapa:** ranking global, perfiles sin sesión, avatares, detalle de una partida concreta, filtros del historial, gráficos, editar usuario, correo o contraseña, borrar la cuenta y estadísticas por par de tipos; prueba E2E automatizada, despliegue, `COOKIE_SECURE` obligatorio, CSRF, límite de intentos de login y de peticiones (etapa 5). Pendientes menores de la etapa 3 que siguen abiertos: `room-state` sin `nextRoundAt`, y los otros siete listados en el plan de esa etapa.
 
-**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 483 pruebas de servidor y 390 de cliente en verde, `tsc` sin errores en los tres paquetes, `vite build` correcto, 13 mutaciones a propósito detectadas por las pruebas, y partidas reales en el navegador contra el catálogo de 1025 Pokémon.
+**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 487 pruebas de servidor y 392 de cliente en verde, `tsc` sin errores en los tres paquetes, `vite build` correcto, 13 mutaciones a propósito detectadas por las pruebas, y partidas reales en el navegador contra el catálogo de 1025 Pokémon.
