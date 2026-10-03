@@ -12,6 +12,8 @@ import type { PrismaClient } from "./db/prisma.js";
 import type { RoomManager } from "./game/room-manager.js";
 import { errorHandler, notFoundHandler } from "./http/errors.js";
 import { createRoomsRouter } from "./rooms/rooms.routes.js";
+import { createStatsRouter } from "./stats/stats.routes.js";
+import { StatsService } from "./stats/stats.service.js";
 
 export interface AppDeps {
   env: Env;
@@ -42,6 +44,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps
   app.use("/auth", createAuthRouter({ env, authService, tokens }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
+  app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
