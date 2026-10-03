@@ -8,6 +8,7 @@ import { GameClient, type GameClientApi, type SocketLike } from "./game/game-cli
 import { type GameStoreState, createGameStore } from "./game/store";
 import { type SessionState, createSessionStore } from "./session/session-store";
 import { type ThemeState, createThemeStore } from "./theme/theme-store";
+import { syncThemeWithSession } from "./theme/theme-sync";
 
 /** Todo lo que la interfaz necesita del exterior. En las pruebas se reemplaza por dobles. */
 export interface Services {
@@ -64,15 +65,19 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
       io(baseUrl || undefined, { autoConnect: false, auth: (cb) => cb({ token: api.getToken() }) }) as unknown as SocketLike,
   });
 
+  const theme = createThemeStore({
+    storage: safeStorage(),
+    root: document.documentElement,
+    media: window.matchMedia("(prefers-color-scheme: dark)"),
+  });
+  // Dura lo que dura la aplicación: la preferencia del perfil y la del navegador se mantienen de acuerdo.
+  syncThemeWithSession({ session, theme, endpoints });
+
   return {
     endpoints,
     session,
     names: createNamesStore(endpoints),
     game: { store: gameStore, client },
-    theme: createThemeStore({
-      storage: safeStorage(),
-      root: document.documentElement,
-      media: window.matchMedia("(prefers-color-scheme: dark)"),
-    }),
+    theme,
   };
 }

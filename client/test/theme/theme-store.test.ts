@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import * as shared from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PREFERENCE,
+  THEME_MODES,
+  THEME_NAMES,
   THEME_STORAGE_KEY,
   type ThemeEnv,
   createThemeStore,
@@ -121,6 +124,61 @@ describe("createThemeStore", () => {
     const { env } = fakeEnv();
     const store = createThemeStore({ ...env, storage: null });
     expect(() => store.getState().setMode("oscuro")).not.toThrow();
+  });
+});
+
+describe("setPreference", () => {
+  it("aplica tema y modo juntos, los guarda y recalcula el modo resuelto", () => {
+    const { env, data, root } = fakeEnv();
+    const store = createThemeStore(env);
+    store.getState().setPreference({ theme: "pokedex", mode: "oscuro" });
+    expect(store.getState()).toMatchObject({ preference: { theme: "pokedex", mode: "oscuro" }, resolvedMode: "oscuro" });
+    expect(root.dataset).toMatchObject({ theme: "pokedex", mode: "oscuro" });
+    expect(JSON.parse(data.get(THEME_STORAGE_KEY)!)).toEqual({ theme: "pokedex", mode: "oscuro" });
+  });
+
+  it("también funciona sin almacenamiento", () => {
+    const { env, root } = fakeEnv({ brokenStorage: true });
+    const store = createThemeStore(env);
+    expect(() => store.getState().setPreference({ theme: "pokedex", mode: "claro" })).not.toThrow();
+    expect(root.dataset).toMatchObject({ theme: "pokedex", mode: "claro" });
+  });
+});
+
+describe("hasChoice", () => {
+  it("al principio es falso: todavía no se ha elegido nada", () => {
+    expect(createThemeStore(fakeEnv().env).getState().hasChoice).toBe(false);
+  });
+
+  it("es verdadero si el navegador ya tenía una preferencia guardada", () => {
+    const { env } = fakeEnv({ saved: '{"theme":"pokedex","mode":"oscuro"}' });
+    expect(createThemeStore(env).getState().hasChoice).toBe(true);
+  });
+
+  it("pasa a verdadero cuando la persona elige tema, modo o aplica una preferencia", () => {
+    for (const choose of [
+      (s: ReturnType<typeof createThemeStore>) => s.getState().setTheme("pokedex"),
+      (s: ReturnType<typeof createThemeStore>) => s.getState().setMode("claro"),
+      (s: ReturnType<typeof createThemeStore>) => s.getState().setPreference({ theme: "clasico", mode: "auto" }),
+    ]) {
+      const store = createThemeStore(fakeEnv().env);
+      choose(store);
+      expect(store.getState().hasChoice).toBe(true);
+    }
+  });
+
+  it("un cambio del tema del sistema no cuenta como elegir", () => {
+    const { env, changeSystemTheme } = fakeEnv();
+    const store = createThemeStore(env);
+    changeSystemTheme(true);
+    expect(store.getState().hasChoice).toBe(false);
+  });
+});
+
+describe("opciones de tema", () => {
+  it("son exactamente las que acepta el servidor", () => {
+    expect(THEME_NAMES).toBe(shared.THEME_NAMES);
+    expect(THEME_MODES).toBe(shared.THEME_MODES);
   });
 });
 

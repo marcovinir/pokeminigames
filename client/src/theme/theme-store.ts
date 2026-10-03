@@ -1,7 +1,9 @@
+import { THEME_MODES, THEME_NAMES, type ThemeMode, type ThemeName } from "@pokemon-minigames/shared";
 import { type StoreApi, createStore } from "zustand";
 
-export type ThemeName = "clasico" | "pokedex";
-export type ThemeMode = "auto" | "claro" | "oscuro";
+// Las opciones son las mismas que acepta el servidor al guardar la preferencia en el perfil.
+export { THEME_MODES, THEME_NAMES };
+export type { ThemeMode, ThemeName };
 export type ResolvedMode = "claro" | "oscuro";
 
 export interface ThemePreference {
@@ -11,8 +13,6 @@ export interface ThemePreference {
 
 export const THEME_LABELS: Record<ThemeName, string> = { clasico: "Clásico", pokedex: "Pokédex" };
 export const MODE_LABELS: Record<ThemeMode, string> = { auto: "Automático", claro: "Claro", oscuro: "Oscuro" };
-export const THEME_NAMES = Object.keys(THEME_LABELS) as ThemeName[];
-export const THEME_MODES = Object.keys(MODE_LABELS) as ThemeMode[];
 
 export const THEME_STORAGE_KEY = "pokemon-minigames:theme";
 export const DEFAULT_PREFERENCE: ThemePreference = { theme: "clasico", mode: "auto" };
@@ -39,8 +39,12 @@ export function resolveMode(mode: ThemeMode, prefersDark: boolean): ResolvedMode
 export interface ThemeState {
   preference: ThemePreference;
   resolvedMode: ResolvedMode;
+  /** La persona ya eligió (ahora o en una visita anterior): lo que tiene no es solo el valor por defecto. */
+  hasChoice: boolean;
   setTheme(theme: ThemeName): void;
   setMode(mode: ThemeMode): void;
+  /** Aplica tema y modo juntos (p. ej. la preferencia guardada en el perfil). */
+  setPreference(preference: ThemePreference): void;
 }
 
 /** Lo que el almacén necesita de `matchMedia("(prefers-color-scheme: dark)")`. */
@@ -79,21 +83,22 @@ export function createThemeStore(env: ThemeEnv): StoreApi<ThemeState> {
     return resolvedMode;
   };
 
-  const initial = parsePreference(read());
-  const store = createStore<ThemeState>((set, get) => ({
-    preference: initial,
-    resolvedMode: apply(initial),
-    setTheme(theme) {
-      const preference = { ...get().preference, theme };
+  const saved = read();
+  const initial = parsePreference(saved);
+  const store = createStore<ThemeState>((set, get) => {
+    const choose = (preference: ThemePreference): void => {
       write(preference);
-      set({ preference, resolvedMode: apply(preference) });
-    },
-    setMode(mode) {
-      const preference = { ...get().preference, mode };
-      write(preference);
-      set({ preference, resolvedMode: apply(preference) });
-    },
-  }));
+      set({ preference, resolvedMode: apply(preference), hasChoice: true });
+    };
+    return {
+      preference: initial,
+      resolvedMode: apply(initial),
+      hasChoice: saved !== null,
+      setTheme: (theme) => choose({ ...get().preference, theme }),
+      setMode: (mode) => choose({ ...get().preference, mode }),
+      setPreference: (preference) => choose({ theme: preference.theme, mode: preference.mode }),
+    };
+  });
 
   // En modo automático, seguir los cambios del sistema mientras la página está abierta.
   env.media.addEventListener("change", () => {
