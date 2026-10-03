@@ -1,4 +1,4 @@
-import type { BaseStats, ErrorCode, GameEndReason, PickResult, TypeName } from "@pokemon-minigames/shared";
+import type { BaseStats, ErrorCode, GameEndReason, GameResult, PickResult, RoomConfig, TypeName } from "@pokemon-minigames/shared";
 
 export const TYPE_LABELS: Record<TypeName, string> = {
   normal: "normal",
@@ -31,6 +31,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   UNAUTHORIZED: "Tu sesión expiró. Inicia sesión de nuevo.",
   INVALID_REFRESH_TOKEN: "Tu sesión expiró. Inicia sesión de nuevo.",
   NOT_FOUND: "No encontramos lo que buscas.",
+  USER_NOT_FOUND: "No encontramos a ese jugador.",
   INTERNAL_ERROR: "Algo falló en el servidor. Inténtalo de nuevo.",
   ALREADY_IN_GAME: "Ya estás en una partida. Vuelve a ella desde el lobby.",
   ROOM_NOT_FOUND: "Esa sala no existe o ya terminó.",
@@ -72,6 +73,38 @@ export const END_REASON_LABELS: Record<GameEndReason, string> = {
   expired: "La sala caducó",
   abandoned: "La partida se abandonó",
 };
+
+export const RESULT_LABELS: Record<GameResult, string> = { won: "Ganaste", drawn: "Empate", lost: "Perdiste" };
+
+const SAME_FOR_ALL = (text: string): Record<GameResult, string> => ({ won: text, drawn: text, lost: text });
+
+/** El motivo del fin contado desde el lado de quien mira su historial. */
+export const HISTORY_REASON_LABELS: Record<GameEndReason, Record<GameResult, string>> = {
+  completed: SAME_FOR_ALL("La partida terminó"),
+  forfeit: { won: "Tu rival abandonó", drawn: "Un jugador abandonó la partida", lost: "Abandonaste la partida" },
+  disconnect: { won: "Tu rival se desconectó", drawn: "Un jugador se desconectó", lost: "Te desconectaste" },
+  exhausted: SAME_FOR_ALL("Se agotaron los pares de tipos jugables"),
+  cancelled: SAME_FOR_ALL("La sala se canceló"),
+  expired: SAME_FOR_ALL("La sala caducó"),
+  abandoned: SAME_FOR_ALL("La partida se abandonó"),
+};
+
+/** Las partidas anteriores a que se guardara el motivo (nulo) se muestran como una partida normal. */
+export function historyReason(reason: GameEndReason | null, result: GameResult): string {
+  return HISTORY_REASON_LABELS[reason ?? "completed"][result];
+}
+
+/** "Tipos aleatorios · 3 rondas", "Tipos elegidos · hasta 7 rondas", "Tipos aleatorios · meta de 2500 puntos". */
+export function describeConfig(config: RoomConfig): string {
+  const types = config.typeMode === "random" ? "Tipos aleatorios" : "Tipos elegidos";
+  const length =
+    config.statsGoal !== null
+      ? `meta de ${config.statsGoal} puntos`
+      : config.lengthMode === "fixed_rounds"
+        ? `${config.roundsLimit} rondas`
+        : `hasta ${config.roundsLimit} ${config.roundsLimit === 1 ? "ronda" : "rondas"}`;
+  return `${types} · ${length}`;
+}
 
 export const STAT_LABELS: Record<keyof BaseStats, string> = {
   hp: "PS",

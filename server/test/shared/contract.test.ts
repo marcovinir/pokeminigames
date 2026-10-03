@@ -1,4 +1,11 @@
-import { ERROR_CODES, TYPE_NAMES, normalizeName as sharedNormalizeName } from "@pokemon-minigames/shared";
+import {
+  ERROR_CODES,
+  GAME_END_REASONS,
+  THEME_MODES,
+  THEME_NAMES,
+  TYPE_NAMES,
+  normalizeName as sharedNormalizeName,
+} from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import { normalizeName as serverNormalizeName } from "../../src/catalog/normalize.js";
 import { TYPE_NAMES as SNAPSHOT_TYPE_NAMES, typeId } from "../../src/catalog/snapshot.js";
@@ -16,6 +23,17 @@ describe("paquete shared", () => {
     expect(serverNormalizeName).toBe(sharedNormalizeName);
     expect(sharedNormalizeName("Nidoran♀")).toBe("nidoranf");
     expect(sharedNormalizeName("  Épsilon ")).toBe("epsilon");
+  });
+
+  it("incluye el código de jugador inexistente", () => {
+    expect(ERROR_CODES).toContain("USER_NOT_FOUND");
+  });
+
+  it("los motivos de fin y las opciones de tema no se repiten", () => {
+    expect(new Set(GAME_END_REASONS).size).toBe(GAME_END_REASONS.length);
+    expect(GAME_END_REASONS).toHaveLength(7);
+    expect(THEME_NAMES).toEqual(["clasico", "pokedex"]);
+    expect(THEME_MODES).toEqual(["auto", "claro", "oscuro"]);
   });
 
   it("los códigos de error no se repiten e incluyen los de salas y partida", () => {

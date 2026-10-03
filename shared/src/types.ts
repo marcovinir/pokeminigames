@@ -45,7 +45,16 @@ export type GamePhase = "waiting" | "starting" | "choosing_types" | "round_activ
  * Por qué terminó la partida. completed, forfeit, disconnect y exhausted son partidas
  * terminadas; cancelled, expired y abandoned quedan como abandonadas.
  */
-export type GameEndReason = "completed" | "forfeit" | "disconnect" | "exhausted" | "cancelled" | "expired" | "abandoned";
+export const GAME_END_REASONS = [
+  "completed",
+  "forfeit",
+  "disconnect",
+  "exhausted",
+  "cancelled",
+  "expired",
+  "abandoned",
+] as const;
+export type GameEndReason = (typeof GAME_END_REASONS)[number];
 
 export interface RoomConfig {
   typeMode: TypeMode;
