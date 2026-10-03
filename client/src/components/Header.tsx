@@ -17,6 +17,9 @@ export function Header() {
           <ThemeSwitcher />
           {user ? (
             <>
+              <Link to="/perfil" className="text-sm underline-offset-2 hover:underline">
+                Mi perfil
+              </Link>
               <span className="text-sm">{user.username}</span>
               <Button variant="header" onClick={() => void session.getState().logout()}>
                 Cerrar sesión

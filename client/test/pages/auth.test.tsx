@@ -89,7 +89,7 @@ describe("página de inicio de sesión", () => {
     await user.type(screen.getByLabelText("Contraseña"), "pikachu-123");
     await user.click(screen.getByRole("button", { name: "Entrar" }));
 
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
+    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/"));
     expect(services.endpoints.auth.login).toHaveBeenCalledWith({ email: "ash@example.com", password: "pikachu-123" });
     expect(services.session.getState()).toMatchObject({ status: "authenticated", user: ASH });
     expect(screen.getByText("Otra pantalla")).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe("página de registro", () => {
     const { services, user } = renderRegister();
     await fillRegistration(user);
     await waitFor(() => expect(services.endpoints.auth.register).toHaveBeenCalledWith({ email: "ash@example.com", username: "ash", password: "pikachu-123" }));
-    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
+    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/"));
     expect(services.session.getState().status).toBe("authenticated");
   });
 

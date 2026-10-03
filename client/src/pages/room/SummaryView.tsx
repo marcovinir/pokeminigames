@@ -57,6 +57,11 @@ export function SummaryView() {
         <Button variant="primary" onClick={() => navigate("/", { state: { config: view.config } })}>
           Jugar de nuevo
         </Button>
+        {opponent ? (
+          <Button onClick={() => navigate(`/jugador/${encodeURIComponent(opponent.username)}`)}>
+            Ver perfil de {opponent.username}
+          </Button>
+        ) : null}
         <Button onClick={() => navigate("/")}>Volver al lobby</Button>
       </div>
     </section>

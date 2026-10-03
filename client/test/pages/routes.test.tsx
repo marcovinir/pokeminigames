@@ -17,6 +17,26 @@ function renderApp(route: string, prepare?: (services: ReturnType<typeof fakeSer
   return utils;
 }
 
+describe("rutas del perfil", () => {
+  it("sin sesión, /perfil y /jugador/:username llevan a /login", async () => {
+    for (const route of ["/perfil", "/jugador/misty"]) {
+      const { unmount } = renderApp(route, (s) => s.session.setState({ status: "anonymous", user: null }));
+      await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/login"));
+      unmount();
+    }
+  });
+
+  it("con sesión, /perfil muestra el perfil propio", async () => {
+    renderApp("/perfil", (s) => signIn(s));
+    expect(await screen.findByRole("heading", { name: "Tu perfil" })).toBeInTheDocument();
+  });
+
+  it("con sesión, /jugador/:username muestra el perfil de esa persona", async () => {
+    renderApp("/jugador/misty", (s) => signIn(s));
+    expect(await screen.findByRole("heading", { name: "misty" })).toBeInTheDocument();
+  });
+});
+
 describe("guardas de ruta", () => {
   it("mientras se recupera la sesión muestra una pantalla de carga, no el formulario", () => {
     renderApp("/");

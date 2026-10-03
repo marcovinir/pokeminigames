@@ -65,6 +65,18 @@ describe("Header", () => {
     expect(screen.getByRole("button", { name: "Cerrar sesión" }).className).toContain("text-header-fg");
   });
 
+  it("con sesión ofrece el enlace a tu perfil", () => {
+    const services = fakeServices();
+    signIn(services);
+    renderWithServices(<Header />, { services });
+    expect(screen.getByRole("link", { name: "Mi perfil" })).toHaveAttribute("href", "/perfil");
+  });
+
+  it("sin sesión no hay enlace al perfil", () => {
+    renderWithServices(<Header />);
+    expect(screen.queryByRole("link", { name: "Mi perfil" })).not.toBeInTheDocument();
+  });
+
   it("sin sesión no muestra usuario ni botón, pero sí el selector de tema", () => {
     renderWithServices(<Header />);
     expect(screen.queryByRole("button", { name: "Cerrar sesión" })).not.toBeInTheDocument();

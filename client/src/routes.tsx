@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { useSession } from "./services";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { LobbyPage } from "./pages/Lobby";
+import { ProfilePage } from "./pages/profile/ProfilePage";
 import { RoomPage } from "./pages/room/RoomPage";
 
 function LoadingScreen() {
@@ -39,6 +40,8 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<LobbyPage />} />
         <Route path="/sala/:code" element={<RoomPage />} />
+        <Route path="/perfil" element={<ProfilePage />} />
+        <Route path="/jugador/:username" element={<ProfilePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

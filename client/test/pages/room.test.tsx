@@ -347,6 +347,12 @@ describe("resumen final", () => {
     expect(JSON.parse(probe.dataset.state!)).toEqual({ config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 1800 } });
   });
 
+  it("'Ver perfil de' lleva al perfil del rival", async () => {
+    const { user } = renderRoom(finished(1, 1));
+    await user.click(screen.getByRole("button", { name: "Ver perfil de misty" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/jugador/misty");
+  });
+
   it("'Volver al lobby' vuelve sin configuración previa", async () => {
     const { user } = renderRoom(finished(1, 1));
     await user.click(screen.getByRole("button", { name: "Volver al lobby" }));
