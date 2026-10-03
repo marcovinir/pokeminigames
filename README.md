@@ -2,7 +2,7 @@
 
 Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga ambos. Gana quien acumule más stats base. El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/).
 
-**Estado:** etapa 3 de 5 (servidor y cliente web completos y jugables). Faltan las estadísticas y el perfil (etapa 4) y el despliegue (etapa 5).
+**Estado:** etapa 4 de 5 (servidor y cliente web completos y jugables, con estadísticas, historial y perfil). Falta el despliegue (etapa 5).
 
 ## Estructura
 
@@ -39,7 +39,7 @@ npm run dev
 npm run dev:client
 ```
 
-En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon` y `/socket.io` al servidor del juego, de modo que cliente y API comparten origen y la cookie de sesión funciona. Abre `http://localhost:5173`, crea una cuenta y una sala; para jugar necesitas un segundo jugador (otro navegador o una ventana privada, con otra cuenta).
+En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`, `/stats`, `/users` y `/socket.io` al servidor del juego, de modo que cliente y API comparten origen y la cookie de sesión funciona. Abre `http://localhost:5173`, crea una cuenta y una sala; para jugar necesitas un segundo jugador (otro navegador o una ventana privada, con otra cuenta).
 
 ## Comandos
 
@@ -57,27 +57,35 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 
 Variable opcional del cliente: `VITE_API_URL` (URL base del servidor; vacía = el mismo origen).
 
+## Estadísticas y perfil
+
+En **Mi perfil** (`/perfil`) cada persona ve sus partidas jugadas, ganadas, empatadas y perdidas, el porcentaje de victorias, la racha actual y la mejor, sus 3 Pokémon más ganados, el poder promedio de los Pokémon que ganó, su mejor partida y el historial de sus partidas (con el motivo del fin: abandono, desconexión, etc.). Al terminar una partida se puede abrir el perfil del rival (`/jugador/:username`), que solo muestra estadísticas. Solo cuentan las partidas completadas; las abandonadas no. Todo se calcula al pedirlo a partir de las partidas guardadas (no hay tablas de estadísticas aparte).
+
 ## Temas y accesibilidad
 
-Cada jugador elige entre dos temas, **Clásico** y **Pokédex** (retro, con números en monoespaciada y bordes rectos), y entre modo automático, claro u oscuro; la preferencia se guarda en el navegador. Los colores de todos los temas y de los 18 tipos cumplen el contraste AA de WCAG (lo comprueban las pruebas). Para revisar lo que realmente se ve, pega [`client/scripts/contrast-audit.js`](client/scripts/contrast-audit.js) en la consola del navegador y ejecuta `__contrastAuditAll()`.
+Cada jugador elige entre dos temas, **Clásico** y **Pokédex** (retro, con números en monoespaciada y bordes rectos), y entre modo automático, claro u oscuro; la preferencia se guarda en el navegador y, con la sesión iniciada, también en tu perfil (al entrar en otro navegador se aplica la del perfil). Los colores de todos los temas y de los 18 tipos cumplen el contraste AA de WCAG (lo comprueban las pruebas). Para revisar lo que realmente se ve, pega [`client/scripts/contrast-audit.js`](client/scripts/contrast-audit.js) en la consola del navegador y ejecuta `__contrastAuditAll()`.
 
 ## API REST
 
 | Método y ruta | Descripción |
 |---|---|
 | `GET /health` | Estado del servidor |
-| `POST /auth/register` | Crea la cuenta; devuelve `user` y `accessToken` y fija la cookie de refresco |
+| `POST /auth/register` | Crea la cuenta; devuelve `user` (con su `preferences` de tema, nulas al principio) y `accessToken` y fija la cookie de refresco |
 | `POST /auth/login` | Inicia sesión |
 | `POST /auth/refresh` | Renueva la sesión con la cookie (rota el refresh token) |
 | `POST /auth/logout` | Cierra la sesión y borra la cookie |
 | `GET /auth/me` | Usuario actual |
+| `PUT /auth/me/preferences` | Guarda el tema: `{ theme: "clasico" \| "pokedex", themeMode: "auto" \| "claro" \| "oscuro" }` |
 | `POST /rooms` | Crea una sala: `{ typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal? }`; devuelve `{ code }` |
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
 | `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado |
+| `GET /stats` | Tus estadísticas: `{ username, stats }` |
+| `GET /stats/history?limit=&before=` | Tus partidas completadas, de la más reciente a la más antigua (`limit` de 1 a 50, por defecto 20); `before` es el `nextCursor` de la página anterior. Devuelve `{ games, nextCursor }` |
+| `GET /users/:username/stats` | Las estadísticas de otra persona (nunca su correo ni su historial); `404 USER_NOT_FOUND` si no existe |
 
-Las rutas de `/auth/me` y `/rooms` exigen `Authorization: Bearer <accessToken>`. Los errores tienen la forma `{ "error": { "code", "message", "details"? } }`.
+Las rutas de `/auth/me`, `/rooms`, `/stats` y `/users` exigen `Authorization: Bearer <accessToken>`. Los errores tienen la forma `{ "error": { "code", "message", "details"? } }`.
 
 ## Tiempo real (Socket.io)
 
