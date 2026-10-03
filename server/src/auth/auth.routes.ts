@@ -2,7 +2,7 @@ import { type CookieOptions, type Response, Router } from "express";
 import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
 import { createRequireAuth, getAuth } from "./auth.middleware.js";
-import { loginSchema, registerSchema } from "./auth.schemas.js";
+import { loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
 import type { TokenService } from "./tokens.js";
 
@@ -15,7 +15,13 @@ export interface AuthRouterDeps {
 }
 
 function toUserDto(user: AuthUser) {
-  return { id: user.id, email: user.email, username: user.username, createdAt: user.createdAt.toISOString() };
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    createdAt: user.createdAt.toISOString(),
+    preferences: user.preferences,
+  };
 }
 
 export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps): Router {
@@ -77,6 +83,11 @@ export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps): 
   router.get("/me", requireAuth, async (_req, res) => {
     const user = await authService.me(getAuth(res).userId);
     res.json({ user: toUserDto(user) });
+  });
+
+  router.put("/me/preferences", requireAuth, async (req, res) => {
+    const preferences = preferencesSchema.parse(req.body);
+    res.json({ preferences: await authService.savePreferences(getAuth(res).userId, preferences) });
   });
 
   return router;

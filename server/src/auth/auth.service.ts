@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import type { ThemeMode, ThemeName, ThemePreferences } from "@pokemon-minigames/shared";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { AppError } from "../http/errors.js";
 import type { PasswordHasher } from "./password.js";
@@ -9,6 +10,18 @@ export interface AuthUser {
   email: string;
   username: string;
   createdAt: Date;
+  /** Nulo mientras la persona no haya guardado una preferencia de tema. */
+  preferences: ThemePreferences | null;
+}
+
+/** Lo que el servicio necesita de una fila de `users`. */
+interface UserRow {
+  id: string;
+  email: string;
+  username: string;
+  createdAt: Date;
+  theme: ThemeName | null;
+  themeMode: ThemeMode | null;
 }
 
 export interface AuthResult {
@@ -30,8 +43,15 @@ export interface AuthServiceDeps {
 const INVALID_REFRESH = () =>
   new AppError(401, "INVALID_REFRESH_TOKEN", "Sesión inválida o expirada. Inicia sesión de nuevo.");
 
-function toAuthUser(user: { id: string; email: string; username: string; createdAt: Date }): AuthUser {
-  return { id: user.id, email: user.email, username: user.username, createdAt: user.createdAt };
+function toAuthUser(user: UserRow): AuthUser {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    createdAt: user.createdAt,
+    // La base de datos exige que tema y modo vayan juntos, así que basta con mirar uno.
+    preferences: user.theme && user.themeMode ? { theme: user.theme, themeMode: user.themeMode } : null,
+  };
 }
 
 export class AuthService {
@@ -124,6 +144,22 @@ export class AuthService {
     return toAuthUser(user);
   }
 
+  /** Guarda la preferencia de tema; si la cuenta ya no existe es lo mismo que una sesión inválida. */
+  async savePreferences(userId: string, preferences: ThemePreferences): Promise<ThemePreferences> {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { theme: preferences.theme, themeMode: preferences.themeMode },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
+      }
+      throw error;
+    }
+    return { theme: preferences.theme, themeMode: preferences.themeMode };
+  }
+
   private async assertAvailable(email: string, username: string): Promise<void> {
     const emailTaken = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (emailTaken) {
@@ -140,7 +176,7 @@ export class AuthService {
 
   private async issueSession(
     db: Prisma.TransactionClient | PrismaClient,
-    user: { id: string; email: string; username: string; createdAt: Date },
+    user: UserRow,
   ): Promise<AuthResult> {
     const refreshToken = this.tokens.generateRefreshToken();
     const refreshExpiresAt = new Date(this.now().getTime() + this.refreshTtlMs);

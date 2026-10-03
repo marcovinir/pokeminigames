@@ -1,3 +1,4 @@
+import { THEME_MODES, THEME_NAMES } from "@pokemon-minigames/shared";
 import { z } from "zod";
 import { MAX_PASSWORD_BYTES } from "./password.js";
 
@@ -20,6 +21,11 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email,
   password: z.string().min(1, "La contraseña es obligatoria").max(1024),
+});
+
+export const preferencesSchema = z.object({
+  theme: z.enum(THEME_NAMES),
+  themeMode: z.enum(THEME_MODES),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
