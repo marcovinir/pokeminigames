@@ -102,23 +102,32 @@ describe("createPrismaGameRepository", () => {
     expect(await prisma.round.count({ where: { gameId: id } })).toBe(0);
   });
 
-  it("finish guarda el resultado, el ganador y los stats finales por asiento", async () => {
+  it("finish guarda el resultado, el motivo, el ganador y los stats finales por asiento", async () => {
     const id = await repository.createGame({ roomCode: "ABC234", config, creatorUserId: ash });
     await repository.addSecondPlayer(id, misty);
-    await repository.finish(id, { status: "completed", winnerUserId: misty, finalStats: { 1: 900, 2: 1200 } });
+    await repository.finish(id, { status: "completed", reason: "forfeit", winnerUserId: misty, finalStats: { 1: 900, 2: 1200 } });
 
     const game = await prisma.game.findUniqueOrThrow({ where: { id }, include: { players: { orderBy: { seat: "asc" } } } });
-    expect(game).toMatchObject({ status: "completed", winnerId: misty });
+    expect(game).toMatchObject({ status: "completed", endReason: "forfeit", winnerId: misty });
     expect(game.endedAt).toBeInstanceOf(Date);
     expect(game.players.map((p) => p.finalStats)).toEqual([900, 1200]);
   });
 
   it("finish de una partida abandonada no tiene ganador y solo actualiza los asientos que existen", async () => {
     const id = await repository.createGame({ roomCode: "ABC234", config, creatorUserId: ash });
-    await repository.finish(id, { status: "abandoned", winnerUserId: null, finalStats: { 1: 0 } });
+    await repository.finish(id, { status: "abandoned", reason: "cancelled", winnerUserId: null, finalStats: { 1: 0 } });
     const game = await prisma.game.findUniqueOrThrow({ where: { id }, include: { players: true } });
-    expect(game).toMatchObject({ status: "abandoned", winnerId: null });
+    expect(game).toMatchObject({ status: "abandoned", endReason: "cancelled", winnerId: null });
     expect(game.players).toHaveLength(1);
+  });
+
+  it("finish rechaza un motivo que no corresponde al estado y no deja la partida a medias", async () => {
+    const id = await repository.createGame({ roomCode: "ABC234", config, creatorUserId: ash });
+    await expect(
+      repository.finish(id, { status: "completed", reason: "expired", winnerUserId: null, finalStats: { 1: 0 } }),
+    ).rejects.toThrow();
+    const game = await prisma.game.findUniqueOrThrow({ where: { id } });
+    expect(game).toMatchObject({ status: "waiting", endReason: null, endedAt: null });
   });
 
   it("abandonUnfinished marca como abandonadas solo las partidas en espera o en curso", async () => {
@@ -135,6 +144,10 @@ describe("createPrismaGameRepository", () => {
     expect(await status(waiting)).toBe("abandoned");
     expect(await status(playing)).toBe("abandoned");
     expect(await status(done.id)).toBe("completed");
+    const reason = async (id: string) => (await prisma.game.findUniqueOrThrow({ where: { id } })).endReason;
+    expect(await reason(waiting)).toBe("abandoned");
+    expect(await reason(playing)).toBe("abandoned");
+    expect(await reason(done.id)).toBeNull();
     expect((await prisma.game.findUniqueOrThrow({ where: { id: waiting } })).endedAt).toBeInstanceOf(Date);
     await expect(repository.abandonUnfinished()).resolves.toBe(0);
   });

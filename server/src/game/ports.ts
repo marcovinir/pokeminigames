@@ -1,4 +1,4 @@
-import type { RoomConfig, Seat, ServerEvent } from "@pokemon-minigames/shared";
+import type { GameEndReason, RoomConfig, Seat, ServerEvent } from "@pokemon-minigames/shared";
 import type { RoundRecord } from "./engine/types.js";
 
 /** Reloj inyectable: en las pruebas se controla a mano. */
@@ -19,6 +19,8 @@ export interface Broadcaster {
 
 export interface FinishInput {
   status: "completed" | "abandoned";
+  /** Por qué terminó; la base de datos exige que sea coherente con `status`. */
+  reason: GameEndReason;
   winnerUserId: string | null;
   finalStats: Partial<Record<Seat, number>>;
 }

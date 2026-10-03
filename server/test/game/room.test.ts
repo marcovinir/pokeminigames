@@ -75,7 +75,12 @@ describe("GameRoom", () => {
     await room.idle();
     expect(repository.calls).toEqual(["addSecondPlayer:u2", "markStarted", "saveRound:1", "finish:completed"]);
     expect(repository.rounds[0]!.picks.map((p) => p.result)).toEqual(["VALID", "NO_ANSWER"]);
-    expect(repository.finishInput).toEqual({ status: "completed", winnerUserId: "u1", finalStats: { 1: 500, 2: 0 } });
+    expect(repository.finishInput).toEqual({
+      status: "completed",
+      reason: "completed",
+      winnerUserId: "u1",
+      finalStats: { 1: 500, 2: 0 },
+    });
   });
 
   it("un empate se guarda sin ganador", async () => {
@@ -83,7 +88,20 @@ describe("GameRoom", () => {
     startGame(room, time);
     time.advance(15_000); // nadie responde
     await room.idle();
-    expect(repository.finishInput).toEqual({ status: "completed", winnerUserId: null, finalStats: { 1: 0, 2: 0 } });
+    expect(repository.finishInput).toEqual({
+      status: "completed",
+      reason: "completed",
+      winnerUserId: null,
+      finalStats: { 1: 0, 2: 0 },
+    });
+  });
+
+  it("un abandono voluntario se guarda con su motivo y le da la victoria al rival", async () => {
+    const { room, time, repository } = setup();
+    startGame(room, time);
+    room.dispatch({ type: "LEAVE", seat: 2 });
+    await room.idle();
+    expect(repository.finishInput).toMatchObject({ status: "completed", reason: "forfeit", winnerUserId: "u1" });
   });
 
   it("al terminar cancela los temporizadores pendientes y avisa una sola vez", () => {
@@ -110,7 +128,7 @@ describe("GameRoom", () => {
     expect(room.phase).toBe("finished");
     expect(onFinished).toHaveBeenCalledTimes(1);
     await room.idle();
-    expect(repository.finishInput).toMatchObject({ status: "abandoned", winnerUserId: null });
+    expect(repository.finishInput).toMatchObject({ status: "abandoned", reason: "expired", winnerUserId: null });
   });
 
   describe("guardado en la base de datos", () => {

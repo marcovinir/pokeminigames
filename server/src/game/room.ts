@@ -153,6 +153,7 @@ export class GameRoom {
           this.persist("guardar el final", () =>
             repository.finish(this.gameId, {
               status: effect.status,
+              reason: effect.outcome.reason,
               winnerUserId,
               finalStats: effect.finalStats,
             }),

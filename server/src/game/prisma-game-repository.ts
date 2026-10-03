@@ -57,7 +57,7 @@ export function createPrismaGameRepository(prisma: PrismaClient): GameRepository
       await prisma.$transaction(async (tx) => {
         await tx.game.update({
           where: { id: gameId },
-          data: { status: input.status, winnerId: input.winnerUserId, endedAt: new Date() },
+          data: { status: input.status, endReason: input.reason, winnerId: input.winnerUserId, endedAt: new Date() },
         });
         for (const seat of [1, 2] as const) {
           const finalStats = input.finalStats[seat];
@@ -71,7 +71,7 @@ export function createPrismaGameRepository(prisma: PrismaClient): GameRepository
     async abandonUnfinished() {
       const result = await prisma.game.updateMany({
         where: { status: { in: ["waiting", "in_progress"] } },
-        data: { status: "abandoned", endedAt: new Date() },
+        data: { status: "abandoned", endReason: "abandoned", endedAt: new Date() },
       });
       return result.count;
     },

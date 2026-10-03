@@ -92,7 +92,7 @@ describe("partida completa de punta a punta", () => {
         rounds: { orderBy: { number: "asc" }, include: { picks: true, type1: true, type2: true } },
       },
     });
-    expect(game).toMatchObject({ status: "completed", winnerId: misty.userId });
+    expect(game).toMatchObject({ status: "completed", endReason: "completed", winnerId: misty.userId });
     expect(game.endedAt).toBeInstanceOf(Date);
     expect(game.players.map((p) => [p.userId, p.seat, p.finalStats])).toEqual([
       [ash.userId, 1, 1150],
@@ -144,7 +144,14 @@ describe("partida completa de punta a punta", () => {
     await room.idle();
 
     const game = await prisma.game.findUniqueOrThrow({ where: { roomCode: code }, include: { rounds: true } });
-    expect(game).toMatchObject({ status: "completed", winnerId: null, typeMode: "chosen", lengthMode: "custom", roundsLimit: 2 });
+    expect(game).toMatchObject({
+      status: "completed",
+      endReason: "completed",
+      winnerId: null,
+      typeMode: "chosen",
+      lengthMode: "custom",
+      roundsLimit: 2,
+    });
     expect(game.rounds).toHaveLength(2);
   }, 15_000);
 
@@ -162,7 +169,7 @@ describe("partida completa de punta a punta", () => {
     await room.idle();
 
     const game = await prisma.game.findUniqueOrThrow({ where: { roomCode: "GAME02" } });
-    expect(game).toMatchObject({ status: "abandoned", winnerId: null });
+    expect(game).toMatchObject({ status: "abandoned", endReason: "expired", winnerId: null });
     expect(game.endedAt).toBeInstanceOf(Date);
     // El creador puede abrir otra sala.
     const again = await request(server.app)
