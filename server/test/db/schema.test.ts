@@ -74,6 +74,75 @@ describe("games", () => {
   });
 });
 
+describe("motivo del fin de la partida", () => {
+  const base = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3 } as const;
+  let n = 0;
+  const create = (status: "waiting" | "in_progress" | "completed" | "abandoned", endReason?: string) =>
+    prisma.game.create({
+      data: { ...base, roomCode: `END${++n}`, status, endReason: endReason as never },
+    });
+
+  it("acepta una partida sin motivo en cualquier estado (las anteriores a la migración no lo tienen)", async () => {
+    for (const status of ["waiting", "in_progress", "completed", "abandoned"] as const) {
+      await expect(create(status)).resolves.toBeTruthy();
+    }
+  });
+
+  it("una partida terminada solo admite los motivos de una partida terminada", async () => {
+    for (const reason of ["completed", "forfeit", "disconnect", "exhausted"]) {
+      await expect(create("completed", reason)).resolves.toBeTruthy();
+    }
+    for (const reason of ["cancelled", "expired", "abandoned"]) {
+      await expect(create("completed", reason)).rejects.toThrow();
+    }
+  });
+
+  it("una partida abandonada solo admite los motivos de una sala que no llegó a terminar", async () => {
+    for (const reason of ["cancelled", "expired", "abandoned"]) {
+      await expect(create("abandoned", reason)).resolves.toBeTruthy();
+    }
+    for (const reason of ["completed", "forfeit", "disconnect", "exhausted"]) {
+      await expect(create("abandoned", reason)).rejects.toThrow();
+    }
+  });
+
+  it("una partida en espera o en curso no puede tener motivo", async () => {
+    await expect(create("waiting", "completed")).rejects.toThrow();
+    await expect(create("in_progress", "forfeit")).rejects.toThrow();
+  });
+});
+
+describe("preferencia de tema", () => {
+  const user = (n: number, extra: object) =>
+    prisma.user.create({ data: { email: `t${n}@example.com`, username: `tema${n}`, passwordHash: "h", ...extra } });
+
+  it("un usuario nuevo no tiene preferencia", async () => {
+    const created = await user(1, {});
+    expect(created).toMatchObject({ theme: null, themeMode: null });
+  });
+
+  it("acepta tema y modo juntos", async () => {
+    await expect(user(2, { theme: "pokedex", themeMode: "oscuro" })).resolves.toMatchObject({
+      theme: "pokedex",
+      themeMode: "oscuro",
+    });
+  });
+
+  it("rechaza guardar el tema sin el modo o el modo sin el tema", async () => {
+    await expect(user(3, { theme: "clasico" })).rejects.toThrow();
+    await expect(user(4, { themeMode: "auto" })).rejects.toThrow();
+  });
+});
+
+describe("índices por jugador", () => {
+  it("existen los índices para buscar partidas y respuestas por usuario", async () => {
+    const rows = await prisma.$queryRaw<{ indexname: string }[]>`
+      SELECT indexname FROM pg_indexes
+      WHERE indexname IN ('game_players_user_id_idx', 'round_picks_user_id_idx') ORDER BY indexname`;
+    expect(rows.map((r) => r.indexname)).toEqual(["game_players_user_id_idx", "round_picks_user_id_idx"]);
+  });
+});
+
 describe("rondas y respuestas", () => {
   async function setupRound() {
     await prisma.type.createMany({

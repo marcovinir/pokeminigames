@@ -48,6 +48,33 @@ enum PickResult {
   @@map("pick_result")
 }
 
+enum GameEndReason {
+  completed
+  forfeit
+  disconnect
+  exhausted
+  cancelled
+  expired
+  abandoned
+
+  @@map("game_end_reason")
+}
+
+enum ThemeName {
+  clasico
+  pokedex
+
+  @@map("theme_name")
+}
+
+enum ThemeMode {
+  auto
+  claro
+  oscuro
+
+  @@map("theme_mode")
+}
+
 model Type {
   id   Int    @id
   name String @unique
@@ -104,11 +131,14 @@ model PokemonName {
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
   username     String
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  passwordHash String     @map("password_hash")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Preferencia de tema: los dos nulos o los dos con valor (lo exige una restricción).
+  theme        ThemeName?
+  themeMode    ThemeMode? @map("theme_mode")
 
   refreshTokens RefreshToken[]
   gamePlayers   GamePlayer[]
@@ -133,16 +163,18 @@ model RefreshToken {
 }
 
 model Game {
-  id          String     @id @default(uuid()) @db.Uuid
-  roomCode    String     @unique @map("room_code") @db.VarChar(10)
-  typeMode    TypeMode   @map("type_mode")
-  lengthMode  LengthMode @map("length_mode")
-  roundsLimit Int?       @map("rounds_limit")
-  statsGoal   Int?       @map("stats_goal")
-  status      GameStatus @default(waiting)
-  winnerId    String?    @map("winner_id") @db.Uuid
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  endedAt     DateTime?  @map("ended_at") @db.Timestamptz(3)
+  id          String         @id @default(uuid()) @db.Uuid
+  roomCode    String         @unique @map("room_code") @db.VarChar(10)
+  typeMode    TypeMode       @map("type_mode")
+  lengthMode  LengthMode     @map("length_mode")
+  roundsLimit Int?           @map("rounds_limit")
+  statsGoal   Int?           @map("stats_goal")
+  status      GameStatus     @default(waiting)
+  // Nulo mientras la partida no termina y en las anteriores a esta columna; la restricción lo liga a `status`.
+  endReason   GameEndReason? @map("end_reason")
+  winnerId    String?        @map("winner_id") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  endedAt     DateTime?      @map("ended_at") @db.Timestamptz(3)
 
   winner  User?        @relation(fields: [winnerId], references: [id])
   players GamePlayer[]
@@ -162,6 +194,7 @@ model GamePlayer {
 
   @@id([gameId, seat])
   @@unique([gameId, userId])
+  @@index([userId])
   @@map("game_players")
 }
 
@@ -195,5 +228,6 @@ model RoundPick {
   pokemon Pokemon? @relation(fields: [pokemonId], references: [id])
 
   @@unique([roundId, userId])
+  @@index([userId])
   @@map("round_picks")
 }
