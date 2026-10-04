@@ -37,7 +37,7 @@ El servidor se empaqueta con esbuild en `server/dist/index.js` (con el paquete `
 
 ### 3.3 La base de datos que se apaga sola
 
-Neon cierra las conexiones inactivas y la primera consulta tras despertarla tarda un poco. Hoy el pool de `pg` no tiene manejo de errores y un error en una conexión inactiva puede tirar el proceso. Se crea el pool explícitamente (`max` pequeño, cierre de conexiones inactivas, un tiempo de espera de conexión holgado para el arranque en frío) con un manejador de errores que lo registra y no cae, y se pasa a Prisma. Se prueba cortando conexiones a propósito (`pg_terminate_backend`): el servidor sobrevive y la siguiente consulta funciona.
+Neon cierra las conexiones inactivas y la primera consulta tras despertarla tarda un poco. Al implementar se comprobó que el adaptador de Prisma para `pg` ya atiende los errores de las conexiones inactivas del pool (no tiran el proceso), así que no hace falta un manejador propio para sobrevivir; lo que sí se configura es el pool: `max` pequeño, cierre de las conexiones inactivas a los 10 s (antes de que Neon las corte) y un tiempo de espera de conexión holgado (30 s) para el arranque en frío, más un aviso en el registro cuando una conexión inactiva se cierra. Se prueba cortando conexiones a propósito (`pg_terminate_backend`): el servidor sobrevive y la siguiente consulta funciona.
 
 ### 3.4 Cierre ordenado y arranque lento
 
@@ -52,7 +52,7 @@ Con `NODE_ENV=production` el servidor se niega a arrancar si: `COOKIE_SECURE` no
 
 ### 4.2 Comprobación de origen
 
-Las peticiones `POST`, `PUT` y `DELETE` se rechazan con `403` y el código nuevo `FORBIDDEN` si traen un `Origin` que no es el del propio servidor (ni `CORS_ORIGIN`, si está definido), o, sin `Origin`, un `Sec-Fetch-Site` de `cross-site` o `same-site`. Sin esas cabeceras (curl, las pruebas, el cliente en desarrollo por el proxy de Vite) pasan; los `GET` no se tocan. El "propio origen" se calcula con el protocolo y el `Host` que ve el servidor (con `TRUST_PROXY`). Se suma a `SameSite=Lax`, no lo reemplaza. El handshake de Socket.io se autentica con el token en la carga, no con cookie, así que no hereda este riesgo.
+Las peticiones `POST`, `PUT`, `PATCH` y `DELETE` se rechazan con `403` y el código nuevo `FORBIDDEN` si traen un `Origin` que no es el del propio servidor (ni `CORS_ORIGIN`, si está definido), o, sin `Origin`, un `Sec-Fetch-Site` de `cross-site` o `same-site`. Sin esas cabeceras (curl, las pruebas, el cliente en desarrollo por el proxy de Vite) pasan; los `GET` no se tocan. El "propio origen" se calcula con el protocolo y el `Host` que ve el servidor (con `TRUST_PROXY`). Se suma a `SameSite=Lax`, no lo reemplaza. El handshake de Socket.io se autentica con el token en la carga, no con cookie, así que no hereda este riesgo.
 
 ### 4.3 Límites de peticiones
 
