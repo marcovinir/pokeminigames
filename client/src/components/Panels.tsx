@@ -1,24 +1,32 @@
 import type { PokemonView } from "@pokemon-minigames/shared";
+import { AnimatedNumber } from "./AnimatedNumber";
+import { ArtImage } from "./ArtImage";
+import { Avatar } from "./Avatar";
+import { Badge } from "./Badge";
+import { Card } from "./Card";
 
 /** Tu equipo: lo que has ganado hasta ahora y su total. */
 export function TeamPanel({ team, total }: { team: PokemonView[]; total: number }) {
   return (
-    <section aria-label="Tu equipo" className="framed rounded-card bg-surface p-3">
-      <h2 className="text-xs text-muted">Tu equipo</h2>
-      <p className="font-num text-2xl font-medium tabular-nums">{total}</p>
+    <Card as="section" aria-label="Tu equipo" className="p-4">
+      <h2 className="text-sm font-semibold text-muted">Tu equipo</h2>
+      <p className="font-num text-4xl font-semibold tabular-nums">
+        <AnimatedNumber value={total} />
+      </p>
       {team.length === 0 ? (
         <p className="mt-2 text-sm text-muted">Todavía no tienes Pokémon.</p>
       ) : (
-        <ul className="mt-2 flex flex-col gap-1 text-sm">
+        <ul className="mt-3 flex flex-col gap-1.5 text-sm">
           {team.map((pokemon) => (
-            <li key={pokemon.id} className="flex items-center justify-between gap-2">
-              <span className="truncate">{pokemon.names.es}</span>
+            <li key={pokemon.id} className="flex items-center gap-2">
+              <ArtImage id={pokemon.id} spriteUrl={pokemon.spriteUrl} size={32} variant="sprite" />
+              <span className="min-w-0 flex-1 truncate font-semibold">{pokemon.names.es}</span>
               <span className="font-num tabular-nums text-muted">{pokemon.totalStats}</span>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -35,14 +43,21 @@ export function OpponentPanel({
   connected: boolean;
 }) {
   return (
-    <section aria-label="Tu rival" className="framed rounded-card bg-surface p-3">
-      <h2 className="truncate text-xs text-muted">{name}</h2>
-      <p className="font-num text-2xl font-medium tabular-nums">{total}</p>
-      <p className="mt-2 text-sm">
-        {teamSize === 1 ? "1 Pokémon" : `${teamSize} Pokémon`}
+    <Card as="section" aria-label="Tu rival" className="p-4">
+      <div className="flex items-center gap-2">
+        <Avatar name={name} size="sm" />
+        <h2 className="truncate text-sm font-semibold text-muted">{name}</h2>
+      </div>
+      <p className="mt-2 font-num text-4xl font-semibold tabular-nums">
+        <AnimatedNumber value={total} />
       </p>
+      <p className="mt-2 text-sm font-semibold">{teamSize === 1 ? "1 Pokémon" : `${teamSize} Pokémon`}</p>
       <p className="mt-1 text-xs text-muted">Sus nombres se revelan al cerrar la ronda.</p>
-      {connected ? null : <p className="mt-1 text-xs text-danger">Desconectado</p>}
-    </section>
+      {connected ? null : (
+        <Badge tone="danger" className="mt-2">
+          Desconectado
+        </Badge>
+      )}
+    </Card>
   );
 }
