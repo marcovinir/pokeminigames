@@ -13,9 +13,9 @@
 ## Global Constraints
 
 - Un solo servicio y un solo origen: Express sirve la API, Socket.io y `client/dist`. Sin Docker. Costo de operación nulo (Render gratuito sin tarjeta + Neon gratuito).
-- Con `NODE_ENV=production` el servidor se niega a arrancar si `COOKIE_SECURE` no es `true`, si `COOKIE_SAME_SITE` es `none` o si falta `TRUST_PROXY` (entero de 0 a 10; en Render, `1`). `CORS_ORIGIN` es opcional: sin él no se instala CORS.
+- Con `NODE_ENV=production` el servidor se niega a arrancar si `COOKIE_SECURE` no es `true`, si `COOKIE_SAME_SITE` es `none` o si falta `TRUST_PROXY` (entero de 0 a 10; en Render se parte de `1` y se verifica tras el primer despliegue). `CORS_ORIGIN` es opcional: sin él no se instala CORS.
 - Las peticiones `POST`, `PUT`, `PATCH` y `DELETE` con un `Origin` ajeno (o, sin `Origin`, con `Sec-Fetch-Site` de `cross-site` o `same-site`) se rechazan con `403` y el código `FORBIDDEN`. Los `GET` no se comprueban.
-- Límites en memoria (una sola instancia) que responden `429` con `RATE_LIMITED`, `details.retryAfterSeconds` y `Retry-After`: login, 5 intentos **fallidos** en 15 minutos por IP y correo (un login correcto reinicia la cuenta; no es un bloqueo por cuenta); registro, 5 por hora por IP; API, 300 por minuto por IP. `/health` y `/socket.io` no pasan por el límite general.
+- Límites en memoria (una sola instancia) que responden `429` con `RATE_LIMITED`, `details.retryAfterSeconds` y `Retry-After`: login, 5 intentos **fallidos** en 15 minutos por IP y correo (un login correcto reinicia la cuenta; no es un bloqueo por cuenta) y 30 por IP sumando todos los correos; el intento se reserva antes de comprobar la contraseña; registro, 5 por hora por IP; API, 300 por minuto por IP. `/health` y `/socket.io` no pasan por el límite general.
 - Los archivos con hash (`/assets/*`) llevan `Cache-Control: public, max-age=31536000, immutable`; `index.html` y el resto, `no-cache`. Ninguna ruta de la API, `/health` ni `/socket.io` devuelve nunca `index.html`.
 - Sin Helmet ni CSP, sin dependencias de producción nuevas. Mensajes al usuario en español; identificadores de código en inglés.
 - Las credenciales de PostgreSQL, la cadena de Neon y los secretos nunca se versionan (`server/.env`, `server/.env.test` siguen ignorados). `render.yaml` no contiene ningún secreto.
@@ -26,7 +26,7 @@
 
 Condiciones que la spec no detalla pero que muerden a una persona real; cada una tiene su prueba en la tarea indicada.
 
-1. **Los límites no se vuelven contra personas inocentes.** Solo cuentan los inicios de sesión fallidos y cada correo y cada IP tienen su propia cuenta (quien escribe el correo de otra persona no la deja fuera); un correo que no existe cuenta igual (no se puede averiguar si existe); mayúsculas y espacios del correo no sirven para esquivar el límite; un cuerpo inválido no cuenta; insistir bloqueado no alarga el bloqueo; `/health` no se bloquea; lo vencido se limpia solo. → Task 3 (`rate-limit.test.ts`) y Task 4 (`limits.routes.test.ts`).
+1. **Los límites no se vuelven contra personas inocentes.** Solo cuentan los inicios de sesión fallidos y cada correo y cada IP tienen su propia cuenta (quien escribe el correo de otra persona no la deja fuera); un correo que no existe cuenta igual (no se puede averiguar si existe); mayúsculas y espacios del correo no sirven para esquivar el límite; un cuerpo inválido no cuenta; insistir bloqueado no alarga el bloqueo; diez intentos fallidos lanzados a la vez no esquivan el límite; una sola IP no puede probar una contraseña en muchas cuentas; `/health` no se bloquea; lo vencido se limpia solo. → Task 3 (`rate-limit.test.ts`) y Task 4 (`limits.routes.test.ts`).
 2. **La comprobación de origen no se esquiva ni rompe a nadie.** Cada método que cambia algo, `Origin` con otro esquema o puerto, el origen opaco `null`, `Sec-Fetch-Site` sin `Origin`, el `Origin` que manda sobre `Sec-Fetch-Site`, `refresh` y `logout` con cookie desde otro sitio, y detrás del proxy de Render (HTTPS) el propio origen sigue siendo válido; sin proxy de confianza un cliente no puede fingir el protocolo. → Task 2.
 3. **El cliente servido no tapa nada.** Las pantallas (`/perfil`, `/sala/ABC234`, con parámetros) devuelven el cliente; un archivo que no existe (`/assets/viejo.js`) da 404 en JSON y no un HTML donde se esperaba JavaScript; ninguna ruta de la API ni de Socket.io cae en el cliente; un `POST` a una pantalla da 404; nada de fuera de `dist` se sirve; sin cliente construido todo sigue como antes. → Task 5.
 4. **Producción se niega a arrancar mal configurada y lo dice.** Cada combinación insegura, todos los problemas a la vez, sin CORS comodín; el archivo empaquetado arranca con `node`, carga el catálogo y aplica las protecciones. → Task 1, Task 7 y Task 11 (el `render.yaml` real pasa la validación de producción).
@@ -64,7 +64,7 @@ Cada pieza nueva de `server/src/http/` hace una sola cosa y no conoce a las dem�
 
 - Se parte de `main` con las etapas 1 a 4 completas (879 pruebas: 487 de servidor y 392 de cliente). Trabaja en una rama `etapa-5-despliegue`.
 - `server/.env` y `server/.env.test` ya existen (rol `pokemon_app`). Las pruebas del servidor usan `pokemon_minigames_test` y **borran datos**.
-- Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 613 pruebas de servidor y 423 de cliente en verde (más una de servidor que se omite en Windows), `tsc` sin errores, la construcción de producción arrancada contra una base de datos real y la E2E con navegador real (4 pruebas).
+- Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 620 pruebas de servidor y 423 de cliente en verde (más una de servidor que se omite en Windows), `tsc` sin errores, la construcción de producción arrancada contra una base de datos real y la E2E con navegador real (4 pruebas).
 - Si el equipo va justo de CPU, las pruebas de interfaz del cliente pueden agotar los 5 s por defecto: ejecútalas con `npx vitest run --testTimeout=30000 --maxWorkers=2` desde `client/` (no hace falta cambiar nada en el repositorio).
 - **La E2E necesita un navegador.** Con Chromium propio de Playwright: `npx playwright install chromium` desde `e2e/` (descarga unos 150 MB). Sin descargar nada, usa el que ya tienes: `E2E_CHANNEL=msedge` o `E2E_CHANNEL=chrome` (en PowerShell: `$env:E2E_CHANNEL="msedge"`). Crea y borra su propia base `pokemon_minigames_e2e` con la conexión de `server/.env` (o `E2E_ADMIN_DATABASE_URL`); el rol necesita permiso `CREATEDB`.
 - Crear las cuentas de Render y Neon y conectar el repositorio lo hace Marco (Task 12 deja la guía lista); nada de este plan las crea.
@@ -212,7 +212,7 @@ Expected: FAIL — `TRUST_PROXY` no existe en `Env`, producción acepta `COOKIE_
 
 ```diff
 diff --git a/server/src/config/env.ts b/server/src/config/env.ts
-index aa3d455..d3530fb 100644
+index aa3d455..11637ff 100644
 --- a/server/src/config/env.ts
 +++ b/server/src/config/env.ts
 @@ -9,7 +9,10 @@ const envSchema = z
@@ -222,7 +222,7 @@ index aa3d455..d3530fb 100644
 -    CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
 +    // Con un solo origen (producción) no hay CORS que configurar; en desarrollo el valor por defecto es Vite.
 +    CORS_ORIGIN: z.string().min(1).optional(),
-+    // Cuántos proxies hay delante del servidor (en Render, 1): sin eso la IP y el protocolo que se leen son los del proxy.
++    // Cuántos proxies hay delante del servidor (en Render se verifica tras desplegar): sin eso la IP y el protocolo que se leen son los del proxy.
 +    TRUST_PROXY: z.coerce.number().int().min(0).max(10).optional(),
      COOKIE_SECURE: z
        .enum(["true", "false"])
@@ -238,7 +238,7 @@ index aa3d455..d3530fb 100644
 +    const problem = (path: string, message: string) => context.addIssue({ code: "custom", path: [path], message });
 +    if (!env.COOKIE_SECURE) problem("COOKIE_SECURE", "en producción debe ser true");
 +    if (env.COOKIE_SAME_SITE === "none") problem("COOKIE_SAME_SITE", "en producción no puede ser none (cliente y API comparten origen)");
-+    if (env.TRUST_PROXY === undefined) problem("TRUST_PROXY", "en producción es obligatoria (cuántos proxies hay delante; en Render, 1)");
++    if (env.TRUST_PROXY === undefined) problem("TRUST_PROXY", "en producción es obligatoria (cuántos proxies hay delante; en Render, se verifica según docs/despliegue.md)");
 +  })
 +  .transform((env) => ({
 +    ...env,
@@ -577,7 +577,7 @@ index 910a9f2..7f4cff6 100644
 
 ```diff
 diff --git a/server/src/app.ts b/server/src/app.ts
-index 184f895..77c82ed 100644
+index 184f895..5f563f0 100644
 --- a/server/src/app.ts
 +++ b/server/src/app.ts
 @@ -11,6 +11,7 @@ import type { Env } from "./config/env.js";
@@ -592,7 +592,7 @@ index 184f895..77c82ed 100644
  
    const app = express();
    app.disable("x-powered-by");
-+  // Cuántos proxies hay delante (en Render, 1): de eso depende la IP del cliente y el protocolo (req.ip, req.protocol).
++  // Cuántos proxies hay delante (en Render se verifica tras desplegar, ver docs/despliegue.md): de eso depende la IP del cliente y el protocolo (req.ip, req.protocol).
 +  app.set("trust proxy", env.TRUST_PROXY);
    // Sin CORS_ORIGIN (producción, un solo origen) no se instala CORS: no hay otros orígenes a los que conceder nada.
    if (env.CORS_ORIGIN) app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
@@ -629,7 +629,7 @@ git commit -m "feat(server): comprobación de origen en las peticiones que cambi
 - Create: `server/src/http/rate-limit.ts`, `server/test/http/rate-limit.test.ts`
 
 **Interfaces:**
-- Produces: `createKeyedLimiter({ limit, windowMs, now?, sweepEveryMs? }): KeyedLimiter` con `check(key): { allowed: true } | { allowed: false; retryAfterSeconds }` (no cuenta nada), `record(key)`, `reset(key)` y `size()`; lanza `RangeError` si `limit` no es un entero de 1 o más o si `windowMs` no es mayor que 0. Ventana deslizante: como mucho `limit` eventos en cualquier intervalo de `windowMs`; las claves vencidas se limpian solas al usar el limitador (cada `sweepEveryMs`, 60 s por defecto), sin temporizadores.
+- Produces: `createKeyedLimiter({ limit, windowMs, now?, sweepEveryMs? }): KeyedLimiter` con `check(key): { allowed: true } | { allowed: false; retryAfterSeconds }` (no cuenta nada), `record(key)`, `reset(key)`, `release(key)` (devuelve el último hueco reservado) y `size()`; lanza `RangeError` si `limit` no es un entero de 1 o más o si `windowMs` no es mayor que 0. Ventana deslizante: como mucho `limit` eventos en cualquier intervalo de `windowMs`; las claves vencidas se limpian solas al usar el limitador (cada `sweepEveryMs`, 60 s por defecto), sin temporizadores.
 - Produces: `tooManyRequests(retryAfterSeconds, message?): AppError` (429, `RATE_LIMITED`, `details: { retryAfterSeconds }`) y `rateLimitMiddleware({ limiter, keyOf }): RequestHandler` (cuenta cada petición; las rechazadas no se cuentan; responde con `Retry-After`).
 - Nota: `RATE_LIMITED` ya existe en `shared/` y en los textos del cliente desde la etapa 2.
 
@@ -710,6 +710,20 @@ describe("createKeyedLimiter", () => {
     limiter.reset("nunca-vista");
     expect(limiter.check("a")).toEqual({ allowed: true });
     expect(limiter.check("b")).toMatchObject({ allowed: false });
+  });
+
+  it("release devuelve el último hueco reservado de una clave (y no falla con una que no existe)", () => {
+    const time = clock();
+    const limiter = createKeyedLimiter({ limit: 2, windowMs: MINUTE, now: time.now });
+    limiter.record("a");
+    time.advance(SECOND);
+    limiter.record("a");
+    expect(limiter.check("a").allowed).toBe(false);
+    limiter.release("a");
+    expect(limiter.check("a").allowed).toBe(true);
+    limiter.release("a");
+    expect(limiter.size()).toBe(0);
+    expect(() => limiter.release("nunca-vista")).not.toThrow();
   });
 
   it("limpia las claves vencidas solas, para que un abuso no llene la memoria", () => {
@@ -811,6 +825,8 @@ export interface KeyedLimiter {
   record(key: string): void;
   /** Olvida los eventos de la clave (p. ej. tras un inicio de sesión correcto). */
   reset(key: string): void;
+  /** Devuelve el último hueco que se reservó con `record` (p. ej. cuando el intento no llegó a ser un fallo). */
+  release(key: string): void;
   /** Cuántas claves tienen eventos guardados. */
   size(): number;
 }
@@ -872,6 +888,12 @@ export function createKeyedLimiter({ limit, windowMs, now = Date.now, sweepEvery
     reset(key) {
       events.delete(key);
     },
+    release(key) {
+      const stamps = events.get(key);
+      if (!stamps) return;
+      stamps.pop();
+      if (stamps.length === 0) events.delete(key);
+    },
     size: () => events.size,
   };
 }
@@ -909,7 +931,7 @@ npm test -w server -- test/http/rate-limit.test.ts
 npm run typecheck
 ```
 
-Expected: PASS (16 pruebas) y `tsc` sin errores.
+Expected: PASS (17 pruebas) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -929,9 +951,9 @@ git commit -m "feat(server): limitador de ventana deslizante con claves y middle
 
 **Interfaces:**
 - Consumes: `createKeyedLimiter`, `rateLimitMiddleware`, `tooManyRequests` (Task 3).
-- Produces: `RateLimitConfig { loginFailures, register, api: { limit, windowMs }; now? }` y `DEFAULT_RATE_LIMITS` (5 / 15 min, 5 / 1 h, 300 / 1 min) en `limits.ts`; `API_PREFIXES` (`/auth`, `/rooms`, `/pokemon`, `/stats`, `/users`) en `api-paths.ts`.
+- Produces: `RateLimitConfig { loginFailures, loginFailuresByIp, register, api: { limit, windowMs }; now? }` y `DEFAULT_RATE_LIMITS` (5 / 15 min, 30 / 15 min, 5 / 1 h, 300 / 1 min) en `limits.ts`; `API_PREFIXES` (`/auth`, `/rooms`, `/pokemon`, `/stats`, `/users`) en `api-paths.ts`.
 - `createApp({ …, rateLimits?: RateLimitConfig | "off" })`: por defecto activos; `"off"` los apaga. El ayudante de pruebas `createTestApp({ rateLimits })` los deja **apagados por defecto** (muchas pruebas registran a más personas de las que permite una IP).
-- `createAuthRouter({ …, limiters?: { loginFailures?, register? } })`. La clave del login es `${req.ip}|${email}`: solo se registra el fallo `INVALID_CREDENTIALS`, un login correcto reinicia la clave, un bloqueado recibe 429 aunque acierte la contraseña y no alarga el bloqueo. El límite general cubre `API_PREFIXES` y no `/health` ni `/socket.io`.
+- `createAuthRouter({ …, limiters?: { loginFailures?, loginFailuresByIp?, register? } })`. Hay dos cuentas de fallos: por `${req.ip}|${email}` y por `req.ip` sumando todos los correos. El hueco se reserva en las dos **antes** de comprobar la contraseña (bcrypt tarda: contar al terminar dejaba pasar peticiones en paralelo); `INVALID_CREDENTIALS` lo conserva, un login correcto reinicia la clave de IP y correo y devuelve el hueco de la IP, y cualquier otro error (la base de datos, p. ej.) devuelve ambos. Un bloqueado recibe 429 aunque acierte la contraseña y no alarga el bloqueo. El límite general cubre `API_PREFIXES` y no `/health` ni `/socket.io`.
 
 - [ ] **Step 1: Escribir las pruebas que fallan**
 
@@ -1000,6 +1022,7 @@ function setup(limits: Partial<RateLimitConfig> = {}) {
 describe("los límites por defecto son los de la spec", () => {
   it("login 5 fallos / 15 min, registro 5 / hora, API 300 / minuto", () => {
     expect(DEFAULT_RATE_LIMITS.loginFailures).toEqual({ limit: 5, windowMs: 15 * MINUTE });
+    expect(DEFAULT_RATE_LIMITS.loginFailuresByIp).toEqual({ limit: 30, windowMs: 15 * MINUTE });
     expect(DEFAULT_RATE_LIMITS.register).toEqual({ limit: 5, windowMs: HOUR });
     expect(DEFAULT_RATE_LIMITS.api).toEqual({ limit: 300, windowMs: MINUTE });
   });
@@ -1133,6 +1156,53 @@ describe("límite general de la API por IP", () => {
     expect((await request(ctx.app).get("/pokemon/names").set(from("1.1.1.1"))).status).toBe(200);
   });
 });
+
+describe("límite de login: peticiones en paralelo y tope por IP", () => {
+  async function withAccount() {
+    const env = setup();
+    await registerUser(env.ctx.app, "ash");
+    return env;
+  }
+
+  it("diez intentos fallidos a la vez no esquivan el límite: solo 5 llegan a comprobar la contraseña", async () => {
+    const { login } = await withAccount();
+    const responses = await Promise.all(Array.from({ length: 10 }, () => login(ash.email, "mala-clave-1")));
+    const statuses = responses.map((response) => response.status).sort();
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429, 429, 429, 429, 429]);
+  });
+
+  it("intentos en paralelo con la contraseña correcta no dejan sin cuenta al dueño: los 5 primeros entran y reinician", async () => {
+    const { login } = await withAccount();
+    const responses = await Promise.all(Array.from({ length: 5 }, () => login(ash.email, ash.password)));
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200]);
+    expect((await login(ash.email, "mala-clave-1")).status).toBe(401);
+  });
+
+  it("una sola IP no puede probar contraseñas contra muchas cuentas: a partir del intento 31 fallido da 429", async () => {
+    const { login } = await withAccount();
+    for (let i = 0; i < 30; i++) expect((await login(`otra${i}@example.com`, "mala-clave-1")).status).toBe(401);
+    const blocked = await login("otra99@example.com", "mala-clave-1");
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.details.retryAfterSeconds).toBeGreaterThan(0);
+    expect((await login(ash.email, ash.password, "8.8.8.8")).status).toBe(200);
+  });
+
+  it("los inicios de sesión correctos no cuentan para el tope de la IP", async () => {
+    const { login } = await withAccount();
+    for (let i = 0; i < 29; i++) await login(`otra${i}@example.com`, "mala-clave-1");
+    for (let i = 0; i < 5; i++) expect((await login(ash.email, ash.password)).status).toBe(200);
+    expect((await login("otra50@example.com", "mala-clave-1")).status).toBe(401);
+    expect((await login("otra51@example.com", "mala-clave-1")).status).toBe(429);
+  });
+
+  it("pasados 15 minutos la IP puede volver a intentar", async () => {
+    const { ctx, login } = await withAccount();
+    for (let i = 0; i < 31; i++) await login(`otra${i}@example.com`, "mala-clave-1");
+    expect((await login("otra99@example.com", "mala-clave-1")).status).toBe(429);
+    ctx.time.advance(15 * MINUTE + 1000);
+    expect((await login("otra99@example.com", "mala-clave-1")).status).toBe(401);
+  });
+});
 ```
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
@@ -1159,6 +1229,8 @@ export interface WindowLimit {
 export interface RateLimitConfig {
   /** Intentos de inicio de sesión **fallidos** por combinación de IP y correo; un login correcto reinicia la cuenta. */
   loginFailures: WindowLimit;
+  /** Intentos de inicio de sesión **fallidos** por IP sumando todos los correos (contra probar una contraseña en muchas cuentas). */
+  loginFailuresByIp: WindowLimit;
   /** Registros por IP (cuentan todos los intentos, también los que fallan). */
   register: WindowLimit;
   /** Peticiones a toda la API por IP. */
@@ -1169,6 +1241,7 @@ export interface RateLimitConfig {
 
 export const DEFAULT_RATE_LIMITS: RateLimitConfig = {
   loginFailures: { limit: 5, windowMs: 15 * MINUTE },
+  loginFailuresByIp: { limit: 30, windowMs: 15 * MINUTE },
   register: { limit: 5, windowMs: HOUR },
   api: { limit: 300, windowMs: MINUTE },
 };
@@ -1188,7 +1261,7 @@ export const API_PREFIXES = ["/auth", "/rooms", "/pokemon", "/stats", "/users"] 
 
 ```diff
 diff --git a/server/src/auth/auth.routes.ts b/server/src/auth/auth.routes.ts
-index 11a792d..9764c68 100644
+index 11a792d..7301190 100644
 --- a/server/src/auth/auth.routes.ts
 +++ b/server/src/auth/auth.routes.ts
 @@ -1,6 +1,7 @@
@@ -1205,7 +1278,7 @@ index 11a792d..9764c68 100644
    authService: AuthService;
    tokens: TokenService;
 +  /** Límites de intentos; sin ellos no se limita nada (las pruebas que no los necesitan). */
-+  limiters?: { loginFailures?: KeyedLimiter; register?: KeyedLimiter };
++  limiters?: { loginFailures?: KeyedLimiter; loginFailuresByIp?: KeyedLimiter; register?: KeyedLimiter };
  }
  
 +const clientIp = (req: Request): string => req.ip ?? "desconocida";
@@ -1235,27 +1308,42 @@ index 11a792d..9764c68 100644
      const input = registerSchema.parse(req.body);
      const result = await authService.register(input);
      startSession(res, result);
-@@ -53,7 +61,22 @@ export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps):
+@@ -53,7 +61,37 @@ export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps):
  
    router.post("/login", async (req, res) => {
      const input = loginSchema.parse(req.body);
 -    const result = await authService.login(input);
-+    // La clave lleva la IP y el correo: no es un bloqueo de la cuenta, así que nadie puede dejar fuera a otra persona
-+    // escribiendo su correo. Solo cuentan los intentos fallidos; un inicio de sesión correcto reinicia la cuenta.
-+    const attemptKey = `${clientIp(req)}|${input.email}`;
-+    const status = limiters.loginFailures?.check(attemptKey);
-+    if (status && !status.allowed) {
-+      res.set("Retry-After", String(status.retryAfterSeconds));
-+      throw tooManyRequests(status.retryAfterSeconds, "Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.");
++    // Dos cuentas de fallos: por IP y correo (no es un bloqueo de la cuenta: nadie puede dejar fuera a otra persona
++    // escribiendo su correo) y por IP sumando todos los correos (nadie puede probar una contraseña en muchas cuentas ni
++    // saturar el servidor con bcrypt). Solo cuentan los intentos fallidos; un inicio de sesión correcto reinicia la cuenta.
++    const ip = clientIp(req);
++    const attemptKey = `${ip}|${input.email}`;
++    const { loginFailures, loginFailuresByIp } = limiters;
++    const waits = [loginFailures?.check(attemptKey), loginFailuresByIp?.check(ip)].flatMap((status) =>
++      status && !status.allowed ? [status.retryAfterSeconds] : [],
++    );
++    if (waits.length > 0) {
++      const retryAfterSeconds = Math.max(...waits);
++      res.set("Retry-After", String(retryAfterSeconds));
++      throw tooManyRequests(retryAfterSeconds, "Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.");
 +    }
++    // El hueco se reserva ANTES de comprobar la contraseña (bcrypt tarda): si se contara al terminar, diez peticiones
++    // en paralelo pasarían todas la comprobación con la cuenta aún a cero.
++    loginFailures?.record(attemptKey);
++    loginFailuresByIp?.record(ip);
 +    let result: AuthResult;
 +    try {
 +      result = await authService.login(input);
 +    } catch (error) {
-+      if (error instanceof AppError && error.code === "INVALID_CREDENTIALS") limiters.loginFailures?.record(attemptKey);
++      if (!(error instanceof AppError && error.code === "INVALID_CREDENTIALS")) {
++        // Un fallo nuestro (la base de datos, p. ej.) no es un intento fallido de la persona.
++        loginFailures?.release(attemptKey);
++        loginFailuresByIp?.release(ip);
++      }
 +      throw error;
 +    }
-+    limiters.loginFailures?.reset(attemptKey);
++    loginFailures?.reset(attemptKey);
++    loginFailuresByIp?.release(ip);
      startSession(res, result);
      res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
    });
@@ -1265,7 +1353,7 @@ index 11a792d..9764c68 100644
 
 ```diff
 diff --git a/server/src/app.ts b/server/src/app.ts
-index 77c82ed..0567d3c 100644
+index 5f563f0..a98c10c 100644
 --- a/server/src/app.ts
 +++ b/server/src/app.ts
 @@ -10,8 +10,11 @@ import type { PokemonCatalog } from "./catalog/pokemon-catalog.js";
@@ -1280,7 +1368,7 @@ index 77c82ed..0567d3c 100644
  import { createRoomsRouter } from "./rooms/rooms.routes.js";
  import { createStatsRouter } from "./stats/stats.routes.js";
  import { StatsService } from "./stats/stats.service.js";
-@@ -23,9 +26,18 @@ export interface AppDeps {
+@@ -23,9 +26,19 @@ export interface AppDeps {
    tokens: TokenService;
    roomManager: RoomManager;
    catalog: PokemonCatalog;
@@ -1293,6 +1381,7 @@ index 77c82ed..0567d3c 100644
 +  const limits = rateLimits === "off" ? null : rateLimits;
 +  const limiters = limits && {
 +    loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
++    loginFailuresByIp: createKeyedLimiter({ ...limits.loginFailuresByIp, now: limits.now }),
 +    register: createKeyedLimiter({ ...limits.register, now: limits.now }),
 +    api: createKeyedLimiter({ ...limits.api, now: limits.now }),
 +  };
@@ -1300,7 +1389,7 @@ index 77c82ed..0567d3c 100644
    const authService = new AuthService({
      prisma,
      hasher: createPasswordHasher(env.BCRYPT_COST),
-@@ -42,11 +54,13 @@ export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps
+@@ -42,11 +55,13 @@ export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps
    app.use(express.json({ limit: "10kb" }));
    app.use(cookieParser());
    app.use(createOriginCheck({ allowedOrigins: env.CORS_ORIGIN ? [env.CORS_ORIGIN] : [] }));
@@ -1324,7 +1413,7 @@ npm test -w server
 npm run typecheck
 ```
 
-Expected: PASS (todo el servidor: **555 pruebas**) y `tsc` sin errores.
+Expected: PASS (todo el servidor: **561 pruebas**) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -1556,7 +1645,7 @@ export function createClientApp(distDir: string): Router | null {
 
 ```diff
 diff --git a/server/src/app.ts b/server/src/app.ts
-index 0567d3c..79e3b32 100644
+index a98c10c..474e427 100644
 --- a/server/src/app.ts
 +++ b/server/src/app.ts
 @@ -11,6 +11,7 @@ import type { Env } from "./config/env.js";
@@ -1580,7 +1669,7 @@ index 0567d3c..79e3b32 100644
    const limits = rateLimits === "off" ? null : rateLimits;
    const limiters = limits && {
      loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
-@@ -65,6 +68,11 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
+@@ -66,6 +69,11 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
    app.use("/pokemon", createCatalogRouter({ catalog }));
    app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));
  
@@ -1625,7 +1714,7 @@ npm test -w server
 npm run typecheck
 ```
 
-Expected: PASS (todo el servidor: **572 pruebas**) y `tsc` sin errores.
+Expected: PASS (todo el servidor: **578 pruebas**) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -1950,7 +2039,7 @@ npm test -w server
 npm run typecheck
 ```
 
-Expected: PASS (todo el servidor: **583 pruebas**) y `tsc` sin errores.
+Expected: PASS (todo el servidor: **589 pruebas**) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -3488,6 +3577,7 @@ git commit -m "feat(server): prueba de humo contra la URL desplegada (sin escrib
 
 **Interfaces:**
 - Consumes: `npm run build` (Task 7), `loadEnv` (Task 1), los scripts de la raíz y del servidor.
+- La guía incluye la sección 5, "Verificar `TRUST_PROXY`", con dos pruebas manuales (IP inventada en `X-Forwarded-For`, y dos redes distintas) porque el número de proxies de Render no está documentado; `render.yaml` parte de `1`.
 - Produces: el script `db:seed:prod` del servidor (`tsx scripts/seed.ts`, sin `--env-file`: en Render las variables ya están en el entorno); `render.yaml` con un único servicio web gratuito (`buildCommand`: `npm ci --include=dev && npm run build && npm run db:deploy -w server && npm run db:seed:prod -w server`; `startCommand`: `node server/dist/index.js`; `DATABASE_URL` con `sync: false` y `JWT_ACCESS_SECRET` con `generateValue: true`); el flujo de CI; la guía `docs/despliegue.md`; `.node-version` con `24`.
 
 - [ ] **Step 1: Escribir la prueba que falla**
@@ -3644,6 +3734,14 @@ describe("documentación de despliegue", () => {
     for (const connection of connections) expect(connection).toMatch(/usuario:clave@/);
   });
 
+  it("la guía manda comprobar TRUST_PROXY tras el primer despliegue, con las dos pruebas (valor demasiado alto y demasiado bajo)", () => {
+    expect(guide).toMatch(/Verificar `TRUST_PROXY`/);
+    expect(guide).toMatch(/X-Forwarded-For/);
+    expect(guide).toMatch(/401 401 401 401 401 429/);
+    expect(guide).toMatch(/otra red/);
+    expect(read("render.yaml")).not.toMatch(/en Render, 1/);
+  });
+
   it("el README enlaza la guía y .env.example documenta TRUST_PROXY", () => {
     expect(read("README.md")).toContain("docs/despliegue.md");
     expect(read("server/.env.example")).toContain("TRUST_PROXY");
@@ -3690,7 +3788,8 @@ services:
         value: "24"
       - key: NODE_ENV
         value: production
-      # Cuántos proxies hay delante del servidor: en Render, 1 (si no, todas las IP serían las del proxy).
+      # Cuántos proxies hay delante del servidor (de él depende la IP que ven los límites). Se empieza en 1 y se verifica tras
+      # el primer despliegue (docs/despliegue.md, sección 5): hay informes de que Render pone más de uno.
       - key: TRUST_PROXY
         value: "1"
       - key: COOKIE_SECURE
@@ -3815,7 +3914,7 @@ index d6cc97b..b746516 100644
 
 ```diff
 diff --git a/server/.env.example b/server/.env.example
-index f23f91a..69a659f 100644
+index f23f91a..512f23b 100644
 --- a/server/.env.example
 +++ b/server/.env.example
 @@ -13,9 +13,15 @@ ACCESS_TOKEN_TTL_SECONDS=3600
@@ -3833,8 +3932,8 @@ index f23f91a..69a659f 100644
  COOKIE_SECURE=false
  COOKIE_SAME_SITE=lax
 +
-+# Cuántos proxies hay delante del servidor (0 = ninguno, 1 = Render). Define de dónde sale la IP de cada petición,
-+# que usan los límites de intentos. En producción es obligatorio.
++# Cuántos proxies hay delante del servidor (0 = ninguno). Define de dónde sale la IP de cada petición, que usan los
++# límites de intentos. En producción es obligatorio; en Render se verifica tras desplegar (docs/despliegue.md, sección 5).
 +TRUST_PROXY=0
 ```
 
@@ -3889,6 +3988,28 @@ Espera a que el servicio despierte (hasta 90 segundos) y comprueba, sin crear cu
 
 Después abre la dirección en dos navegadores (o uno normal y otro privado), crea una cuenta en cada uno, crea una sala en uno y únete con el código desde el otro.
 
+## 5. Verificar `TRUST_PROXY` (una sola vez, tras el primer despliegue)
+
+Los límites de intentos dependen de que el servidor lea bien la IP de cada visitante, y eso depende de cuántos proxies hay entre internet y el servicio. El `render.yaml` parte de `1`, pero Render no documenta la cifra y hay informes de la comunidad de que hacen falta más (hasta 3: [hilo de la comunidad de Render](https://community.render.com/t/what-number-of-proxies-sit-in-front-of-an-express-app-deployed-on-render/35981)). Un valor equivocado es grave en los dos sentidos, y la prueba E2E y la de humo no pueden detectarlo porque en local no hay proxy: se comprueba a mano.
+
+**Prueba 1: ¿el valor es demasiado alto?** (el servidor se fiaría de una IP inventada por el visitante y se podrían esquivar todos los límites). Seis intentos de login fallidos, cada uno con una IP falsa distinta en `X-Forwarded-For`:
+
+```bash
+for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -H "X-Forwarded-For: 10.0.0.$i" -d email:prueba1@example.com; done; echo
+```
+
+Debe imprimir `401 401 401 401 401 429`: el servidor ignora la IP inventada y cuenta todos los intentos contra tu IP real. Si imprime seis `401`, el valor es demasiado alto: bájalo.
+
+**Prueba 2: ¿el valor es demasiado bajo?** (todo el mundo compartiría la IP de un proxy de Render y, por ejemplo, solo se podrían hacer 5 registros por hora entre todos). Desde tu computadora haz cinco intentos fallidos con otro correo:
+
+```bash
+for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -d email:prueba2@example.com; done; echo
+```
+
+Imprime `401 401 401 401 401`. Ahora, desde otra red (el celular con datos móviles, sin wifi), abre `https://TU-SERVICIO.onrender.com/login` e intenta entrar con `prueba2@example.com` y cualquier contraseña: debe decir "Email o contraseña incorrectos." Si dice "Demasiados intentos", las dos redes comparten IP para el servidor: el valor es demasiado bajo, súbelo.
+
+**Cómo cambiarlo:** en el panel de Render, *Environment* → `TRUST_PROXY` → guardar (Render redespliega y, de paso, reinicia los límites, que viven en memoria). Empieza en `1`; si falla la Prueba 2 sube a `2` y luego a `3`, y repite las dos pruebas con cada valor. El correcto es el que pasa las dos. Anótalo en `render.yaml` y súbelo para que el repositorio diga lo mismo que el panel.
+
 ## Variables de entorno
 
 | Variable | Valor en Render | Para qué |
@@ -3896,7 +4017,7 @@ Después abre la dirección en dos navegadores (o uno normal y otro privado), cr
 | `NODE_ENV` | `production` | Activa las comprobaciones de producción: el servidor se niega a arrancar si algo de lo siguiente falta o es inseguro |
 | `COOKIE_SECURE` | `true` | La cookie de sesión solo viaja por HTTPS |
 | `COOKIE_SAME_SITE` | `lax` | Con un solo origen basta `lax` (`none` se rechaza en producción) |
-| `TRUST_PROXY` | `1` | Cuántos proxies hay delante; sin él el servidor vería la IP del proxy de Render y los límites de intentos afectarían a todo el mundo a la vez |
+| `TRUST_PROXY` | `1` de partida (verifícalo en la sección 5) | Cuántos proxies hay delante; si es menor que los reales el servidor ve la IP de un proxy de Render y los límites de intentos afectan a todo el mundo a la vez, y si es mayor cualquiera puede falsear su IP |
 | `JWT_ACCESS_SECRET` | generado por Render | Firma de los tokens de acceso (mínimo 32 caracteres) |
 | `DATABASE_URL` | la cadena de Neon | Conexión a la base de datos |
 | `NODE_VERSION` | `24` | Versión de Node |
@@ -3905,7 +4026,7 @@ Después abre la dirección en dos navegadores (o uno normal y otro privado), cr
 ## Seguridad: qué hay y qué no
 
 - Cookie `Secure` + `SameSite=Lax` y comprobación de origen en todas las peticiones que cambian algo (`POST`, `PUT`, `DELETE`): una petición que el navegador dice venir de otro sitio se rechaza con 403.
-- Límites de peticiones por IP, en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo (un login correcto reinicia la cuenta), 5 registros por hora por IP y 300 peticiones por minuto a la API. Al pasarse responde 429 con `Retry-After`.
+- Límites de peticiones por IP, en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo y 30 por IP sumando todos los correos (un login correcto reinicia la cuenta), 5 registros por hora por IP y 300 peticiones por minuto a la API. Al pasarse responde 429 con `Retry-After`.
 - No hay Helmet ni política de contenido (CSP), recuperación de contraseña por correo ni verificación de correo. El servicio es una sola instancia: los límites y las salas viven en su memoria.
 
 ## Actualizar y solucionar problemas
@@ -3921,7 +4042,7 @@ Después abre la dirección en dos navegadores (o uno normal y otro privado), cr
 
 ```diff
 diff --git a/README.md b/README.md
-index 120c856..ee6a250 100644
+index 120c856..884d120 100644
 --- a/README.md
 +++ b/README.md
 @@ -2,7 +2,7 @@
@@ -3961,7 +4082,7 @@ index 120c856..ee6a250 100644
  
 +## Producción y pruebas E2E
 +
-+El servidor sirve el cliente construido, la API y Socket.io desde un solo origen, así que en producción no hay CORS y la cookie de sesión es `Secure` + `SameSite=Lax`. Las peticiones que cambian algo se rechazan si vienen de otro origen (403 `FORBIDDEN`) y hay límites por IP en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo, 5 registros por hora y 300 peticiones por minuto a la API (429 `RATE_LIMITED` con `Retry-After`). Cómo desplegarlo, qué esperar de la capa gratuita y cómo comprobarlo: [`docs/despliegue.md`](docs/despliegue.md).
++El servidor sirve el cliente construido, la API y Socket.io desde un solo origen, así que en producción no hay CORS y la cookie de sesión es `Secure` + `SameSite=Lax`. Las peticiones que cambian algo se rechazan si vienen de otro origen (403 `FORBIDDEN`) y hay límites por IP en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo (y 30 por IP sumando todos los correos), 5 registros por hora y 300 peticiones por minuto a la API (429 `RATE_LIMITED` con `Retry-After`). Cómo desplegarlo, qué esperar de la capa gratuita y cómo comprobarlo: [`docs/despliegue.md`](docs/despliegue.md).
 +
 +`npm run e2e` necesita Chromium: `npx playwright install chromium` desde `e2e/`, o define `E2E_CHANNEL=msedge` (o `chrome`) para usar el navegador ya instalado. Con `E2E_ADMIN_DATABASE_URL` (o tu `server/.env`) crea la base `pokemon_minigames_e2e`. En GitHub, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre tipos, pruebas, construcción y E2E en cada push a `main` y en cada pull request.
 +
@@ -3977,7 +4098,7 @@ npm test -w server -- test/deploy
 npm run typecheck
 ```
 
-Expected: PASS (15 pruebas) y `tsc` sin errores.
+Expected: PASS (16 pruebas) y `tsc` sin errores.
 
 - [ ] **Step 5: Commit**
 
@@ -4001,7 +4122,7 @@ npm run build
 git status
 ```
 
-Expected: **1036 pruebas pasan** (613 de servidor, una más omitida en Windows, y 423 de cliente); `tsc` sin errores en los cuatro paquetes; el build deja `client/dist` y `server/dist/index.js`; `git status` no muestra nada pendiente (ni `.env`, ni `.env.test`, ni `dist`, ni `e2e/test-results`).
+Expected: **1043 pruebas pasan** (620 de servidor, una más omitida en Windows, y 423 de cliente); `tsc` sin errores en los cuatro paquetes; el build deja `client/dist` y `server/dist/index.js`; `git status` no muestra nada pendiente (ni `.env`, ni `.env.test`, ni `dist`, ni `e2e/test-results`).
 
 - [ ] **Step 2: La E2E con navegadores reales**
 
@@ -4068,23 +4189,25 @@ Rompe a propósito cada protección crítica, ejecuta la prueba indicada y resta
 | 3 | `server/src/http/origin-check.ts`: un `Origin` ajeno pasa: `origin === own || … ? next() : next(forbidden())` → `next()` | `origin-check.test.ts` → «rechaza un POST de otro origen con 403 FORBIDDEN» y «también comprueba PUT» |
 | 4 | `server/src/http/rate-limit.ts`: el limitador no limpia memoria: `if (current - lastSweep < sweepEveryMs) return;` → `return;` | `rate-limit.test.ts` → «limpia las claves vencidas solas, para que un abuso no llene la memoria» y «la limpieza no borra las claves que todavía cuentan» |
 | 5 | `server/src/http/rate-limit.ts`: cabe un evento de más: `stamps.length < limit` → `stamps.length <= limit` | `rate-limit.test.ts` → «deja pasar hasta el límite y luego bloquea» y «comprobar no cuenta: solo cuentan los eventos registrados» |
-| 6 | `server/src/auth/auth.routes.ts`: el limitador cuenta los aciertos: tras un login correcto se llama a `record` en vez de a `reset` | `limits.routes.test.ts` → «un inicio de sesión correcto reinicia la cuenta» |
+| 6 | `server/src/auth/auth.routes.ts`: el limitador cuenta los aciertos: tras un login correcto se llama a `record` en vez de a `reset` | `limits.routes.test.ts` → «un inicio de sesión correcto reinicia la cuenta» y «intentos en paralelo con la contraseña correcta no dejan sin cuenta al dueño: los 5 primeros entran y reinician» |
 | 7 | `server/src/auth/auth.routes.ts`: el límite pasa a ser por cuenta, no por IP y correo: la clave es solo `input.email` | `limits.routes.test.ts` → «no es un bloqueo de la cuenta: otra IP puede entrar con la contraseña correcta» |
 | 8 | `server/src/auth/auth.routes.ts`: el registro deja de limitarse: se quita `limitRegistrations` de la ruta | `limits.routes.test.ts` → «a partir del sexto registro por hora desde la misma IP da 429» y «los intentos fallidos (cuenta repetida) también cuentan» |
-| 9 | `server/src/app.ts`: el límite general también cuenta `/health`: se quita `[...API_PREFIXES]` del `app.use` | `limits.routes.test.ts` → «/health no cuenta ni se bloquea (la plataforma lo consulta sin parar)» |
-| 10 | `server/src/http/client-app.ts`: el fallback tapa la API: se quita `isServerPath(req.path)` de la condición | `client-app.test.ts` → «una ruta de la API que no existe sigue dando el 404 en JSON de siempre» |
-| 11 | `server/src/http/client-app.ts`: un archivo que no existe devuelve `index.html`: se quita la comprobación de la extensión | `client-app.test.ts` → «un archivo que no existe (con extensión) da 404 en JSON, no el index.html (que rompería el JavaScript)» |
-| 12 | `server/src/http/client-app.ts`: todo se cachea para siempre, también `index.html`: `inAssets ? IMMUTABLE : "no-cache"` → `IMMUTABLE` | `client-app.test.ts` → «lo que no está en /assets (index.html, el icono) nunca se cachea sin revalidar» |
-| 13 | `server/src/config/env.ts`: producción acepta `SameSite=none`: se quita esa regla | `env.test.ts` → «rechaza SameSite=none (con un solo origen no hace falta)» |
-| 14 | `server/src/config/env.ts`: producción arranca sin `TRUST_PROXY`: se quita esa regla | `env.test.ts` → «exige decir cuántos proxies hay delante (si no, todas las IP serían la del proxy)» y «nombra todos los problemas a la vez» |
-| 15 | `server/src/app.ts`: CORS se concede a cualquier origen: `cors({ origin: env.CORS_ORIGIN, … })` → `cors({ origin: true, … })` | `cors.test.ts` → «en producción con CORS_ORIGIN se concede solo a ese origen» |
-| 16 | `server/src/shutdown.ts`: un cierre que falla sale con 0: `exit(failed ? 1 : 0)` → `exit(0)` | `shutdown.test.ts` → «si cerrar Socket.io falla, igualmente intenta cerrar la base de datos y sale con 1» y «si cerrar la base de datos falla, sale con 1» |
-| 17 | `server/src/db/prisma.ts`: las conexiones inactivas se cierran a los 10 minutos, después de que Neon se apague: `idleTimeoutMillis: 10_000` → `600_000` | `pool-resilience.test.ts` → «cierra las conexiones inactivas mucho antes de que Neon se apague (a los 5 minutos)» |
-| 18 | `server/scripts/build.ts`: el paquete deja fuera el código compartido (que es TypeScript): `EXTERNAL` pasa a incluir `@pokemon-minigames/shared` | `bundle.test.ts` → «el paquete es un solo archivo que lleva dentro el código compartido y deja fuera las dependencias instaladas» y «arranca en modo producción con node, carga el catálogo y responde» |
-| 19 | `client/src/components/LoadingScreen.tsx`: el aviso de arranque lento tarda un minuto: `SLOW_START_MS = 5000` → `60000` | `loading-screen.test.tsx` → «pasados 5 segundos avisa de que el servidor se está despertando» |
-| 20 | `client/src/i18n/es.ts`: la espera del `429` se redondea hacia abajo (promete menos de lo que falta): `Math.ceil(retryAfterSeconds / 60)` → `Math.floor` | `rate-limit.test.ts` → «con 61 segundos de espera dice: Demasiados intentos. Inténtalo de nuevo en 2 min.» |
-| 21 | `render.yaml`: el Blueprint deja de ser gratuito: `plan: free` → `plan: starter` | `config-files.test.ts` → «define un único servicio web gratuito con comprobación de salud» |
-| 22 | `.github/workflows/ci.yml`: el CI prueba contra otra versión de PostgreSQL: `postgres:18` → `postgres:17` | `config-files.test.ts` → «corre en cada push a main y en cada pull request, con PostgreSQL 18» |
+| 9 | `server/src/auth/auth.routes.ts`: el tope por IP nunca cuenta: se quita `loginFailuresByIp?.record(ip);` | `limits.routes.test.ts` → «una sola IP no puede probar contraseñas contra muchas cuentas: a partir del intento 31 fallido da 429» y «los inicios de sesión correctos no cuentan para el tope de la IP» |
+| 10 | `server/src/auth/auth.routes.ts`: el fallo se cuenta al terminar de comprobar la contraseña y no antes (las peticiones en paralelo lo esquivan) | `limits.routes.test.ts` → «diez intentos fallidos a la vez no esquivan el límite: solo 5 llegan a comprobar la contraseña» y «los inicios de sesión correctos no cuentan para el tope de la IP» |
+| 11 | `server/src/app.ts`: el límite general también cuenta `/health`: se quita `[...API_PREFIXES]` del `app.use` | `limits.routes.test.ts` → «/health no cuenta ni se bloquea (la plataforma lo consulta sin parar)» |
+| 12 | `server/src/http/client-app.ts`: el fallback tapa la API: se quita `isServerPath(req.path)` de la condición | `client-app.test.ts` → «una ruta de la API que no existe sigue dando el 404 en JSON de siempre» |
+| 13 | `server/src/http/client-app.ts`: un archivo que no existe devuelve `index.html`: se quita la comprobación de la extensión | `client-app.test.ts` → «un archivo que no existe (con extensión) da 404 en JSON, no el index.html (que rompería el JavaScript)» |
+| 14 | `server/src/http/client-app.ts`: todo se cachea para siempre, también `index.html`: `inAssets ? IMMUTABLE : "no-cache"` → `IMMUTABLE` | `client-app.test.ts` → «lo que no está en /assets (index.html, el icono) nunca se cachea sin revalidar» |
+| 15 | `server/src/config/env.ts`: producción acepta `SameSite=none`: se quita esa regla | `env.test.ts` → «rechaza SameSite=none (con un solo origen no hace falta)» |
+| 16 | `server/src/config/env.ts`: producción arranca sin `TRUST_PROXY`: se quita esa regla | `env.test.ts` → «exige decir cuántos proxies hay delante (si no, todas las IP serían la del proxy)» y «nombra todos los problemas a la vez» |
+| 17 | `server/src/app.ts`: CORS se concede a cualquier origen: `cors({ origin: env.CORS_ORIGIN, … })` → `cors({ origin: true, … })` | `cors.test.ts` → «en producción con CORS_ORIGIN se concede solo a ese origen» |
+| 18 | `server/src/shutdown.ts`: un cierre que falla sale con 0: `exit(failed ? 1 : 0)` → `exit(0)` | `shutdown.test.ts` → «si cerrar Socket.io falla, igualmente intenta cerrar la base de datos y sale con 1» y «si cerrar la base de datos falla, sale con 1» |
+| 19 | `server/src/db/prisma.ts`: las conexiones inactivas se cierran a los 10 minutos, después de que Neon se apague: `idleTimeoutMillis: 10_000` → `600_000` | `pool-resilience.test.ts` → «cierra las conexiones inactivas mucho antes de que Neon se apague (a los 5 minutos)» |
+| 20 | `server/scripts/build.ts`: el paquete deja fuera el código compartido (que es TypeScript): `EXTERNAL` pasa a incluir `@pokemon-minigames/shared` | `bundle.test.ts` → «el paquete es un solo archivo que lleva dentro el código compartido y deja fuera las dependencias instaladas» y «arranca en modo producción con node, carga el catálogo y responde» |
+| 21 | `client/src/components/LoadingScreen.tsx`: el aviso de arranque lento tarda un minuto: `SLOW_START_MS = 5000` → `60000` | `loading-screen.test.tsx` → «pasados 5 segundos avisa de que el servidor se está despertando» |
+| 22 | `client/src/i18n/es.ts`: la espera del `429` se redondea hacia abajo (promete menos de lo que falta): `Math.ceil(retryAfterSeconds / 60)` → `Math.floor` | `rate-limit.test.ts` → «con 61 segundos de espera dice: Demasiados intentos. Inténtalo de nuevo en 2 min.» |
+| 23 | `render.yaml`: el Blueprint deja de ser gratuito: `plan: free` → `plan: starter` | `config-files.test.ts` → «define un único servicio web gratuito con comprobación de salud» |
+| 24 | `.github/workflows/ci.yml`: el CI prueba contra otra versión de PostgreSQL: `postgres:18` → `postgres:17` | `config-files.test.ts` → «corre en cada push a main y en cada pull request, con PostgreSQL 18» |
 
 Al terminar, `git status` no debe mostrar cambios.
 
@@ -4094,7 +4217,7 @@ Al terminar, `git status` no debe mostrar cambios.
 git push -u origin etapa-5-despliegue
 ```
 
-Expected: rama `etapa-5-despliegue` en `https://github.com/marcovinir/pokemon-minigames`; el primer resultado real de GitHub Actions confirma el CI (no se puede ejecutar desde aquí). La integración a `main` la decide Marco. Después, Marco sigue `docs/despliegue.md` (crear Neon, crear el Blueprint en Render, pegar `DATABASE_URL`) y ejecuta `npm run smoke:deployed -- https://SU-SERVICIO.onrender.com`.
+Expected: rama `etapa-5-despliegue` en `https://github.com/marcovinir/pokemon-minigames`; el primer resultado real de GitHub Actions confirma el CI (no se puede ejecutar desde aquí). La integración a `main` la decide Marco. Después, Marco sigue `docs/despliegue.md` (crear Neon, crear el Blueprint en Render, pegar `DATABASE_URL`) y ejecuta `npm run smoke:deployed -- https://SU-SERVICIO.onrender.com`. **Antes de anunciar el juego**, hace las dos pruebas de la sección 5 de la guía (verificar `TRUST_PROXY`): ni la E2E ni la prueba de humo pueden detectar un valor equivocado, porque en local no hay proxy.
 
 ---
 
@@ -4107,7 +4230,7 @@ Expected: rama `etapa-5-despliegue` en `https://github.com/marcovinir/pokemon-mi
 | §4.1 Producción exige cookie segura, `SameSite` distinto de `none` y `TRUST_PROXY`; `CORS_ORIGIN` opcional | 1 (y 11: el `render.yaml` real lo cumple) |
 | §4.2 Comprobación de origen (`FORBIDDEN`), cada método y cabecera, detrás del proxy | 2 |
 | §4.3 Limitador con claves, ventana deslizante, reloj inyectable, limpieza, `429` con `Retry-After` | 3 |
-| §4.3 Login (5 fallos / 15 min por IP y correo, éxito reinicia), registro (5 / hora), API (300 / min) | 4 |
+| §4.3 Login (5 fallos / 15 min por IP y correo, éxito reinicia; más 30 por IP sumando correos y el intento reservado antes de comprobar la contraseña), registro (5 / hora), API (300 / min) | 4 |
 | §3.1 Servir el cliente, caché, fallback de React sin tapar la API, 404 en JSON | 5 |
 | §3.3 Pool para Neon y §3.4 cierre ordenado con `SIGTERM` | 6 |
 | §3.2 Empaquetado con esbuild, arranque con `node`, plan B documentado | 7 |
@@ -4121,8 +4244,12 @@ Expected: rama `etapa-5-despliegue` en `https://github.com/marcovinir/pokemon-mi
 
 **Hallazgos de la verificación real (ya corregidos en el código de este plan):** (1) `smoke:deployed` abortaba en Windows con un error de libuv al terminar con `process.exit` (el código de salida no era el esperado); ahora fija `process.exitCode`; (2) la verificación local con el `.env` de desarrollo hacía fallar "No concede CORS a otros orígenes" porque ese archivo define `CORS_ORIGIN`: el paso 3 de la Task 12 usa una copia sin esa línea; (3) `cors` con `origin: undefined` no concede nada (no cae en el comodín `*` como suponía la spec), así que la guarda `if (env.CORS_ORIGIN)` es por claridad y no por seguridad: se corrigieron el comentario y la mutación que la protege (ahora es `origin: true`); (4) `/pokemon/names` no sirve para probar el corte de la base de datos porque el catálogo está en memoria: el paso 4 usa un login, que sí consulta la base.
 
+**Lo que encontró la revisión final independiente de toda la rama (ya corregido en el código de este plan, cada punto con su prueba):** (1) el límite de login contaba el fallo al terminar de comprobar la contraseña, así que diez peticiones en paralelo pasaban todas la comprobación con la cuenta a cero (`limits.routes.test.ts`, con `Promise.all`); ahora el hueco se reserva antes y `release` lo devuelve si el error no fue de credenciales; (2) sin un tope por IP, una sola IP podía probar una contraseña común contra muchas cuentas y saturar la CPU con bcrypt; ahora hay 30 fallos por IP en 15 minutos sumando todos los correos (los logins correctos no cuentan); (3) el número de proxies de Render no está documentado y hay informes de la comunidad de que hacen falta hasta 3: la guía manda verificar `TRUST_PROXY` con dos pruebas (un valor bajo hace que todo el mundo comparta IP; uno alto permite falsear la IP) y `render.yaml` sigue en `1`, el valor que falla de forma visible.
+
+**Pendientes menores de esa revisión (no se corrigen en esta etapa):** si falta del todo una variable obligatoria (p. ej. `DATABASE_URL`), `loadEnv` muestra solo ese error y en inglés; `CORS_ORIGIN=*` se acepta en producción (los navegadores rechazan `*` con credenciales y el token va en memoria); el registro cuenta también los intentos fallidos (cinco nombres ocupados bloquean una hora); los límites están activos también en desarrollo (todo llega desde `::1` por el proxy de Vite); el `429` general fuera de los formularios muestra "Vas muy rápido. Espera un momento." sin la espera; la guía promete el aviso de servidor despertando en un arranque en frío, pero quien espera es el propio HTML; la guía lista POST, PUT y DELETE sin PATCH; `isServerPath` distingue mayúsculas y Express no; y el CI no declara `permissions: contents: read` y la E2E reintenta una vez, lo que puede ocultar inestabilidad.
+
 **Lo que no se puede probar desde aquí:** el flujo de GitHub Actions (se valida su estructura con una prueba y el primer resultado real llega al subir la rama) y el despliegue en Render y Neon (lo hace Marco con la guía; la prueba de humo comprueba el resultado). Una de las pruebas del paquete se omite en Windows (la señal `SIGTERM` real no existe allí).
 
 **Fuera de esta etapa:** dominio propio, Helmet y CSP, Redis o varias instancias, Docker, recuperación de contraseña y verificación de correo, monitoreo y alertas, copias de seguridad más allá de las de Neon, y mantener el servicio despierto con un ping periódico. Pendientes menores de las etapas 3 y 4 que siguen abiertos: `room-state` sin `nextRoundAt` (y los otros siete listados en el plan de la etapa 3) y los cuatro de la revisión de la etapa 4 (`getStats` sin instantánea común, guardados de tema que podrían llegar desordenados, `hasChoice` con un `localStorage` corrupto, y el "?" si faltara el rival).
 
-**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 613 pruebas de servidor y 423 de cliente en verde, `tsc` sin errores, la construcción de producción arrancada contra una base de datos real, la E2E con navegador real, 22 mutaciones a propósito detectadas por las pruebas, y la prueba de humo contra el servidor de producción en local.
+**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 620 pruebas de servidor y 423 de cliente en verde, `tsc` sin errores, la construcción de producción arrancada contra una base de datos real, la E2E con navegador real, 24 mutaciones a propósito detectadas por las pruebas, y la prueba de humo contra el servidor de producción en local.
