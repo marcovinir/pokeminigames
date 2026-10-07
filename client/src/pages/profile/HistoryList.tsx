@@ -1,6 +1,8 @@
 import type { GameResult, HistoryEntry } from "@pokemon-minigames/shared";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { Avatar } from "../../components/Avatar";
+import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
 import { RESULT_LABELS, describeConfig, historyReason } from "../../i18n/es";
@@ -8,28 +10,33 @@ import { useServices } from "../../services";
 import { formatDate, formatScore } from "./format";
 import { useLoad } from "./use-load";
 
-const RESULT_STYLE: Record<GameResult, string> = {
-  won: "text-success",
-  drawn: "text-muted",
-  lost: "text-danger",
+const RESULT_TONE: Record<GameResult, "success" | "neutral" | "danger"> = {
+  won: "success",
+  drawn: "neutral",
+  lost: "danger",
 };
 
 function HistoryRow({ game }: { game: HistoryEntry }) {
   return (
     // tabIndex -1: se puede enfocar por código (al cargar más partidas) sin entrar en el orden de tabulación.
-    <li tabIndex={-1} className="framed rounded-card bg-surface p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className={`font-medium ${RESULT_STYLE[game.result]}`}>{RESULT_LABELS[game.result]}</span>
-        <span className="font-num tabular-nums">{`${formatScore(game.myScore)} – ${formatScore(game.opponentScore)}`}</span>
+    <li tabIndex={-1} className="framed rounded-card bg-surface p-4 shadow-card">
+      <div className="flex items-center gap-3">
+        <Avatar name={game.opponent.username} size="md" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm">
+            contra{" "}
+            <Link to={`/jugador/${encodeURIComponent(game.opponent.username)}`} className="font-semibold underline">
+              {game.opponent.username}
+            </Link>
+          </p>
+          <p className="text-sm text-muted">{historyReason(game.reason, game.result)}</p>
+        </div>
+        <div className="text-right">
+          <Badge tone={RESULT_TONE[game.result]}>{RESULT_LABELS[game.result]}</Badge>
+          <p className="mt-1 font-num text-lg font-semibold tabular-nums">{`${formatScore(game.myScore)} – ${formatScore(game.opponentScore)}`}</p>
+        </div>
       </div>
-      <p className="mt-1 text-sm">
-        contra{" "}
-        <Link to={`/jugador/${encodeURIComponent(game.opponent.username)}`} className="underline">
-          {game.opponent.username}
-        </Link>
-      </p>
-      <p className="text-sm text-muted">{historyReason(game.reason, game.result)}</p>
-      <p className="text-sm text-muted">{describeConfig(game.config)}</p>
+      <p className="mt-2 text-xs text-muted">{describeConfig(game.config)}</p>
       <p className="text-xs text-muted">
         <time dateTime={game.endedAt}>{formatDate(game.endedAt)}</time>
       </p>
@@ -128,7 +135,7 @@ export function HistoryList() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium">Historial</h2>
+      <h2 className="font-display text-lg font-semibold">Historial</h2>
       {body}
     </section>
   );
