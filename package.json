@@ -4,13 +4,15 @@
   "workspaces": [
     "shared",
     "server",
-    "client"
+    "client",
+    "e2e"
   ],
   "scripts": {
     "dev": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
     "build": "npm run build -w client && npm run build -w server",
     "start": "npm start -w server",
+    "e2e": "npm run build && npm run e2e -w e2e",
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }

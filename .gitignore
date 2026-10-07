@@ -7,3 +7,6 @@ coverage/
 !.env.example
 !.env.test.example
 server/src/generated/
+
+e2e/test-results/
+e2e/playwright-report/
