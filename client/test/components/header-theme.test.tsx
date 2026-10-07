@@ -2,19 +2,33 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { Header } from "../../src/components/Header";
-import { ThemeSwitcher } from "../../src/components/ThemeSwitcher";
+import { ThemeMenu } from "../../src/components/ThemeMenu";
 import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
 
-describe("ThemeSwitcher", () => {
-  it("muestra el tema y el modo actuales", () => {
-    renderWithServices(<ThemeSwitcher />);
-    expect(screen.getByRole("combobox", { name: "Tema" })).toHaveValue("clasico");
-    expect(screen.getByRole("combobox", { name: "Modo" })).toHaveValue("auto");
+const openMenu = async () => userEvent.click(screen.getByRole("button", { name: "Apariencia" }));
+
+describe("ThemeMenu", () => {
+  it("empieza cerrado: solo se ve el botón de apariencia", () => {
+    renderWithServices(<ThemeMenu />);
+    const button = screen.getByRole("button", { name: "Apariencia" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
-  it("ofrece los dos temas y los tres modos en español", () => {
-    renderWithServices(<ThemeSwitcher />);
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+  it("al abrirlo muestra el tema y el modo actuales", async () => {
+    renderWithServices(<ThemeMenu />);
+    await openMenu();
+    expect(screen.getByRole("button", { name: "Apariencia" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("radio", { name: "Clásico" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Automático" })).toBeChecked();
+  });
+
+  it("ofrece los dos temas y los tres modos en español, cada grupo con su nombre", async () => {
+    renderWithServices(<ThemeMenu />);
+    await openMenu();
+    expect(screen.getByRole("group", { name: "Tema" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Modo" })).toBeInTheDocument();
+    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("aria-label") ?? radio.closest("label")?.textContent)).toEqual([
       "Clásico",
       "Pokédex",
       "Automático",
@@ -25,25 +39,66 @@ describe("ThemeSwitcher", () => {
 
   it("al elegir otro tema lo aplica al documento", async () => {
     const services = fakeServices();
-    renderWithServices(<ThemeSwitcher />, { services });
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Tema" }), "pokedex");
+    renderWithServices(<ThemeMenu />, { services });
+    await openMenu();
+    await userEvent.click(screen.getByRole("radio", { name: "Pokédex" }));
     expect(services.themeRoot.dataset.theme).toBe("pokedex");
     expect(services.theme.getState().preference.theme).toBe("pokedex");
+    expect(screen.getByRole("radio", { name: "Pokédex" })).toBeChecked();
   });
 
   it("al elegir otro modo lo aplica al documento", async () => {
     const services = fakeServices();
-    renderWithServices(<ThemeSwitcher />, { services });
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Modo" }), "oscuro");
+    renderWithServices(<ThemeMenu />, { services });
+    await openMenu();
+    await userEvent.click(screen.getByRole("radio", { name: "Oscuro" }));
     expect(services.themeRoot.dataset.mode).toBe("oscuro");
   });
 
-  it("refleja un cambio de tema hecho desde fuera", () => {
+  it("refleja un cambio de tema hecho desde fuera", async () => {
     const services = fakeServices();
-    renderWithServices(<ThemeSwitcher />, { services });
+    renderWithServices(<ThemeMenu />, { services });
+    await openMenu();
     services.theme.getState().setTheme("pokedex");
-    // zustand notifica de forma síncrona; React vuelve a pintar en el siguiente ciclo
-    return screen.findByDisplayValue("Pokédex");
+    expect(await screen.findByRole("radio", { name: "Pokédex", checked: true })).toBeInTheDocument();
+  });
+
+  it("se puede cambiar con el teclado: las flechas mueven la selección entre los radios", async () => {
+    const services = fakeServices();
+    renderWithServices(<ThemeMenu />, { services });
+    await openMenu();
+    screen.getByRole("radio", { name: "Clásico" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(services.theme.getState().preference.theme).toBe("pokedex");
+  });
+
+  it("Escape lo cierra y devuelve el foco al botón", async () => {
+    renderWithServices(<ThemeMenu />);
+    await openMenu();
+    screen.getByRole("radio", { name: "Claro" }).focus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apariencia" })).toHaveFocus();
+  });
+
+  it("un clic fuera lo cierra", async () => {
+    renderWithServices(
+      <>
+        <ThemeMenu />
+        <p>Otra parte de la página</p>
+      </>,
+    );
+    await openMenu();
+    await userEvent.click(screen.getByText("Otra parte de la página"));
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  it("el botón lo abre y lo cierra", async () => {
+    renderWithServices(<ThemeMenu />);
+    await openMenu();
+    expect(screen.getAllByRole("radio")).toHaveLength(5);
+    await openMenu();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 });
 
@@ -72,19 +127,31 @@ describe("Header", () => {
     expect(screen.getByRole("link", { name: "Mi perfil" })).toHaveAttribute("href", "/perfil");
   });
 
+  it("con sesión muestra tu avatar, decorativo, junto al nombre", () => {
+    const services = fakeServices();
+    signIn(services);
+    renderWithServices(<Header />, { services });
+    expect(screen.getByText("AS")).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("sin sesión no hay enlace al perfil", () => {
     renderWithServices(<Header />);
     expect(screen.queryByRole("link", { name: "Mi perfil" })).not.toBeInTheDocument();
   });
 
-  it("sin sesión no muestra usuario ni botón, pero sí el selector de tema", () => {
+  it("sin sesión no muestra usuario ni botón de cerrar sesión, pero sí el de apariencia", () => {
     renderWithServices(<Header />);
     expect(screen.queryByRole("button", { name: "Cerrar sesión" })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Tema" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apariencia" })).toBeInTheDocument();
   });
 
-  it("el título lleva al lobby", () => {
+  it("el logo lleva al lobby y su nombre accesible es el del juego (la bola es decorativa)", () => {
     renderWithServices(<Header />);
     expect(screen.getByRole("link", { name: "Pokémon Minigames" })).toHaveAttribute("href", "/");
+  });
+
+  it("es un encabezado de la página (banner)", () => {
+    renderWithServices(<Header />);
+    expect(screen.getByRole("banner")).toBeInTheDocument();
   });
 });

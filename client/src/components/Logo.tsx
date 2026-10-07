@@ -11,12 +11,15 @@ export function LogoMark({ size = 28, className = "" }: { size?: number; classNa
   );
 }
 
-/** La bola con el nombre del juego en la fuente de títulos. */
-export function Logo({ size = 30 }: { size?: number }) {
+/**
+ * La bola con el nombre del juego en la fuente de títulos. En pantallas estrechas el nombre puede quedar solo para los
+ * lectores de pantalla (`hideNameOnMobile`), para que quepan los botones.
+ */
+export function Logo({ size = 30, hideNameOnMobile = false }: { size?: number; hideNameOnMobile?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2">
       <LogoMark size={size} />
-      <span className="font-display text-xl font-semibold tracking-tight">Pokémon Minigames</span>
+      <span className={`font-display text-xl font-semibold tracking-tight ${hideNameOnMobile ? "max-sm:sr-only" : ""}`}>Pokémon Minigames</span>
     </span>
   );
 }
