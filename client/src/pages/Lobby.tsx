@@ -1,13 +1,14 @@
 import type { RoomConfig, TypeMode } from "@pokemon-minigames/shared";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ApiError } from "../api/client";
 import type { CurrentRoom } from "../api/endpoints";
 import { Button } from "../components/Button";
+import { Card } from "../components/Card";
 import { Notice } from "../components/Notice";
 import { TextField } from "../components/TextField";
 import { errorMessage } from "../i18n/es";
-import { useServices } from "../services";
+import { useServices, useSession } from "../services";
 import {
   type CreateRoomForm,
   DEFAULT_FORM,
@@ -18,6 +19,54 @@ import {
 } from "./room-form";
 
 const shownError = (error: unknown): string => (error instanceof ApiError ? error.message : errorMessage(undefined));
+
+const ICON = "size-5";
+const STROKE = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" } as const;
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className={ICON} aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function EnterIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className={ICON} aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-muted" aria-hidden="true" focusable="false" {...STROKE}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg data-check viewBox="0 0 24 24" className="mt-0.5 size-5 shrink-0 text-accent opacity-0 transition-opacity duration-(--dur-fast)" aria-hidden="true" focusable="false" {...STROKE}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12.5 2.8 2.8L16 9.6" />
+    </svg>
+  );
+}
+
+/** El título de una tarjeta del lobby, con su icono en un círculo de color. */
+function CardTitle({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <span aria-hidden="true" className="inline-flex size-10 items-center justify-center rounded-pill bg-accent text-accent-fg">
+        {icon}
+      </span>
+      <h2 className="font-display text-xl font-semibold">{children}</h2>
+    </div>
+  );
+}
 
 /** Si el usuario ya está en una partida (o dejó una sala abierta), ofrece volver a ella. */
 function ResumeBanner() {
@@ -85,50 +134,56 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
   }
 
   return (
-    <section className="framed rounded-card bg-surface p-4">
-      <h2 className="mb-3 text-lg font-medium">Crear sala</h2>
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <Card as="section" className="p-6">
+      <CardTitle icon={<PlusIcon />}>Crear sala</CardTitle>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         {formError ? <Notice tone="danger">{formError}</Notice> : null}
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-sm font-medium">Modo de tipos</legend>
+          <legend className="mb-1.5 text-sm font-semibold">Modo de tipos</legend>
           {TYPE_MODE_OPTIONS.map((option) => (
-            <label key={option.value} className="flex items-start gap-2 text-sm">
+            <label key={option.value} className="block cursor-pointer">
               <input
                 type="radio"
                 name="typeMode"
                 value={option.value}
                 checked={form.typeMode === option.value}
                 onChange={() => setForm({ ...form, typeMode: option.value })}
-                className="mt-1"
+                className="peer sr-only"
               />
-              <span>
-                <span className="font-medium">{option.label}</span>
-                <span className="block text-muted">{option.hint}</span>
+              <span className="framed flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-checked:[&_[data-check]]:opacity-100">
+                <span className="min-w-0 flex-1">
+                  <span className="font-display font-semibold">{option.label}</span>
+                  <span className="block text-sm text-muted">{option.hint}</span>
+                </span>
+                <CheckIcon />
               </span>
             </label>
           ))}
         </fieldset>
 
         <div>
-          <label htmlFor="length" className="mb-1 block text-sm font-medium">
+          <label htmlFor="length" className="mb-1.5 block text-sm font-semibold">
             Largo de la partida
           </label>
-          <select
-            id="length"
-            value={form.lengthKind}
-            onChange={(event) => {
-              setForm({ ...form, lengthKind: event.target.value as LengthKind });
-              setFieldError(null);
-            }}
-            className="framed w-full rounded-ui bg-surface px-3 py-2 text-fg"
-          >
-            {(Object.keys(LENGTH_LABELS) as LengthKind[]).map((kind) => (
-              <option key={kind} value={kind}>
-                {LENGTH_LABELS[kind]}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              id="length"
+              value={form.lengthKind}
+              onChange={(event) => {
+                setForm({ ...form, lengthKind: event.target.value as LengthKind });
+                setFieldError(null);
+              }}
+              className="framed w-full appearance-none rounded-ui bg-surface px-4 py-3 pr-10 text-fg"
+            >
+              {(Object.keys(LENGTH_LABELS) as LengthKind[]).map((kind) => (
+                <option key={kind} value={kind}>
+                  {LENGTH_LABELS[kind]}
+                </option>
+              ))}
+            </select>
+            <ChevronIcon />
+          </div>
         </div>
 
         {form.lengthKind === "custom-rounds" ? (
@@ -152,11 +207,11 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
           />
         ) : null}
 
-        <Button type="submit" variant="primary" loading={submitting}>
+        <Button type="submit" variant="primary" size="lg" loading={submitting}>
           Crear sala
         </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -189,9 +244,9 @@ function JoinRoomCard() {
   }
 
   return (
-    <section className="framed rounded-card bg-surface p-4">
-      <h2 className="mb-3 text-lg font-medium">Unirse a una sala</h2>
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <Card as="section" className="p-6">
+      <CardTitle icon={<EnterIcon />}>Unirse a una sala</CardTitle>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         {formError ? <Notice tone="danger">{formError}</Notice> : null}
         <TextField
           label="Código de sala"
@@ -199,6 +254,7 @@ function JoinRoomCard() {
           maxLength={10}
           autoComplete="off"
           autoCapitalize="characters"
+          inputClassName="font-num text-center text-2xl uppercase tracking-[0.3em]"
           onChange={(event) => {
             setCode(event.target.value);
             setError(null);
@@ -206,20 +262,24 @@ function JoinRoomCard() {
           error={error}
           hint="Te lo da quien creó la sala."
         />
-        <Button type="submit" loading={submitting}>
+        <Button type="submit" size="lg" loading={submitting}>
           Unirse
         </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
 export function LobbyPage() {
   const state = useLocation().state as { config?: RoomConfig } | null;
+  const user = useSession((s) => s.user);
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-medium">Lobby</h1>
+      <div>
+        {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
+        <h1 className="font-display text-3xl font-semibold">Lobby</h1>
+      </div>
       <ResumeBanner />
       <div className="grid gap-6 md:grid-cols-2">
         <CreateRoomCard initial={state?.config} />

@@ -2,12 +2,14 @@ import { type InputHTMLAttributes, type ReactNode, useId } from "react";
 
 export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "className"> {
   label: string;
+  /** Clases extra para el campo (p. ej. el código de sala, grande y espaciado). */
+  inputClassName?: string;
   error?: string | null;
   hint?: ReactNode;
 }
 
 /** Campo con su etiqueta y su mensaje de error, bien asociados para lectores de pantalla. */
-export function TextField({ label, error, hint, id, ...input }: TextFieldProps) {
+export function TextField({ label, error, hint, id, inputClassName = "", ...input }: TextFieldProps) {
   const autoId = useId();
   const fieldId = id ?? autoId;
   const errorId = `${fieldId}-error`;
@@ -22,7 +24,7 @@ export function TextField({ label, error, hint, id, ...input }: TextFieldProps) 
         id={fieldId}
         aria-invalid={error ? true : undefined}
         aria-describedby={[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(" ") || undefined}
-        className="framed w-full rounded-ui bg-surface px-4 py-3 text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)]"
+        className={`framed w-full rounded-ui bg-surface px-4 py-3 text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)] ${inputClassName}`}
         {...input}
       />
       {hint ? (
