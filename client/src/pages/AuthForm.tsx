@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode, useState } from "react";
 import { ApiError } from "../api/client";
 import { Button } from "../components/Button";
+import { Card } from "../components/Card";
 import { Notice } from "../components/Notice";
 import { TextField } from "../components/TextField";
 import { errorMessage, rateLimitMessage, retryAfterOf } from "../i18n/es";
@@ -54,9 +55,9 @@ export function AuthForm({ title, submitLabel, withUsername = false, validate, o
   }
 
   return (
-    <section className="mx-auto max-w-sm">
-      <h1 className="mb-4 text-xl font-medium">{title}</h1>
-      <form onSubmit={handleSubmit} noValidate className="framed flex flex-col gap-4 rounded-card bg-surface p-4">
+    <Card as="section" tone="raised" className="mx-auto w-full max-w-sm p-6">
+      <h1 className="mb-5 font-display text-2xl font-semibold">{title}</h1>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         {formError ? <Notice tone="danger">{formError}</Notice> : null}
         <TextField
           label="Email"
@@ -85,11 +86,11 @@ export function AuthForm({ title, submitLabel, withUsername = false, validate, o
           error={errors.password}
           hint={withUsername ? "Mínimo 8 caracteres." : undefined}
         />
-        <Button type="submit" variant="primary" loading={submitting}>
+        <Button type="submit" variant="primary" size="lg" loading={submitting}>
           {submitLabel}
         </Button>
       </form>
-      <p className="mt-4 text-sm text-muted">{footer}</p>
-    </section>
+      <p className="mt-5 border-t-(length:--frame) border-line pt-4 text-sm text-muted">{footer}</p>
+    </Card>
   );
 }
