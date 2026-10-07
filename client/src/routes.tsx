@@ -1,17 +1,10 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { LoadingScreen } from "./components/LoadingScreen";
 import { useSession } from "./services";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { LobbyPage } from "./pages/Lobby";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { RoomPage } from "./pages/room/RoomPage";
-
-function LoadingScreen() {
-  return (
-    <p role="status" className="text-center text-muted">
-      Cargando…
-    </p>
-  );
-}
 
 /** Rutas que exigen sesión: sin ella llevan a /login y, tras entrar, vuelven a donde se iba. */
 function RequireAuth() {

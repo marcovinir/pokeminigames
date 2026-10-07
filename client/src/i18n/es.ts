@@ -53,6 +53,22 @@ export function errorMessage(code: string | undefined): string {
   return ERROR_MESSAGES.INTERNAL_ERROR;
 }
 
+/** Los segundos que el servidor pide esperar (`details.retryAfterSeconds` de un 429), si vienen como número. */
+export function retryAfterOf(details: unknown): number | undefined {
+  if (typeof details !== "object" || details === null) return undefined;
+  const value = (details as { retryAfterSeconds?: unknown }).retryAfterSeconds;
+  return typeof value === "number" ? value : undefined;
+}
+
+/** "Demasiados intentos. Inténtalo de nuevo en 9 min."; sin una espera usable, sin número. */
+export function rateLimitMessage(retryAfterSeconds: number | undefined): string {
+  if (retryAfterSeconds === undefined || !Number.isFinite(retryAfterSeconds) || retryAfterSeconds <= 0) {
+    return "Demasiados intentos. Inténtalo de nuevo más tarde.";
+  }
+  const wait = retryAfterSeconds < 60 ? `${Math.ceil(retryAfterSeconds)} s` : `${Math.ceil(retryAfterSeconds / 60)} min`;
+  return `Demasiados intentos. Inténtalo de nuevo en ${wait}.`;
+}
+
 /** Errores tras los que tiene sentido salir de la sala y volver al lobby. */
 export const ROOM_GONE_CODES: readonly string[] = ["ROOM_NOT_FOUND", "NOT_IN_ROOM", "ROOM_CLOSED"];
 
