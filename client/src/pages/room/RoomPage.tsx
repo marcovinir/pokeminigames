@@ -110,11 +110,14 @@ export function RoomPage() {
       </p>
       {connection === "disconnected" && phase !== "finished" ? <Notice>Conexión perdida. Reconectando…</Notice> : null}
       {connection === "replaced" && phase !== "finished" ? (
-        <Notice className="flex flex-wrap items-center justify-between gap-2">
+        <Notice
+          action={
+            <Button variant="primary" onClick={() => game.client.join(code)}>
+              Jugar aquí
+            </Button>
+          }
+        >
           <span>Abriste esta partida en otra pestaña.</span>
-          <Button variant="primary" onClick={() => game.client.join(code)}>
-            Jugar aquí
-          </Button>
         </Notice>
       ) : null}
       <OpponentAwayNotice />

@@ -38,11 +38,15 @@ function ResumeBanner() {
 
   if (!room) return null;
   return (
-    <Notice tone="success" className="flex flex-wrap items-center justify-between gap-2">
+    <Notice
+      tone="success"
+      action={
+        <Button variant="primary" onClick={() => navigate(`/sala/${room.code}`)}>
+          Volver a tu partida
+        </Button>
+      }
+    >
       <span>Tienes una partida en curso (sala {room.code}).</span>
-      <Button variant="primary" onClick={() => navigate(`/sala/${room.code}`)}>
-        Volver a tu partida
-      </Button>
     </Notice>
   );
 }
