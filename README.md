@@ -2,7 +2,7 @@
 
 Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga ambos. Gana quien acumule más stats base. El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/).
 
-**Estado:** etapa 4 de 5 (servidor y cliente web completos y jugables, con estadísticas, historial y perfil). Falta el despliegue (etapa 5).
+**Estado:** etapa 5 de 5. El juego está completo (servidor, cliente web, estadísticas, perfil y temas) y listo para desplegarse gratis en Render y Neon: la guía está en [`docs/despliegue.md`](docs/despliegue.md).
 
 ## Estructura
 
@@ -11,6 +11,7 @@ Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tip
 | `server/` | API REST (Express) y tiempo real (Socket.io), motor de juego, Prisma y PostgreSQL |
 | `client/` | Cliente web: React 19, Vite, Tailwind, Zustand y React Router |
 | `shared/` | Tipos de eventos, payloads, códigos de error y `normalizeName`, compartidos por servidor y cliente |
+| `e2e/` | Prueba de extremo a extremo con Playwright: dos navegadores reales juegan contra la construcción de producción |
 
 ## Requisitos
 
@@ -47,15 +48,24 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 |---|---|
 | `npm run dev` | Servidor del juego en modo desarrollo con recarga |
 | `npm run dev:client` | Cliente web con recarga en caliente |
-| `npm run build` | Construye el cliente para producción (`client/dist`) |
+| `npm run build` | Construye el cliente (`client/dist`) y empaqueta el servidor (`server/dist/index.js`) |
+| `npm start` | Arranca la construcción de producción (necesita las variables de `NODE_ENV=production`, ver la guía de despliegue) |
+| `npm run e2e` | Construye y ejecuta la prueba E2E: crea su propia base de datos, la borra al terminar |
 | `npm test` | Todas las pruebas: servidor (usan la base `pokemon_minigames_test`) y cliente |
 | `npm run typecheck` | Verifica los tipos con `tsc` en todos los paquetes |
 | `npm run db:migrate -w server` | Crea/aplica migraciones en desarrollo |
 | `npm run db:seed -w server` | Carga el catálogo desde `server/data/catalog.snapshot.json` |
 | `npm run catalog:fetch -w server` | Vuelve a descargar el catálogo de PokéAPI al snapshot |
 | `npm run smoke -w server` | Juega una partida real de una ronda contra el servidor en marcha |
+| `npm run smoke:deployed -- URL` | Comprueba un despliegue en internet sin escribir nada (despierta el servicio si hace falta) |
 
 Variable opcional del cliente: `VITE_API_URL` (URL base del servidor; vacía = el mismo origen).
+
+## Producción y pruebas E2E
+
+El servidor sirve el cliente construido, la API y Socket.io desde un solo origen, así que en producción no hay CORS y la cookie de sesión es `Secure` + `SameSite=Lax`. Las peticiones que cambian algo se rechazan si vienen de otro origen (403 `FORBIDDEN`) y hay límites por IP en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo, 5 registros por hora y 300 peticiones por minuto a la API (429 `RATE_LIMITED` con `Retry-After`). Cómo desplegarlo, qué esperar de la capa gratuita y cómo comprobarlo: [`docs/despliegue.md`](docs/despliegue.md).
+
+`npm run e2e` necesita Chromium: `npx playwright install chromium` desde `e2e/`, o define `E2E_CHANNEL=msedge` (o `chrome`) para usar el navegador ya instalado. Con `E2E_ADMIN_DATABASE_URL` (o tu `server/.env`) crea la base `pokemon_minigames_e2e`. En GitHub, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre tipos, pruebas, construcción y E2E en cada push a `main` y en cada pull request.
 
 ## Estadísticas y perfil
 

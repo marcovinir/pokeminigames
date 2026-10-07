@@ -1,0 +1,33 @@
+# Blueprint de Render: un solo servicio web gratuito que sirve la API, Socket.io y el cliente construido (un solo origen).
+# Guía paso a paso: docs/despliegue.md
+services:
+  - type: web
+    name: pokemon-minigames
+    runtime: node
+    plan: free
+    # Cerca de Costa Rica; elige la misma región (AWS US East 1, N. Virginia) al crear el proyecto de Neon.
+    region: virginia
+    branch: main
+    autoDeployTrigger: commit
+    healthCheckPath: /health
+    # Con NODE_ENV=production npm omite las dependencias de desarrollo, y hacen falta para construir (Vite, esbuild, tsx,
+    # Prisma): por eso --include=dev. El catálogo se siembra de nuevo en cada despliegue (es idempotente).
+    buildCommand: npm ci --include=dev && npm run build && npm run db:deploy -w server && npm run db:seed:prod -w server
+    startCommand: node server/dist/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # Cuántos proxies hay delante del servidor: en Render, 1 (si no, todas las IP serían las del proxy).
+      - key: TRUST_PROXY
+        value: "1"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAME_SITE
+        value: lax
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      # La cadena de conexión de Neon (la directa, no la del pooler): se pega al crear el servicio y no se versiona.
+      - key: DATABASE_URL
+        sync: false

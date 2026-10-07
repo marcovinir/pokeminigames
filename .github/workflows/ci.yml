@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # La prueba E2E crea y borra su propia base de datos con esta conexión.
+      E2E_ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Base de datos de las pruebas del servidor
+        run: |
+          createdb pokemon_minigames_test
+          cat > server/.env.test <<'EOF'
+          NODE_ENV=test
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/pokemon_minigames_test
+          JWT_ACCESS_SECRET=clave-solo-para-pruebas-0123456789-abcdefghij
+          BCRYPT_COST=4
+          EOF
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Pruebas del servidor y del cliente
+        run: npm test
+
+      - name: Construir (cliente y servidor)
+        run: npm run build
+
+      - name: Instalar Chromium para la prueba E2E
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Prueba E2E (dos navegadores juegan una partida completa)
+        run: npm run e2e -w e2e
+
+      - name: Informe de la prueba E2E
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-e2e
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
