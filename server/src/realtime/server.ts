@@ -29,7 +29,7 @@ export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents, Re
 /** Monta Socket.io sobre el servidor HTTP. Cada evento se valida y se delega en la sala. */
 export function attachRealtime(httpServer: HttpServer, deps: RealtimeDeps): GameIoServer {
   const io: GameIoServer = new Server(httpServer, {
-    cors: { origin: deps.env.CORS_ORIGIN, credentials: true },
+    cors: deps.env.CORS_ORIGIN ? { origin: deps.env.CORS_ORIGIN, credentials: true } : undefined,
   });
 
   io.use((socket, next) => {

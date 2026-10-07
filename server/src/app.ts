@@ -34,7 +34,8 @@ export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps
 
   const app = express();
   app.disable("x-powered-by");
-  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  // Sin CORS_ORIGIN (producción, un solo origen) no se instala CORS: no hay otros orígenes a los que conceder nada.
+  if (env.CORS_ORIGIN) app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json({ limit: "10kb" }));
   app.use(cookieParser());
 

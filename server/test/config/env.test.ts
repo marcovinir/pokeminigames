@@ -6,6 +6,63 @@ const valid = {
   JWT_ACCESS_SECRET: "x".repeat(32),
 };
 
+const production = { ...valid, NODE_ENV: "production", COOKIE_SECURE: "true", TRUST_PROXY: "1" };
+
+describe("loadEnv en producción", () => {
+  it("acepta una configuración segura y completa", () => {
+    const env = loadEnv(production);
+    expect(env).toMatchObject({ NODE_ENV: "production", COOKIE_SECURE: true, COOKIE_SAME_SITE: "lax", TRUST_PROXY: 1 });
+  });
+
+  it("no inventa un CORS_ORIGIN: con un solo origen no hay CORS que configurar", () => {
+    expect(loadEnv(production).CORS_ORIGIN).toBeUndefined();
+    expect(loadEnv({ ...production, CORS_ORIGIN: "https://juego.example" }).CORS_ORIGIN).toBe("https://juego.example");
+  });
+
+  it("exige la cookie segura", () => {
+    expect(() => loadEnv({ ...production, COOKIE_SECURE: "false" })).toThrow(/COOKIE_SECURE/);
+    expect(() => loadEnv({ ...valid, NODE_ENV: "production", TRUST_PROXY: "1" })).toThrow(/COOKIE_SECURE/);
+  });
+
+  it("rechaza SameSite=none (con un solo origen no hace falta)", () => {
+    expect(() => loadEnv({ ...production, COOKIE_SAME_SITE: "none" })).toThrow(/COOKIE_SAME_SITE/);
+    expect(loadEnv({ ...production, COOKIE_SAME_SITE: "strict" }).COOKIE_SAME_SITE).toBe("strict");
+  });
+
+  it("exige decir cuántos proxies hay delante (si no, todas las IP serían la del proxy)", () => {
+    const { TRUST_PROXY: _omitted, ...withoutProxy } = production;
+    expect(() => loadEnv(withoutProxy)).toThrow(/TRUST_PROXY/);
+  });
+
+  it("nombra todos los problemas a la vez", () => {
+    const { TRUST_PROXY: _omitted, ...withoutProxy } = production;
+    let message = "";
+    try {
+      loadEnv({ ...withoutProxy, COOKIE_SECURE: "false", COOKIE_SAME_SITE: "none" });
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).toMatch(/COOKIE_SECURE/);
+    expect(message).toMatch(/COOKIE_SAME_SITE/);
+    expect(message).toMatch(/TRUST_PROXY/);
+  });
+});
+
+describe("TRUST_PROXY", () => {
+  it("fuera de producción es 0 si no se dice nada", () => {
+    expect(loadEnv(valid).TRUST_PROXY).toBe(0);
+  });
+
+  it("acepta de 0 a 10 proxies", () => {
+    expect(loadEnv({ ...valid, TRUST_PROXY: "0" }).TRUST_PROXY).toBe(0);
+    expect(loadEnv({ ...valid, TRUST_PROXY: "10" }).TRUST_PROXY).toBe(10);
+  });
+
+  it.each(["-1", "11", "1.5", "abc", "true"])("rechaza %s", (value) => {
+    expect(() => loadEnv({ ...valid, TRUST_PROXY: value })).toThrow(/TRUST_PROXY/);
+  });
+});
+
 describe("loadEnv", () => {
   it("aplica los valores por defecto", () => {
     const env = loadEnv(valid);
