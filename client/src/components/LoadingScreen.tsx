@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LogoMark } from "./Logo";
 
 /** Si la sesión tarda más que esto en recuperarse, el servidor probablemente se estaba durmiendo (capa gratuita). */
 export const SLOW_START_MS = 5000;
@@ -12,9 +13,10 @@ export function LoadingScreen() {
   }, []);
 
   return (
-    <div role="status" className="text-center text-muted">
-      <p>Cargando…</p>
-      {slow ? <p className="mt-2 text-sm">El servidor se está despertando, puede tardar hasta un minuto…</p> : null}
+    <div role="status" className="flex flex-col items-center gap-4 py-16 text-center text-muted">
+      <LogoMark size={56} className="animate-spin-slow" />
+      <p className="font-display text-lg font-medium">Cargando…</p>
+      {slow ? <p className="text-sm">El servidor se está despertando, puede tardar hasta un minuto…</p> : null}
     </div>
   );
 }
