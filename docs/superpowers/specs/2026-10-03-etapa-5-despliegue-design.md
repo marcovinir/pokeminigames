@@ -48,7 +48,7 @@ Neon cierra las conexiones inactivas y la primera consulta tras despertarla tard
 
 ### 4.1 Configuración exigida
 
-Con `NODE_ENV=production` el servidor se niega a arrancar si: `COOKIE_SECURE` no es `true`; `COOKIE_SAME_SITE` es `none`; o falta `TRUST_PROXY` (entero ≥ 0; en Render, `1`; es la cantidad de proxies delante, para leer bien la IP del cliente y el protocolo). `CORS_ORIGIN` pasa a ser opcional: sin él no se instala CORS.
+Con `NODE_ENV=production` el servidor se niega a arrancar si: `COOKIE_SECURE` no es `true`; `COOKIE_SAME_SITE` es `none`; o falta `TRUST_PROXY` (entero ≥ 0; en Render se parte de `1` y se verifica tras el primer despliegue, porque hay informes de la comunidad de que hacen falta más (hasta 3) y un valor equivocado es grave en los dos sentidos; es la cantidad de proxies delante, para leer bien la IP del cliente y el protocolo). `CORS_ORIGIN` pasa a ser opcional: sin él no se instala CORS.
 
 ### 4.2 Comprobación de origen
 
@@ -58,7 +58,7 @@ Las peticiones `POST`, `PUT`, `PATCH` y `DELETE` se rechazan con `403` y el cód
 
 En memoria (hay una sola instancia) y sin dependencias nuevas: un limitador con claves (ventana deslizante, reloj inyectable) como el que ya existe para los sockets. Responden `429` con `RATE_LIMITED`, `details.retryAfterSeconds` y la cabecera `Retry-After`. Constantes con nombre:
 
-- **Login:** 5 intentos **fallidos** en 15 minutos por combinación de IP y correo; un login correcto reinicia la cuenta. No es un bloqueo por cuenta, para que nadie pueda dejar fuera a otra persona usando su correo.
+- **Login:** 5 intentos **fallidos** en 15 minutos por combinación de IP y correo; un login correcto reinicia la cuenta. No es un bloqueo por cuenta, para que nadie pueda dejar fuera a otra persona usando su correo. Además, 30 fallidos en 15 minutos por IP sumando todos los correos (la revisión final señaló que, sin este tope, una sola IP podía probar una contraseña en muchas cuentas y saturar la CPU con bcrypt). El intento se reserva antes de comprobar la contraseña: contarlo al terminar dejaba pasar peticiones en paralelo.
 - **Registro:** 5 por hora por IP.
 - **General:** 300 peticiones por minuto por IP en toda la API.
 - Las entradas vencidas se limpian solas, para que un abuso no llene la memoria.
