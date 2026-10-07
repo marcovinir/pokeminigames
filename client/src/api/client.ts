@@ -1,5 +1,5 @@
 import type { ErrorCode } from "@pokemon-minigames/shared";
-import { NETWORK_ERROR, errorMessage } from "../i18n/es";
+import { NETWORK_ERROR, errorMessage, rateLimitMessage, retryAfterOf } from "../i18n/es";
 import type { AuthSession } from "./types";
 
 /** Error de una llamada al servidor. `message` ya está en español y listo para mostrar. */
@@ -9,7 +9,8 @@ export class ApiError extends Error {
     readonly code: ErrorCode | typeof NETWORK_ERROR,
     readonly details?: unknown,
   ) {
-    super(errorMessage(code));
+    // Un 429 dice cuánto esperar cuando el servidor lo informa, en cualquier pantalla y no solo en los formularios.
+    super(code === "RATE_LIMITED" ? rateLimitMessage(retryAfterOf(details)) : errorMessage(code));
     this.name = "ApiError";
   }
 }

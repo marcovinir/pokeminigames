@@ -1,7 +1,7 @@
-import { type CookieOptions, type Request, type RequestHandler, type Response, Router } from "express";
+import { type CookieOptions, type Request, type Response, Router } from "express";
 import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
-import { type KeyedLimiter, rateLimitMiddleware, tooManyRequests } from "../http/rate-limit.js";
+import { type KeyedLimiter, tooManyRequests } from "../http/rate-limit.js";
 import { createRequireAuth, getAuth } from "./auth.middleware.js";
 import { loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
@@ -14,7 +14,7 @@ export interface AuthRouterDeps {
   authService: AuthService;
   tokens: TokenService;
   /** Límites de intentos; sin ellos no se limita nada (las pruebas que no los necesitan). */
-  limiters?: { loginFailures?: KeyedLimiter; loginFailuresByIp?: KeyedLimiter; register?: KeyedLimiter };
+  limiters?: { loginFailures?: KeyedLimiter; loginFailuresByIp?: KeyedLimiter; register?: KeyedLimiter; registerFailures?: KeyedLimiter };
 }
 
 const clientIp = (req: Request): string => req.ip ?? "desconocida";
@@ -31,9 +31,6 @@ function toUserDto(user: AuthUser) {
 
 export function createAuthRouter({ env, authService, tokens, limiters = {} }: AuthRouterDeps): Router {
   const router = Router();
-  const limitRegistrations: RequestHandler = limiters.register
-    ? rateLimitMiddleware({ limiter: limiters.register, keyOf: clientIp })
-    : (_req, _res, next) => next();
   const requireAuth = createRequireAuth(tokens);
 
   // La cookie solo viaja a /auth: el resto de la API nunca la recibe.
@@ -52,9 +49,28 @@ export function createAuthRouter({ env, authService, tokens, limiters = {} }: Au
     res.clearCookie(REFRESH_COOKIE, cookieOptions);
   }
 
-  router.post("/register", limitRegistrations, async (req, res) => {
-    const input = registerSchema.parse(req.body);
-    const result = await authService.register(input);
+  router.post("/register", async (req, res) => {
+    // Dos cuentas por IP: las cuentas creadas (5 por hora) y los intentos que fallan (20 por hora), para que probar unos
+    // nombres ya ocupados no deje a nadie sin poder registrarse. El hueco de las cuentas se reserva ANTES de crearla
+    // (el hash de la contraseña tarda: contarla al terminar dejaría pasar peticiones en paralelo) y se devuelve si falla.
+    const ip = clientIp(req);
+    const { register: created, registerFailures: failed } = limiters;
+    const waits = [created?.check(ip), failed?.check(ip)].flatMap((status) => (status && !status.allowed ? [status.retryAfterSeconds] : []));
+    if (waits.length > 0) {
+      const retryAfterSeconds = Math.max(...waits);
+      res.set("Retry-After", String(retryAfterSeconds));
+      throw tooManyRequests(retryAfterSeconds);
+    }
+    created?.record(ip);
+    let result: AuthResult;
+    try {
+      const input = registerSchema.parse(req.body);
+      result = await authService.register(input);
+    } catch (error) {
+      created?.release(ip);
+      failed?.record(ip);
+      throw error;
+    }
     startSession(res, result);
     res.status(201).json({ user: toUserDto(result.user), accessToken: result.accessToken });
   });

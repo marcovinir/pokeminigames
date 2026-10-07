@@ -191,3 +191,19 @@ describe("ApiClient.refreshSession", () => {
     expect(api.getToken()).toBeNull();
   });
 });
+
+describe("ApiError con un 429", () => {
+  it("el mensaje dice cuánto esperar cuando el servidor lo informa", () => {
+    expect(new ApiError(429, "RATE_LIMITED", { retryAfterSeconds: 540 }).message).toBe("Demasiados intentos. Inténtalo de nuevo en 9 min.");
+    expect(new ApiError(429, "RATE_LIMITED", { retryAfterSeconds: 40 }).message).toBe("Demasiados intentos. Inténtalo de nuevo en 40 s.");
+  });
+
+  it("sin una espera usable, no inventa una", () => {
+    expect(new ApiError(429, "RATE_LIMITED").message).toBe("Demasiados intentos. Inténtalo de nuevo más tarde.");
+    expect(new ApiError(429, "RATE_LIMITED", { retryAfterSeconds: "pronto" }).message).toBe("Demasiados intentos. Inténtalo de nuevo más tarde.");
+  });
+
+  it("los demás códigos conservan su mensaje de siempre", () => {
+    expect(new ApiError(401, "UNAUTHORIZED").message).toBe("Tu sesión expiró. Inicia sesión de nuevo.");
+  });
+});

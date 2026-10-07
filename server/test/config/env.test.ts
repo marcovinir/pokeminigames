@@ -48,6 +48,35 @@ describe("loadEnv en producción", () => {
   });
 });
 
+describe("variables obligatorias que faltan", () => {
+  it("en producción, si falta DATABASE_URL se dicen también los demás problemas, todo en español", () => {
+    let message = "";
+    try {
+      loadEnv({ NODE_ENV: "production", JWT_ACCESS_SECRET: "x".repeat(32), COOKIE_SECURE: "false" });
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message).toMatch(/DATABASE_URL: es obligatoria/);
+    expect(message).toMatch(/COOKIE_SECURE/);
+    expect(message).toMatch(/TRUST_PROXY/);
+    expect(message).not.toMatch(/Invalid input|expected string/);
+  });
+
+  it("falta JWT_ACCESS_SECRET: lo dice en español", () => {
+    expect(() => loadEnv({ DATABASE_URL: "postgresql://x" })).toThrow(/JWT_ACCESS_SECRET: es obligatoria/);
+  });
+
+  it("un TRUST_PROXY inválido en producción se nombra una sola vez", () => {
+    let message = "";
+    try {
+      loadEnv({ ...valid, NODE_ENV: "production", COOKIE_SECURE: "true", TRUST_PROXY: "abc" });
+    } catch (error) {
+      message = String(error);
+    }
+    expect(message.match(/TRUST_PROXY/g)?.length).toBe(1);
+  });
+});
+
 describe("TRUST_PROXY", () => {
   it("fuera de producción es 0 si no se dice nada", () => {
     expect(loadEnv(valid).TRUST_PROXY).toBe(0);

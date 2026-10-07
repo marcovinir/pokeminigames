@@ -6,7 +6,11 @@ import { API_PREFIXES } from "./api-paths.js";
 const NOT_CLIENT = [...API_PREFIXES, "/health", "/socket.io"];
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
-const isServerPath = (path: string): boolean => NOT_CLIENT.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+// Express no distingue mayúsculas en las rutas (/Auth/x llega al enrutador de /auth): aquí tampoco.
+const isServerPath = (path: string): boolean => {
+  const lower = path.toLowerCase();
+  return NOT_CLIENT.some((prefix) => lower === prefix || lower.startsWith(`${prefix}/`));
+};
 
 /**
  * Sirve el cliente construido (`client/dist`) desde el mismo servicio que la API: un solo origen. Devuelve `null` si

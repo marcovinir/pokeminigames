@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { DEFAULT_RATE_LIMITS, type RateLimitConfig } from "../../src/http/limits.js";
+import { DEFAULT_RATE_LIMITS, type RateLimitConfig, rateLimitsFor } from "../../src/http/limits.js";
 import { buildTestContext } from "../helpers/app.js";
 import { prisma, resetDatabase } from "../helpers/db.js";
 import { registerUser } from "../helpers/users.js";
@@ -29,7 +29,16 @@ describe("los límites por defecto son los de la spec", () => {
     expect(DEFAULT_RATE_LIMITS.loginFailures).toEqual({ limit: 5, windowMs: 15 * MINUTE });
     expect(DEFAULT_RATE_LIMITS.loginFailuresByIp).toEqual({ limit: 30, windowMs: 15 * MINUTE });
     expect(DEFAULT_RATE_LIMITS.register).toEqual({ limit: 5, windowMs: HOUR });
+    expect(DEFAULT_RATE_LIMITS.registerFailures).toEqual({ limit: 20, windowMs: HOUR });
     expect(DEFAULT_RATE_LIMITS.api).toEqual({ limit: 300, windowMs: MINUTE });
+  });
+});
+
+describe("rateLimitsFor", () => {
+  it("solo producción usa los límites; en desarrollo y en pruebas están apagados (todo llega desde la misma IP por el proxy de Vite)", () => {
+    expect(rateLimitsFor("production")).toBe(DEFAULT_RATE_LIMITS);
+    expect(rateLimitsFor("development")).toBe("off");
+    expect(rateLimitsFor("test")).toBe("off");
   });
 });
 
@@ -124,11 +133,28 @@ describe("límite de registros", () => {
     expect(blocked.body.error.code).toBe("RATE_LIMITED");
   });
 
-  it("los intentos fallidos (cuenta repetida) también cuentan", async () => {
+  it("los intentos fallidos (cuenta repetida) no gastan los 5 registros por hora", async () => {
     const { ctx } = setup();
     expect((await register(ctx, 1)).status).toBe(201);
     for (let i = 0; i < 4; i++) expect((await register(ctx, 1)).status).toBe(409);
-    expect((await register(ctx, 2)).status).toBe(429);
+    for (let n = 2; n <= 5; n++) expect((await register(ctx, n)).status).toBe(201);
+    expect((await register(ctx, 6)).status).toBe(429);
+  });
+
+  it("los intentos fallidos tienen su propio tope: el vigésimo primero de la hora da 429", async () => {
+    const { ctx } = setup();
+    expect((await register(ctx, 1)).status).toBe(201);
+    for (let i = 0; i < 20; i++) expect((await register(ctx, 1)).status).toBe(409);
+    const blocked = await register(ctx, 1);
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.details.retryAfterSeconds).toBeGreaterThan(0);
+    expect((await register(ctx, 1, "2.2.2.2")).status).toBe(409);
+  });
+
+  it("diez registros a la vez no esquivan el límite: solo se crean 5 cuentas", async () => {
+    const { ctx } = setup();
+    const responses = await Promise.all(Array.from({ length: 10 }, (_, i) => register(ctx, i + 1)));
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 201, 201, 201, 201, 429, 429, 429, 429, 429]);
   });
 
   it("otra IP no se ve afectada y pasada una hora se puede volver a registrar", async () => {

@@ -6,6 +6,8 @@ import { loadEnv } from "../../src/config/env.js";
 const root = new URL("../../../", import.meta.url);
 const read = (path: string): string => readFileSync(new URL(path, root), "utf8");
 
+type CiWorkflow = { permissions?: Record<string, string> };
+
 type EnvVar = { key: string; value?: string; generateValue?: boolean; sync?: boolean };
 type Service = {
   type: string;
@@ -101,6 +103,10 @@ describe("flujo de CI", () => {
     expect(ci.jobs.test.services.postgres?.image).toBe("postgres:18");
   });
 
+  it("el token del flujo solo puede leer el contenido del repositorio", () => {
+    expect((ci as CiWorkflow).permissions).toEqual({ contents: "read" });
+  });
+
   it("usa la misma versión de Node que el proyecto", () => {
     const setupNode = steps.find((step) => String(step.uses ?? "").startsWith("actions/setup-node"));
     const configured = (setupNode?.with as { "node-version": number | string }) ["node-version"];
@@ -145,6 +151,12 @@ describe("documentación de despliegue", () => {
     const connections = guide.match(/postgres(?:ql)?:\/\/\S+/g) ?? [];
     expect(connections.length).toBeGreaterThan(0);
     for (const connection of connections) expect(connection).toMatch(/usuario:clave@/);
+  });
+
+  it("la guía lista todos los métodos que comprueba el origen y no promete un aviso que no aparece en el arranque en frío", () => {
+    expect(guide).toMatch(/`POST`, `PUT`, `PATCH` y `DELETE`/);
+    expect(guide).not.toMatch(/el cliente muestra "El servidor se está despertando…" mientras tanto/);
+    expect(guide).toMatch(/el navegador se queda cargando/);
   });
 
   it("la guía manda comprobar TRUST_PROXY tras el primer despliegue, con las dos pruebas (valor demasiado alto y demasiado bajo)", () => {

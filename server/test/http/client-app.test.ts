@@ -89,6 +89,14 @@ describe("el cliente construido", () => {
     }
   });
 
+  it("Express no distingue mayúsculas en las rutas y el cliente tampoco debe tapar la API por eso", async () => {
+    const unknown = await request(app()).get("/Auth/no-existe");
+    expect(unknown.status).toBe(404);
+    expect(unknown.body.error.code).toBe("NOT_FOUND");
+    expect((await request(app()).get("/ROOMS/current")).status).toBe(401);
+    expect((await request(app()).get("/Health")).body).toEqual({ status: "ok" });
+  });
+
   it("no tapa la API: sus rutas siguen respondiendo en JSON", async () => {
     const health = await request(app()).get("/health");
     expect(health.body).toEqual({ status: "ok" });

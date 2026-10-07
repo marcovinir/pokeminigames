@@ -39,6 +39,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
     loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
     loginFailuresByIp: createKeyedLimiter({ ...limits.loginFailuresByIp, now: limits.now }),
     register: createKeyedLimiter({ ...limits.register, now: limits.now }),
+    registerFailures: createKeyedLimiter({ ...limits.registerFailures, now: limits.now }),
     api: createKeyedLimiter({ ...limits.api, now: limits.now }),
   };
 

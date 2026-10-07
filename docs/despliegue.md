@@ -4,7 +4,7 @@ Esta guía deja el juego en internet sin gastar nada: **Render** aloja un único
 
 ## Qué esperar de la capa gratuita
 
-- **El servicio se duerme** tras 15 minutos sin tráfico (ni peticiones ni mensajes de WebSocket). El primer acceso después tarda cerca de un minuto en despertar; el cliente muestra "El servidor se está despertando…" mientras tanto.
+- **El servicio se duerme** tras 15 minutos sin tráfico (ni peticiones ni mensajes de WebSocket). El primer acceso después tarda cerca de un minuto en despertar: el navegador se queda cargando hasta que el servicio responde, porque es el propio servicio el que entrega la página. La pantalla de carga del cliente avisa "El servidor se está despertando…" cuando la sesión tarda más de 5 s en recuperarse, por ejemplo si Neon también está despertando.
 - **Las partidas viven en la memoria del servicio.** Si el servicio se reinicia (un despliegue nuevo, por ejemplo), las partidas que estaban en curso se marcan como abandonadas. Con el servicio dormido no puede haber partidas activas.
 - **Neon apaga la base de datos** tras 5 minutos sin consultas y la despierta sola en la siguiente (la primera consulta tarda un poco). El servidor cierra las conexiones inactivas a los 10 segundos para no guardar ninguna que Neon vaya a cortar.
 - Límites vigentes al escribir esto (2026-10): Render da 750 horas de servicio al mes y Neon 0,5 GB y 100 horas de cómputo. Compruébalos en [render.com/docs/free](https://render.com/docs/free) y [neon.com/pricing](https://neon.com/pricing) antes de depender de ellos.
@@ -83,7 +83,7 @@ Imprime `401 401 401 401 401`. Ahora, desde otra red (el celular con datos móvi
 
 ## Seguridad: qué hay y qué no
 
-- Cookie `Secure` + `SameSite=Lax` y comprobación de origen en todas las peticiones que cambian algo (`POST`, `PUT`, `DELETE`): una petición que el navegador dice venir de otro sitio se rechaza con 403.
+- Cookie `Secure` + `SameSite=Lax` y comprobación de origen en todas las peticiones que cambian algo (`POST`, `PUT`, `PATCH` y `DELETE`): una petición que el navegador dice venir de otro sitio se rechaza con 403.
 - Límites de peticiones por IP, en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo y 30 por IP sumando todos los correos (un login correcto reinicia la cuenta), 5 registros por hora por IP y 300 peticiones por minuto a la API. Al pasarse responde 429 con `Retry-After`.
 - No hay Helmet ni política de contenido (CSP), recuperación de contraseña por correo ni verificación de correo. El servicio es una sola instancia: los límites y las salas viven en su memoria.
 
