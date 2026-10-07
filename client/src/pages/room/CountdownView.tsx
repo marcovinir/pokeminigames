@@ -1,17 +1,28 @@
+import { Avatar } from "../../components/Avatar";
+import { Card } from "../../components/Card";
 import { Timer } from "../../components/Timer";
 import { START_COUNTDOWN_MS } from "../../game/durations";
 import { useRoom } from "./use-room";
 
 export function CountdownView() {
-  const { view, opponent } = useRoom();
+  const { view, me, opponent } = useRoom();
 
   return (
-    <section className="framed mx-auto max-w-md rounded-card bg-surface p-6 text-center">
-      <h1 className="text-xl font-medium">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
-      <p className="mt-2 text-sm text-muted">La partida empieza en…</p>
+    <Card as="section" tone="raised" className="mx-auto max-w-lg p-8 text-center">
+      <h1 className="font-display text-2xl font-semibold">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
+      {me && opponent ? (
+        <div className="mt-6 flex items-center justify-center gap-6">
+          <Avatar name={me.username} size="xl" />
+          <span aria-hidden="true" className="font-display text-2xl font-semibold text-muted">
+            VS
+          </span>
+          <Avatar name={opponent.username} size="xl" />
+        </div>
+      ) : null}
+      <p className="mt-6 text-sm text-muted">La partida empieza en…</p>
       <div className="mt-3">
-        <Timer deadline={view.startsAt} offset={view.clockOffset} totalMs={START_COUNTDOWN_MS} label="Inicio de la partida" />
+        <Timer deadline={view.startsAt} offset={view.clockOffset} totalMs={START_COUNTDOWN_MS} label="Inicio de la partida" size={160} urgentAtMs={0} />
       </div>
-    </section>
+    </Card>
   );
 }

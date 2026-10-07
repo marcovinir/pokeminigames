@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Timer } from "../../components/Timer";
 import { TYPE_CHOICE_MS } from "../../game/durations";
 import { TYPE_LABELS } from "../../i18n/es";
-import { TYPE_STYLES } from "../../theme/type-styles";
+import { typeChipStyle } from "../../theme/type-styles";
 import { LeaveButton } from "./LeaveButton";
 import { useRoom } from "./use-room";
 
@@ -18,26 +18,28 @@ export function TypePickerView() {
   const waiting = chosen !== null && !view.lastError;
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-5">
       <div className="text-center">
-        <h1 className="text-xl font-medium">Elige un tipo</h1>
+        <h1 className="font-display text-2xl font-semibold">Elige un tipo</h1>
         <p className="mt-1 text-sm text-muted">Tú y tu rival eligen uno; con los dos se forma el par de la ronda {round?.number}.</p>
       </div>
       <Timer deadline={round?.deadline ?? null} offset={view.clockOffset} totalMs={TYPE_CHOICE_MS} label="Tiempo para elegir" />
 
-      <div role="group" aria-label="Tipos" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {TYPE_NAMES.map((type) => (
+      <div role="group" aria-label="Tipos" className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        {TYPE_NAMES.map((type, index) => (
           <button
             key={type}
             type="button"
             disabled={locked || waiting}
             aria-pressed={chosen === type}
+            data-type={type}
+            data-chosen={chosen === type ? "true" : undefined}
             onClick={() => {
               setChosen(type);
               client.chooseType(type);
             }}
-            style={TYPE_STYLES[type]}
-            className={`rounded-ui px-2 py-3 text-sm font-medium transition-opacity disabled:cursor-not-allowed ${
+            style={{ ...typeChipStyle(type), "--i": index } as React.CSSProperties}
+            className={`animate-rise rounded-card px-2 py-4 font-display text-base font-semibold shadow-[inset_0_-3px_0_rgb(0_0_0/0.18)] transition-transform duration-(--dur-fast) hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
               locked && chosen !== type ? "opacity-40" : ""
             } ${chosen === type ? "outline-4 outline-offset-2 outline-fg" : ""}`}
           >
