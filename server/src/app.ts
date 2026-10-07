@@ -11,6 +11,7 @@ import type { Env } from "./config/env.js";
 import type { PrismaClient } from "./db/prisma.js";
 import type { RoomManager } from "./game/room-manager.js";
 import { API_PREFIXES } from "./http/api-paths.js";
+import { createClientApp } from "./http/client-app.js";
 import { errorHandler, notFoundHandler } from "./http/errors.js";
 import { DEFAULT_RATE_LIMITS, type RateLimitConfig } from "./http/limits.js";
 import { createOriginCheck } from "./http/origin-check.js";
@@ -28,9 +29,11 @@ export interface AppDeps {
   catalog: PokemonCatalog;
   /** Límites de peticiones; "off" los apaga (solo para pruebas). Por defecto, los de producción. */
   rateLimits?: RateLimitConfig | "off";
+  /** Directorio del cliente construido; si existe con su index.html, el servidor lo sirve (un solo origen). */
+  clientDist?: string;
 }
 
-export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimits = DEFAULT_RATE_LIMITS }: AppDeps): Express {
+export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimits = DEFAULT_RATE_LIMITS, clientDist }: AppDeps): Express {
   const limits = rateLimits === "off" ? null : rateLimits;
   const limiters = limits && {
     loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
@@ -64,6 +67,11 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));
+
+  if (clientDist) {
+    const client = createClientApp(clientDist);
+    if (client) app.use(client);
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);
