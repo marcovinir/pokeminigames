@@ -68,7 +68,7 @@ export function RoundResultView() {
         {theirs.pokemon ? `, ${theirs.pokemon.names.es}` : ""}.
       </p>
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <ResultCard title="Tú" result={mine} />
         <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} />
       </div>

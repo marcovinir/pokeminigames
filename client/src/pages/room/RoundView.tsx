@@ -51,12 +51,12 @@ export function RoundView() {
         {opponent?.username ?? "Rival"} <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
       </p>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="hidden md:block">
           <TeamPanel team={view.myTeam} total={me?.totalStats ?? 0} />
         </div>
 
-        <Card data-arena tone="raised" className="flex flex-col gap-5 p-6">
+        <Card data-arena tone="raised" className="flex min-w-0 flex-col gap-5 p-6">
           <div className="text-center">
             <h1 className="font-display text-sm font-semibold text-muted">{goal}</h1>
             {config?.roundsLimit != null ? <RoundDots total={config.roundsLimit} current={round.number} /> : null}

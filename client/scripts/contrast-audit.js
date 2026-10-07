@@ -7,11 +7,14 @@
  *
  * Las pruebas automáticas comprueban los pares de colores de los tokens; esto comprueba lo que
  * realmente se ve (un componente con el color de texto equivocado sobre un fondo de otro tema).
- * Se desactivan las transiciones mientras se mide: a mitad de una transición los colores
- * intermedios dan falsos avisos. Se tiene en cuenta la `opacity` del elemento y de sus
+ * Se desactivan las transiciones y animaciones mientras se mide: a mitad de una transición los
+ * colores intermedios dan falsos avisos. Se tiene en cuenta la `opacity` del elemento y de sus
  * ancestros (`getComputedStyle().color` no la incluye y un texto atenuado parecería cumplir).
+ * Cuando el fondo de un elemento (o de su ancestro más cercano con fondo) es un degradado, el
+ * texto se mide contra cada color de la lista del degradado y cuenta el peor: así se cubren el
+ * degradado de la página (`--art-1` arriba, `--art-2` abajo) y el de los chips de tipo.
  * Para medir la lista de sugerencias del autocompletado, ábrela (escribe una letra y pulsa
- * la flecha abajo) antes de ejecutar la auditoría.
+ * la flecha abajo) antes de ejecutar la auditoría; para el menú de apariencia, ábrelo.
  */
 (() => {
   const parse = (color) => {
@@ -38,14 +41,27 @@
     }
     return opacity;
   };
-  const backgroundOf = (element) => {
+  /**
+   * Los fondos posibles de un elemento: un degradado da un fondo por cada color opaco de su lista; un color sólido
+   * (o nada, que es blanco) da uno solo. Los colores con transparencia de los ancestros se superponen encima.
+   */
+  const backgroundsOf = (element) => {
     const layers = [];
+    let bases = null;
     for (let node = element; node; node = node.parentElement) {
-      const color = parse(getComputedStyle(node).backgroundColor);
+      const style = getComputedStyle(node);
+      const stops = style.backgroundImage.includes("gradient(")
+        ? [...style.backgroundImage.matchAll(/rgba?([^)]*)/g)].map((match) => parse(match[0])).filter((color) => color.a === 1)
+        : [];
+      if (stops.length > 0) {
+        bases = stops;
+        break;
+      }
+      const color = parse(style.backgroundColor);
       if (color.a > 0) layers.push(color);
       if (color.a === 1) break;
     }
-    return layers.reverse().reduce((base, layer) => over(layer, base), { r: 255, g: 255, b: 255, a: 1 });
+    return (bases ?? [{ r: 255, g: 255, b: 255, a: 1 }]).map((base) => [...layers].reverse().reduce((under, layer) => over(layer, under), base));
   };
 
   window.__contrastAudit = () => {
@@ -55,16 +71,18 @@
       if (!hasText || element.closest(".sr-only")) continue;
       const style = getComputedStyle(element);
       if (style.display === "none" || style.visibility === "hidden" || (element.tagName === "BUTTON" && element.disabled)) continue;
-      const background = backgroundOf(element);
       const color = parse(style.color);
-      const text = over({ ...color, a: color.a * opacityOf(element) }, background);
-      const [lighter, darker] = [luminance(text), luminance(background)].sort((a, b) => b - a);
-      const ratio = (lighter + 0.05) / (darker + 0.05);
       const size = Number.parseFloat(style.fontSize);
       const large = size >= 24 || (size >= 18.66 && Number.parseInt(style.fontWeight) >= 700);
       const required = large ? 3 : 4.5;
-      if (ratio < required) {
-        problems.push(`${element.tagName.toLowerCase()} «${element.textContent.trim().slice(0, 30)}»: ${ratio.toFixed(2)} (mínimo ${required})`);
+      let worst = Number.POSITIVE_INFINITY;
+      for (const background of backgroundsOf(element)) {
+        const text = over({ ...color, a: color.a * opacityOf(element) }, background);
+        const [lighter, darker] = [luminance(text), luminance(background)].sort((a, b) => b - a);
+        worst = Math.min(worst, (lighter + 0.05) / (darker + 0.05));
+      }
+      if (worst < required) {
+        problems.push(`${element.tagName.toLowerCase()} «${element.textContent.trim().slice(0, 30)}»: ${worst.toFixed(2)} (mínimo ${required})`);
       }
     }
     return problems;

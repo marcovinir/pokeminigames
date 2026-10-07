@@ -281,7 +281,7 @@ export function LobbyPage() {
         <h1 className="font-display text-3xl font-semibold">Lobby</h1>
       </div>
       <ResumeBanner />
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <CreateRoomCard initial={state?.config} />
         <JoinRoomCard />
       </div>

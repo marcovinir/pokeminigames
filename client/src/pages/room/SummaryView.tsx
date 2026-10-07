@@ -78,7 +78,7 @@ export function SummaryView() {
         <p className="mt-3 font-num text-3xl tabular-nums">{scoreLabel(ended, mySeat)}</p>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} />
         <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} />
       </div>

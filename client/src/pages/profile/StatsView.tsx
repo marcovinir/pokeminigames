@@ -38,7 +38,7 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
             {own ? "Todavía no has ganado ningún Pokémon." : "Todavía no ha ganado ningún Pokémon."}
           </p>
         ) : (
-          <ul className="grid gap-4 md:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {stats.topPokemon.map(({ pokemon, wins }, index) => (
               <li key={pokemon.id} className="relative">
                 <span
