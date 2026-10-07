@@ -12,9 +12,12 @@ import { RoomManager } from "./game/room-manager.js";
 import { InMemoryRoomStore } from "./game/room-store.js";
 import { SocketBroadcaster } from "./realtime/broadcaster.js";
 import { attachRealtime } from "./realtime/server.js";
+import { createShutdown } from "./shutdown.js";
 
 const env = loadEnv();
-const prisma = createPrismaClient(env.DATABASE_URL);
+const prisma = createPrismaClient(env.DATABASE_URL, {
+  onPoolError: (error) => console.warn(`Base de datos: se cerró una conexión inactiva (${error.message})`),
+});
 const repository = createPrismaGameRepository(prisma);
 
 // Las salas viven en memoria: lo que quedó a medias antes de reiniciar ya no se puede retomar.
@@ -53,12 +56,7 @@ server.listen(env.PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${env.PORT}`);
 });
 
-async function shutdown(signal: string): Promise<void> {
-  console.log(`${signal} recibido, cerrando...`);
-  await io.close();
-  await prisma.$disconnect();
-  process.exit(0);
-}
+const shutdown = createShutdown({ io, prisma, logger: console, exit: (code) => process.exit(code) });
 
 process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
