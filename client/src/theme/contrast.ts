@@ -23,3 +23,17 @@ const DARK_TEXT = "#111111";
 export function readableOn(background: string): string {
   return contrastRatio(LIGHT_TEXT, background) >= contrastRatio(DARK_TEXT, background) ? LIGHT_TEXT : DARK_TEXT;
 }
+
+/** Mezcla dos colores `#rrggbb`: `amount` 0 deja el primero, 1 el segundo. */
+export function mixHex(from: string, to: string, amount: number): string {
+  const channels = (hex: string): number[] => {
+    const match = /^#([0-9a-f]{6})$/i.exec(hex);
+    if (!match) throw new Error(`Color inválido: ${hex}`);
+    const value = Number.parseInt(match[1]!, 16);
+    return [(value >> 16) & 255, (value >> 8) & 255, value & 255];
+  };
+  const a = channels(from);
+  const b = channels(to);
+  const mixed = a.map((channel, i) => Math.round(channel + (b[i]! - channel) * amount));
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
