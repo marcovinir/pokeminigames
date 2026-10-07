@@ -64,7 +64,7 @@ Los componentes siguen usando solo variables CSS (tokens) a través de utilidade
 Mismo comportamiento y mismos textos; cambia la estructura y el aspecto. Se diseñan primero para 375 px y se ensanchan en escritorio (≥ 768 px, ancho máximo 1024 px).
 
 - **Acceso y registro:** en escritorio, dos columnas: a la izquierda el logo, el lema «Nombra el Pokémon, gana más stats» y una mini tarjeta de ronda de ejemplo; a la derecha el formulario. En móvil, el formulario con el logo arriba.
-- **Lobby:** saludo con el nombre de la persona. El aviso «Tienes una partida en curso» pasa a un banner destacado con su botón. «Crear sala»: los modos como tarjetas seleccionables y el largo de la partida como botones segmentados. «Unirse»: el código en un campo grande, monoespaciado y con letras espaciadas.
+- **Lobby:** saludo con el nombre de la persona. El aviso «Tienes una partida en curso» pasa a un banner destacado con su botón. «Crear sala»: los modos como tarjetas seleccionables y el largo de la partida como un selector con aspecto propio (cuatro opciones con textos largos no caben en una fila en móvil, y así se conserva el control y sus pruebas). «Unirse»: el código en un campo grande, monoespaciado y con letras espaciadas.
 - **Sala de espera:** el código en grande, en casillas por letra, con el botón de copiar; debajo, dos huecos de jugador (tú y un hueco que palpita mientras llega el rival).
 - **Cuenta atrás:** número gigante dentro del anillo y, a los lados, los dos avatares con un «VS».
 - **Elegir tipo:** los 18 tipos como cuadrícula de teselas de colores, con el elegido resaltado y el cronómetro en anillo arriba.
@@ -87,11 +87,12 @@ Mismo comportamiento y mismos textos; cambia la estructura y el aspecto. Se dise
 
 ## 7. Pruebas y verificación
 
-- **Pruebas existentes:** las 426 de cliente y las 4 E2E siguen pasando en cada tarea. Los textos, roles y nombres accesibles que ya fijan no cambian. La única excepción es el control de tema: `client/test/components/header-theme.test.tsx` fija los dos `<select>` actuales y se actualiza junto con el menú nuevo, que conserva los nombres «Tema» y «Modo».
+- **Pruebas existentes:** las 426 de cliente y las 4 E2E siguen pasando en cada tarea. Los textos, roles y nombres accesibles que ya fijan no cambian. Las únicas excepciones son las que fijan el control de tema: `client/test/components/header-theme.test.tsx` y la E2E `e2e/tests/theme.spec.ts` fijan los dos `<select>` actuales y se actualizan junto con el menú nuevo, que conserva los nombres «Tema» y «Modo».
 - **Pruebas nuevas:** anillo del cronómetro (rol, nombre, últimos 5 s, no anuncia cada segundo); menú de tema con teclado y su persistencia; cadena de respaldo del arte (oficial, sprite, bola); marcador y `useCountUp` con y sin «reducir movimiento»; `Avatar` determinista y con contraste; `artworkUrl`; y que ninguna imagen decorativa tenga texto alternativo.
 - **Contraste:** `client/test/theme/tokens.test.ts` se amplía a todos los pares de color nuevos en los 4 temas y modos, incluido el texto sobre los dos extremos de cada degradado de tipo.
-- **Verificación visual real:** recorrer cada pantalla en el navegador contra el servidor local, en los 4 temas y modos, en 375 px y en escritorio, y pasar la auditoría de contraste del navegador (`client/scripts/contrast-audit.js`).
-- **Portafolio:** el README gana capturas de las pantallas principales.
+- **Verificación visual real:** recorrer cada pantalla en el navegador contra el servidor local, en los 4 temas y modos, en 375 px y en escritorio, y pasar la auditoría de contraste del navegador (`client/scripts/contrast-audit.js`, que se actualiza para entender los degradados: antes medía contra blanco el texto sobre el degradado de la página).
+- **Portafolio:** el README gana capturas de las pantallas principales, generadas por una prueba E2E que solo corre si se pide (`E2E_SCREENSHOTS=1`).
+- **Móvil:** una prueba fija que ninguna cuadrícula de una columna ensanche la pantalla (`grid-cols-1`, `min-w-0`); se encontró al recorrer la ronda en 375 px.
 - **Mutaciones:** romper a propósito las protecciones nuevas (`useReducedMotion`, la cadena de respaldo del arte, el contraste de los degradados) y comprobar que las pruebas las detectan.
 - **Entrega:** rama `etapa-6-rediseno`, una tarea por área (tokens y tipografías, kit de componentes, acceso, lobby, sala, partida, perfil, cierre), revisión final independiente, fusión en `main` y subida; Render redespliega solo.
 
