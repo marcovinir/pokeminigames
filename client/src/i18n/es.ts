@@ -29,6 +29,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   USERNAME_TAKEN: "Ese nombre de usuario ya está en uso.",
   INVALID_CREDENTIALS: "Email o contraseña incorrectos.",
   UNAUTHORIZED: "Tu sesión expiró. Inicia sesión de nuevo.",
+  FORBIDDEN: "Esa petición no está permitida desde este sitio.",
   INVALID_REFRESH_TOKEN: "Tu sesión expiró. Inicia sesión de nuevo.",
   NOT_FOUND: "No encontramos lo que buscas.",
   USER_NOT_FOUND: "No encontramos a ese jugador.",

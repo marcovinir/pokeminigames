@@ -48,6 +48,11 @@ describe("textos del historial", () => {
 });
 
 describe("mensajes de error", () => {
+  it("una petición de otro origen tiene su propio mensaje, no el genérico", () => {
+    expect(errorMessage("FORBIDDEN")).toBe("Esa petición no está permitida desde este sitio.");
+    expect(errorMessage("FORBIDDEN")).not.toBe(errorMessage("INTERNAL_ERROR"));
+  });
+
   it("un jugador inexistente tiene su propio mensaje, no el genérico", () => {
     expect(errorMessage("USER_NOT_FOUND")).toBe("No encontramos a ese jugador.");
     expect(errorMessage("USER_NOT_FOUND")).not.toBe(errorMessage("INTERNAL_ERROR"));
