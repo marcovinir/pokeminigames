@@ -30,6 +30,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b-(length:--frame) border-line bg-header text-header-fg">
       <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 sm:gap-3">
+        {/* Luces de adorno: solo en el tema Pokédex (el encabezado rojo tipo consola). */}
+        <span data-leds aria-hidden="true" className="hidden items-center gap-1.5 in-data-[theme=pokedex]:flex">
+          <span className="size-6 rounded-full border-2 border-header-fg bg-accent-2" />
+          <span className="size-2 rounded-full bg-gold" />
+          <span className="size-2 rounded-full bg-success" />
+          <span className="size-2 rounded-full bg-danger" />
+        </span>
         <Link to="/" className="rounded-ui">
           <Logo hideNameOnMobile={Boolean(user)} />
         </Link>
