@@ -24,6 +24,9 @@ const themes = parseTokens();
 const REQUIRED = [
   "bg", "surface", "surface-2", "fg", "fg-muted", "line", "accent", "accent-fg", "danger", "danger-bg",
   "success", "success-bg", "header-bg", "header-fg", "radius", "radius-lg", "frame", "font-ui", "font-num",
+  // Etapa 6: fondo con degradado, segundo acento, dorado, forma y tipografía de títulos.
+  "art-1", "art-2", "mark", "accent-edge", "accent-2", "accent-2-fg", "gold", "gold-fg", "pill", "depth",
+  "elev-card", "elev-pop", "font-display",
 ];
 
 describe("tokens de los temas", () => {
@@ -51,6 +54,18 @@ describe("tokens de los temas", () => {
     ["danger", "danger-bg"],
     ["success", "success-bg"],
     ["header-fg", "header-bg"],
+    // El fondo con degradado: el texto se lee sobre sus dos extremos.
+    ["fg", "art-1"],
+    ["fg", "art-2"],
+    ["fg-muted", "art-1"],
+    ["fg-muted", "art-2"],
+    ["accent", "art-1"],
+    ["accent", "art-2"],
+    ["accent-2", "art-1"],
+    ["accent-2", "surface"],
+    // Los rellenos de color y su texto.
+    ["accent-2-fg", "accent-2"],
+    ["gold-fg", "gold"],
   ];
 
   it.each([...themes.keys()])("%s: todos los pares de texto cumplen contraste AA", (name) => {
@@ -74,10 +89,39 @@ describe("tokens de los temas", () => {
     for (const theme of ["clasico", "pokedex"]) {
       const light = themes.get(`${theme}/claro`)!;
       const dark = themes.get(`${theme}/oscuro`)!;
-      for (const token of ["radius", "radius-lg", "frame", "font-ui", "font-num"]) {
+      for (const token of ["radius", "radius-lg", "frame", "font-ui", "font-num", "font-display", "pill", "depth"]) {
         expect(dark[token]).toBe(light[token]);
       }
     }
+  });
+});
+
+describe("forma y tipografía de cada tema (etapa 6)", () => {
+  it("Clásico es redondeado, con relieve y con la fuente redondeada para títulos y números", () => {
+    const classic = themes.get("clasico/claro")!;
+    expect(Number.parseInt(classic.radius!)).toBeGreaterThanOrEqual(14);
+    expect(Number.parseInt(classic["radius-lg"]!)).toBeGreaterThanOrEqual(24);
+    expect(Number.parseInt(classic.depth!)).toBeGreaterThan(0);
+    expect(classic["font-display"]).toContain("Fredoka Variable");
+    expect(classic["font-num"]).toContain("Fredoka Variable");
+    expect(classic["font-ui"]).toContain("Nunito Variable");
+  });
+
+  it("Pokédex es plano y marcado, sin relieve ni sombras difusas, y monoespaciado", () => {
+    const pokedex = themes.get("pokedex/claro")!;
+    expect(Number.parseInt(pokedex.radius!)).toBeLessThanOrEqual(4);
+    expect(Number.parseInt(pokedex.pill!)).toBeLessThanOrEqual(4);
+    expect(Number.parseInt(pokedex.depth!)).toBe(0);
+    expect(pokedex["elev-card"]).toBe("none");
+    expect(pokedex["font-display"]).toContain("JetBrains Mono Variable");
+    expect(pokedex["font-num"]).toContain("JetBrains Mono Variable");
+    expect(pokedex["font-ui"]).toContain("Nunito Variable");
+  });
+
+  it.each([...themes.keys()])("%s: el acento tiene su propio color de borde de relieve", (name) => {
+    const tokens = themes.get(name)!;
+    expect(tokens["accent-edge"]).not.toBe(tokens.accent);
+    expect(tokens["accent-edge"]).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });
 

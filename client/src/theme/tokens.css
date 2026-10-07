@@ -2,54 +2,87 @@
  * Tokens de los dos temas (Clásico y Pokédex), cada uno en modo claro y oscuro.
  * Los componentes solo usan estas variables (a través de las utilidades de Tailwind definidas
  * en index.css), nunca colores literales; los 18 colores de tipo son la única excepción.
+ *
+ * Etapa 6: Clásico es el estilo moderno y colorido (esquinas muy redondeadas, relieve, degradados suaves, fuente
+ * redondeada); Pokédex es la piel retro del mismo diseño (bordes marcados, sin sombras difusas, monoespaciada).
+ * `art-1` y `art-2` son los extremos del degradado de la página: el texto debe leerse sobre los dos.
  */
 
 :root[data-theme="clasico"][data-mode="claro"] {
-  --bg: #f6f5f1;
+  --bg: #e8f3ff;
+  --art-1: #cfe6ff;
+  --art-2: #f5faff;
+  --mark: rgb(255 255 255 / 0.6);
   --surface: #ffffff;
-  --surface-2: #f1efe8;
-  --fg: #2c2c2a;
-  --fg-muted: #5f5e5a;
-  --line: #d3d1c7;
-  --accent: #185fa5;
+  --surface-2: #eaf2fb;
+  --fg: #14263f;
+  --fg-muted: #40536e;
+  --line: #bcd0e6;
+  --accent: #bd2a26;
   --accent-fg: #ffffff;
-  --danger: #a32d2d;
-  --danger-bg: #fcebeb;
-  --success: #3b6d11;
-  --success-bg: #eaf3de;
+  --accent-edge: #85191a;
+  --accent-2: #1f5fbf;
+  --accent-2-fg: #ffffff;
+  --gold: #ffcb05;
+  --gold-fg: #1c2a40;
+  --danger: #b3261e;
+  --danger-bg: #fde7e5;
+  --success: #1b7332;
+  --success-bg: #e1f4e6;
   --header-bg: #ffffff;
-  --header-fg: #2c2c2a;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --header-fg: #14263f;
+  --radius: 14px;
+  --radius-lg: 24px;
+  --pill: 999px;
   --frame: 1px;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-num: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --depth: 4px;
+  --elev-card: 0 1px 2px rgb(20 38 63 / 0.08), 0 10px 28px rgb(20 38 63 / 0.1);
+  --elev-pop: 0 2px 6px rgb(20 38 63 / 0.12), 0 18px 40px rgb(20 38 63 / 0.18);
+  --font-ui: "Nunito Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fredoka Variable", "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-num: "Fredoka Variable", "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root[data-theme="clasico"][data-mode="oscuro"] {
-  --bg: #1d1d1b;
-  --surface: #2a2a28;
-  --surface-2: #353533;
-  --fg: #f1efe8;
-  --fg-muted: #b4b2a9;
-  --line: #4d4d4a;
-  --accent: #85b7eb;
-  --accent-fg: #042c53;
-  --danger: #f09595;
-  --danger-bg: #501313;
-  --success: #97c459;
-  --success-bg: #173404;
-  --header-bg: #2a2a28;
-  --header-fg: #f1efe8;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --bg: #0b1730;
+  --art-1: #13284f;
+  --art-2: #08122a;
+  --mark: rgb(255 255 255 / 0.05);
+  --surface: #132548;
+  --surface-2: #1b3361;
+  --fg: #eaf1ff;
+  --fg-muted: #a9bad6;
+  --line: #2d4878;
+  --accent: #ff6f61;
+  --accent-fg: #240604;
+  --accent-edge: #b23a2e;
+  --accent-2: #6fa8ff;
+  --accent-2-fg: #041a3d;
+  --gold: #ffd84d;
+  --gold-fg: #1c1500;
+  --danger: #ff9d95;
+  --danger-bg: #4a1713;
+  --success: #7fe392;
+  --success-bg: #12361d;
+  --header-bg: #0f1f40;
+  --header-fg: #eaf1ff;
+  --radius: 14px;
+  --radius-lg: 24px;
+  --pill: 999px;
   --frame: 1px;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-num: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --depth: 4px;
+  --elev-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px rgb(0 0 0 / 0.35);
+  --elev-pop: 0 2px 8px rgb(0 0 0 / 0.5), 0 20px 44px rgb(0 0 0 / 0.5);
+  --font-ui: "Nunito Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fredoka Variable", "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-num: "Fredoka Variable", "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root[data-theme="pokedex"][data-mode="claro"] {
   --bg: #e9e4d4;
+  --art-1: #efeadb;
+  --art-2: #ddd6c0;
+  --mark: rgb(44 44 42 / 0.08);
   --surface: #f7f3e6;
   --surface-2: #ddd6c0;
   --fg: #2c2c2a;
@@ -57,6 +90,11 @@
   --line: #2c2c2a;
   --accent: #a32d2d;
   --accent-fg: #fcebeb;
+  --accent-edge: #701e1e;
+  --accent-2: #1d5aa0;
+  --accent-2-fg: #ffffff;
+  --gold: #f2c230;
+  --gold-fg: #2c2c2a;
   --danger: #791f1f;
   --danger-bg: #f7c1c1;
   --success: #27500a;
@@ -65,13 +103,21 @@
   --header-fg: #fcebeb;
   --radius: 2px;
   --radius-lg: 4px;
+  --pill: 2px;
   --frame: 2px;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --depth: 0px;
+  --elev-card: none;
+  --elev-pop: 4px 4px 0 #2c2c2a;
+  --font-ui: "Nunito Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-num: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 :root[data-theme="pokedex"][data-mode="oscuro"] {
   --bg: #1c1a17;
+  --art-1: #24211d;
+  --art-2: #161411;
+  --mark: rgb(241 239 232 / 0.06);
   --surface: #2a2723;
   --surface-2: #38342e;
   --fg: #f1efe8;
@@ -79,6 +125,11 @@
   --line: #9a968a;
   --accent: #f09595;
   --accent-fg: #501313;
+  --accent-edge: #a85a5a;
+  --accent-2: #85b7eb;
+  --accent-2-fg: #042c53;
+  --gold: #f2c230;
+  --gold-fg: #2c2c2a;
   --danger: #f09595;
   --danger-bg: #501313;
   --success: #97c459;
@@ -87,7 +138,12 @@
   --header-fg: #fcebeb;
   --radius: 2px;
   --radius-lg: 4px;
+  --pill: 2px;
   --frame: 2px;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-num: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --depth: 0px;
+  --elev-card: none;
+  --elev-pop: 4px 4px 0 #9a968a;
+  --font-ui: "Nunito Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-num: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }

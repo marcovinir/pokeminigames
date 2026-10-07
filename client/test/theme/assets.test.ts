@@ -1,0 +1,58 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const client = join(import.meta.dirname, "../..");
+const read = (path: string): string => readFileSync(join(client, path), "utf8");
+
+describe("tipografías empaquetadas", () => {
+  const css = read("src/index.css");
+  const pkg = JSON.parse(read("package.json")) as { dependencies: Record<string, string> };
+
+  it.each(["fredoka", "nunito", "jetbrains-mono"])("%s se instala y se importa desde el CSS (no se pide a un servicio externo)", (font) => {
+    expect(pkg.dependencies[`@fontsource-variable/${font}`]).toBeDefined();
+    expect(css).toContain(`@import "@fontsource-variable/${font}`);
+    expect(css).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
+  });
+});
+
+describe("movimiento", () => {
+  const css = read("src/index.css");
+
+  it("una sola regla apaga animaciones y transiciones con «reducir movimiento»", () => {
+    const block = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    expect(block).toMatch(/animation-duration:\s*0\.01ms\s*!important/);
+    expect(block).toMatch(/transition-duration:\s*0\.01ms\s*!important/);
+  });
+
+  it("define las duraciones y la curva comunes", () => {
+    for (const token of ["--dur-fast: 120ms", "--dur-base: 220ms", "--dur-slow: 420ms", "--ease-out:"]) {
+      expect(css).toContain(token);
+    }
+  });
+
+  it("el fondo de la página usa el degradado del tema", () => {
+    expect(css).toMatch(/background:\s*linear-gradient\([^)]*var\(--art-1\)[^)]*var\(--art-2\)/);
+  });
+});
+
+describe("cabecera del documento", () => {
+  const html = read("index.html");
+
+  it("declara el icono, el color del navegador y las etiquetas para compartir el enlace", () => {
+    expect(html).toMatch(/<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg"/);
+    expect(html).toMatch(/<meta name="theme-color"/);
+    expect(html).toMatch(/<meta property="og:title" content="Pokémon Minigames"/);
+    expect(html).toMatch(/<meta property="og:description" content="[^"]{20,}"/);
+  });
+
+  it("el icono existe y es un SVG con la bola partida en dos colores", () => {
+    const svg = read("public/favicon.svg");
+    expect(svg).toContain("<svg");
+    expect(svg.match(/fill="#[0-9a-f]{6}"/gi)?.length ?? 0).toBeGreaterThanOrEqual(3);
+  });
+
+  it("conserva el script que aplica el tema antes de pintar", () => {
+    expect(html).toContain("pokemon-minigames:theme");
+  });
+});
