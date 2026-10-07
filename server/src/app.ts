@@ -10,8 +10,11 @@ import type { PokemonCatalog } from "./catalog/pokemon-catalog.js";
 import type { Env } from "./config/env.js";
 import type { PrismaClient } from "./db/prisma.js";
 import type { RoomManager } from "./game/room-manager.js";
+import { API_PREFIXES } from "./http/api-paths.js";
 import { errorHandler, notFoundHandler } from "./http/errors.js";
+import { DEFAULT_RATE_LIMITS, type RateLimitConfig } from "./http/limits.js";
 import { createOriginCheck } from "./http/origin-check.js";
+import { createKeyedLimiter, rateLimitMiddleware } from "./http/rate-limit.js";
 import { createRoomsRouter } from "./rooms/rooms.routes.js";
 import { createStatsRouter } from "./stats/stats.routes.js";
 import { StatsService } from "./stats/stats.service.js";
@@ -23,9 +26,18 @@ export interface AppDeps {
   tokens: TokenService;
   roomManager: RoomManager;
   catalog: PokemonCatalog;
+  /** Límites de peticiones; "off" los apaga (solo para pruebas). Por defecto, los de producción. */
+  rateLimits?: RateLimitConfig | "off";
 }
 
-export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps): Express {
+export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimits = DEFAULT_RATE_LIMITS }: AppDeps): Express {
+  const limits = rateLimits === "off" ? null : rateLimits;
+  const limiters = limits && {
+    loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
+    register: createKeyedLimiter({ ...limits.register, now: limits.now }),
+    api: createKeyedLimiter({ ...limits.api, now: limits.now }),
+  };
+
   const authService = new AuthService({
     prisma,
     hasher: createPasswordHasher(env.BCRYPT_COST),
@@ -42,11 +54,13 @@ export function createApp({ env, prisma, tokens, roomManager, catalog }: AppDeps
   app.use(express.json({ limit: "10kb" }));
   app.use(cookieParser());
   app.use(createOriginCheck({ allowedOrigins: env.CORS_ORIGIN ? [env.CORS_ORIGIN] : [] }));
+  // El límite general solo cubre la API: /health (que consulta la plataforma sin parar) y /socket.io quedan fuera.
+  if (limiters) app.use([...API_PREFIXES], rateLimitMiddleware({ limiter: limiters.api, keyOf: (req) => req.ip ?? "desconocida" }));
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
-  app.use("/auth", createAuthRouter({ env, authService, tokens }));
+  app.use("/auth", createAuthRouter({ env, authService, tokens, limiters: limiters ?? undefined }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));

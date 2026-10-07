@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createApp } from "../../src/app.js";
+import type { RateLimitConfig } from "../../src/http/limits.js";
 import type { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
 import { createTokenService } from "../../src/auth/tokens.js";
 import { loadEnv } from "../../src/config/env.js";
@@ -19,6 +20,8 @@ export interface TestContextOptions {
   generateCode?: () => string;
   /** Catálogo (por defecto el de pruebas en memoria). */
   catalog?: PokemonCatalog;
+  /** Límites de peticiones (por defecto apagados: muchas pruebas registran a más personas de las que permite la IP). */
+  rateLimits?: RateLimitConfig;
 }
 
 /**
@@ -43,7 +46,7 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
     store,
     persistRetryDelayMs: 0,
   });
-  const app = createApp({ env, prisma, tokens, roomManager, catalog });
+  const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off" });
   return { app, env, tokens, time, broadcaster, store, roomManager, catalog };
 }
 

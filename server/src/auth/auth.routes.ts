@@ -1,6 +1,7 @@
-import { type CookieOptions, type Response, Router } from "express";
+import { type CookieOptions, type Request, type RequestHandler, type Response, Router } from "express";
 import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
+import { type KeyedLimiter, rateLimitMiddleware, tooManyRequests } from "../http/rate-limit.js";
 import { createRequireAuth, getAuth } from "./auth.middleware.js";
 import { loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
@@ -12,7 +13,11 @@ export interface AuthRouterDeps {
   env: Env;
   authService: AuthService;
   tokens: TokenService;
+  /** Límites de intentos; sin ellos no se limita nada (las pruebas que no los necesitan). */
+  limiters?: { loginFailures?: KeyedLimiter; register?: KeyedLimiter };
 }
+
+const clientIp = (req: Request): string => req.ip ?? "desconocida";
 
 function toUserDto(user: AuthUser) {
   return {
@@ -24,8 +29,11 @@ function toUserDto(user: AuthUser) {
   };
 }
 
-export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps): Router {
+export function createAuthRouter({ env, authService, tokens, limiters = {} }: AuthRouterDeps): Router {
   const router = Router();
+  const limitRegistrations: RequestHandler = limiters.register
+    ? rateLimitMiddleware({ limiter: limiters.register, keyOf: clientIp })
+    : (_req, _res, next) => next();
   const requireAuth = createRequireAuth(tokens);
 
   // La cookie solo viaja a /auth: el resto de la API nunca la recibe.
@@ -44,7 +52,7 @@ export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps): 
     res.clearCookie(REFRESH_COOKIE, cookieOptions);
   }
 
-  router.post("/register", async (req, res) => {
+  router.post("/register", limitRegistrations, async (req, res) => {
     const input = registerSchema.parse(req.body);
     const result = await authService.register(input);
     startSession(res, result);
@@ -53,7 +61,22 @@ export function createAuthRouter({ env, authService, tokens }: AuthRouterDeps): 
 
   router.post("/login", async (req, res) => {
     const input = loginSchema.parse(req.body);
-    const result = await authService.login(input);
+    // La clave lleva la IP y el correo: no es un bloqueo de la cuenta, así que nadie puede dejar fuera a otra persona
+    // escribiendo su correo. Solo cuentan los intentos fallidos; un inicio de sesión correcto reinicia la cuenta.
+    const attemptKey = `${clientIp(req)}|${input.email}`;
+    const status = limiters.loginFailures?.check(attemptKey);
+    if (status && !status.allowed) {
+      res.set("Retry-After", String(status.retryAfterSeconds));
+      throw tooManyRequests(status.retryAfterSeconds, "Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.");
+    }
+    let result: AuthResult;
+    try {
+      result = await authService.login(input);
+    } catch (error) {
+      if (error instanceof AppError && error.code === "INVALID_CREDENTIALS") limiters.loginFailures?.record(attemptKey);
+      throw error;
+    }
+    limiters.loginFailures?.reset(attemptKey);
     startSession(res, result);
     res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
   });
