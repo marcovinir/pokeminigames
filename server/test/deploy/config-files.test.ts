@@ -147,6 +147,14 @@ describe("documentación de despliegue", () => {
     for (const connection of connections) expect(connection).toMatch(/usuario:clave@/);
   });
 
+  it("la guía manda comprobar TRUST_PROXY tras el primer despliegue, con las dos pruebas (valor demasiado alto y demasiado bajo)", () => {
+    expect(guide).toMatch(/Verificar `TRUST_PROXY`/);
+    expect(guide).toMatch(/X-Forwarded-For/);
+    expect(guide).toMatch(/401 401 401 401 401 429/);
+    expect(guide).toMatch(/otra red/);
+    expect(read("render.yaml")).not.toMatch(/en Render, 1/);
+  });
+
   it("el README enlaza la guía y .env.example documenta TRUST_PROXY", () => {
     expect(read("README.md")).toContain("docs/despliegue.md");
     expect(read("server/.env.example")).toContain("TRUST_PROXY");

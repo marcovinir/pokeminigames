@@ -27,6 +27,7 @@ function setup(limits: Partial<RateLimitConfig> = {}) {
 describe("los límites por defecto son los de la spec", () => {
   it("login 5 fallos / 15 min, registro 5 / hora, API 300 / minuto", () => {
     expect(DEFAULT_RATE_LIMITS.loginFailures).toEqual({ limit: 5, windowMs: 15 * MINUTE });
+    expect(DEFAULT_RATE_LIMITS.loginFailuresByIp).toEqual({ limit: 30, windowMs: 15 * MINUTE });
     expect(DEFAULT_RATE_LIMITS.register).toEqual({ limit: 5, windowMs: HOUR });
     expect(DEFAULT_RATE_LIMITS.api).toEqual({ limit: 300, windowMs: MINUTE });
   });
@@ -158,5 +159,52 @@ describe("límite general de la API por IP", () => {
     const { ctx, from } = setup({ api: { limit: 2, windowMs: MINUTE } });
     for (let i = 0; i < 20; i++) expect((await request(ctx.app).get("/health").set(from("1.1.1.1"))).status).toBe(200);
     expect((await request(ctx.app).get("/pokemon/names").set(from("1.1.1.1"))).status).toBe(200);
+  });
+});
+
+describe("límite de login: peticiones en paralelo y tope por IP", () => {
+  async function withAccount() {
+    const env = setup();
+    await registerUser(env.ctx.app, "ash");
+    return env;
+  }
+
+  it("diez intentos fallidos a la vez no esquivan el límite: solo 5 llegan a comprobar la contraseña", async () => {
+    const { login } = await withAccount();
+    const responses = await Promise.all(Array.from({ length: 10 }, () => login(ash.email, "mala-clave-1")));
+    const statuses = responses.map((response) => response.status).sort();
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429, 429, 429, 429, 429]);
+  });
+
+  it("intentos en paralelo con la contraseña correcta no dejan sin cuenta al dueño: los 5 primeros entran y reinician", async () => {
+    const { login } = await withAccount();
+    const responses = await Promise.all(Array.from({ length: 5 }, () => login(ash.email, ash.password)));
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200]);
+    expect((await login(ash.email, "mala-clave-1")).status).toBe(401);
+  });
+
+  it("una sola IP no puede probar contraseñas contra muchas cuentas: a partir del intento 31 fallido da 429", async () => {
+    const { login } = await withAccount();
+    for (let i = 0; i < 30; i++) expect((await login(`otra${i}@example.com`, "mala-clave-1")).status).toBe(401);
+    const blocked = await login("otra99@example.com", "mala-clave-1");
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.details.retryAfterSeconds).toBeGreaterThan(0);
+    expect((await login(ash.email, ash.password, "8.8.8.8")).status).toBe(200);
+  });
+
+  it("los inicios de sesión correctos no cuentan para el tope de la IP", async () => {
+    const { login } = await withAccount();
+    for (let i = 0; i < 29; i++) await login(`otra${i}@example.com`, "mala-clave-1");
+    for (let i = 0; i < 5; i++) expect((await login(ash.email, ash.password)).status).toBe(200);
+    expect((await login("otra50@example.com", "mala-clave-1")).status).toBe(401);
+    expect((await login("otra51@example.com", "mala-clave-1")).status).toBe(429);
+  });
+
+  it("pasados 15 minutos la IP puede volver a intentar", async () => {
+    const { ctx, login } = await withAccount();
+    for (let i = 0; i < 31; i++) await login(`otra${i}@example.com`, "mala-clave-1");
+    expect((await login("otra99@example.com", "mala-clave-1")).status).toBe(429);
+    ctx.time.advance(15 * MINUTE + 1000);
+    expect((await login("otra99@example.com", "mala-clave-1")).status).toBe(401);
   });
 });

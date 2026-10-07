@@ -10,6 +10,8 @@ export interface KeyedLimiter {
   record(key: string): void;
   /** Olvida los eventos de la clave (p. ej. tras un inicio de sesión correcto). */
   reset(key: string): void;
+  /** Devuelve el último hueco que se reservó con `record` (p. ej. cuando el intento no llegó a ser un fallo). */
+  release(key: string): void;
   /** Cuántas claves tienen eventos guardados. */
   size(): number;
 }
@@ -70,6 +72,12 @@ export function createKeyedLimiter({ limit, windowMs, now = Date.now, sweepEvery
     },
     reset(key) {
       events.delete(key);
+    },
+    release(key) {
+      const stamps = events.get(key);
+      if (!stamps) return;
+      stamps.pop();
+      if (stamps.length === 0) events.delete(key);
     },
     size: () => events.size,
   };

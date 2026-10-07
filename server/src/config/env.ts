@@ -11,7 +11,7 @@ const envSchema = z
     BCRYPT_COST: z.coerce.number().int().min(4).max(15).default(12),
     // Con un solo origen (producción) no hay CORS que configurar; en desarrollo el valor por defecto es Vite.
     CORS_ORIGIN: z.string().min(1).optional(),
-    // Cuántos proxies hay delante del servidor (en Render, 1): sin eso la IP y el protocolo que se leen son los del proxy.
+    // Cuántos proxies hay delante del servidor (en Render se verifica tras desplegar): sin eso la IP y el protocolo que se leen son los del proxy.
     TRUST_PROXY: z.coerce.number().int().min(0).max(10).optional(),
     COOKIE_SECURE: z
       .enum(["true", "false"])
@@ -28,7 +28,7 @@ const envSchema = z
     const problem = (path: string, message: string) => context.addIssue({ code: "custom", path: [path], message });
     if (!env.COOKIE_SECURE) problem("COOKIE_SECURE", "en producción debe ser true");
     if (env.COOKIE_SAME_SITE === "none") problem("COOKIE_SAME_SITE", "en producción no puede ser none (cliente y API comparten origen)");
-    if (env.TRUST_PROXY === undefined) problem("TRUST_PROXY", "en producción es obligatoria (cuántos proxies hay delante; en Render, 1)");
+    if (env.TRUST_PROXY === undefined) problem("TRUST_PROXY", "en producción es obligatoria (cuántos proxies hay delante; en Render, se verifica según docs/despliegue.md)");
   })
   .transform((env) => ({
     ...env,

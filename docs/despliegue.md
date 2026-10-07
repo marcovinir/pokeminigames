@@ -46,6 +46,28 @@ Espera a que el servicio despierte (hasta 90 segundos) y comprueba, sin crear cu
 
 Después abre la dirección en dos navegadores (o uno normal y otro privado), crea una cuenta en cada uno, crea una sala en uno y únete con el código desde el otro.
 
+## 5. Verificar `TRUST_PROXY` (una sola vez, tras el primer despliegue)
+
+Los límites de intentos dependen de que el servidor lea bien la IP de cada visitante, y eso depende de cuántos proxies hay entre internet y el servicio. El `render.yaml` parte de `1`, pero Render no documenta la cifra y hay informes de la comunidad de que hacen falta más (hasta 3: [hilo de la comunidad de Render](https://community.render.com/t/what-number-of-proxies-sit-in-front-of-an-express-app-deployed-on-render/35981)). Un valor equivocado es grave en los dos sentidos, y la prueba E2E y la de humo no pueden detectarlo porque en local no hay proxy: se comprueba a mano.
+
+**Prueba 1: ¿el valor es demasiado alto?** (el servidor se fiaría de una IP inventada por el visitante y se podrían esquivar todos los límites). Seis intentos de login fallidos, cada uno con una IP falsa distinta en `X-Forwarded-For`:
+
+```bash
+for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -H "X-Forwarded-For: 10.0.0.$i" -d email:prueba1@example.com; done; echo
+```
+
+Debe imprimir `401 401 401 401 401 429`: el servidor ignora la IP inventada y cuenta todos los intentos contra tu IP real. Si imprime seis `401`, el valor es demasiado alto: bájalo.
+
+**Prueba 2: ¿el valor es demasiado bajo?** (todo el mundo compartiría la IP de un proxy de Render y, por ejemplo, solo se podrían hacer 5 registros por hora entre todos). Desde tu computadora haz cinco intentos fallidos con otro correo:
+
+```bash
+for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -d email:prueba2@example.com; done; echo
+```
+
+Imprime `401 401 401 401 401`. Ahora, desde otra red (el celular con datos móviles, sin wifi), abre `https://TU-SERVICIO.onrender.com/login` e intenta entrar con `prueba2@example.com` y cualquier contraseña: debe decir "Email o contraseña incorrectos." Si dice "Demasiados intentos", las dos redes comparten IP para el servidor: el valor es demasiado bajo, súbelo.
+
+**Cómo cambiarlo:** en el panel de Render, *Environment* → `TRUST_PROXY` → guardar (Render redespliega y, de paso, reinicia los límites, que viven en memoria). Empieza en `1`; si falla la Prueba 2 sube a `2` y luego a `3`, y repite las dos pruebas con cada valor. El correcto es el que pasa las dos. Anótalo en `render.yaml` y súbelo para que el repositorio diga lo mismo que el panel.
+
 ## Variables de entorno
 
 | Variable | Valor en Render | Para qué |
@@ -53,7 +75,7 @@ Después abre la dirección en dos navegadores (o uno normal y otro privado), cr
 | `NODE_ENV` | `production` | Activa las comprobaciones de producción: el servidor se niega a arrancar si algo de lo siguiente falta o es inseguro |
 | `COOKIE_SECURE` | `true` | La cookie de sesión solo viaja por HTTPS |
 | `COOKIE_SAME_SITE` | `lax` | Con un solo origen basta `lax` (`none` se rechaza en producción) |
-| `TRUST_PROXY` | `1` | Cuántos proxies hay delante; sin él el servidor vería la IP del proxy de Render y los límites de intentos afectarían a todo el mundo a la vez |
+| `TRUST_PROXY` | `1` de partida (verifícalo en la sección 5) | Cuántos proxies hay delante; si es menor que los reales el servidor ve la IP de un proxy de Render y los límites de intentos afectan a todo el mundo a la vez, y si es mayor cualquiera puede falsear su IP |
 | `JWT_ACCESS_SECRET` | generado por Render | Firma de los tokens de acceso (mínimo 32 caracteres) |
 | `DATABASE_URL` | la cadena de Neon | Conexión a la base de datos |
 | `NODE_VERSION` | `24` | Versión de Node |

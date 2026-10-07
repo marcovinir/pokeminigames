@@ -37,6 +37,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
   const limits = rateLimits === "off" ? null : rateLimits;
   const limiters = limits && {
     loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
+    loginFailuresByIp: createKeyedLimiter({ ...limits.loginFailuresByIp, now: limits.now }),
     register: createKeyedLimiter({ ...limits.register, now: limits.now }),
     api: createKeyedLimiter({ ...limits.api, now: limits.now }),
   };
@@ -50,7 +51,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
 
   const app = express();
   app.disable("x-powered-by");
-  // Cuántos proxies hay delante (en Render, 1): de eso depende la IP del cliente y el protocolo (req.ip, req.protocol).
+  // Cuántos proxies hay delante (en Render se verifica tras desplegar, ver docs/despliegue.md): de eso depende la IP del cliente y el protocolo (req.ip, req.protocol).
   app.set("trust proxy", env.TRUST_PROXY);
   // Sin CORS_ORIGIN (producción, un solo origen) no se instala CORS: no hay otros orígenes a los que conceder nada.
   if (env.CORS_ORIGIN) app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));

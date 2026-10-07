@@ -72,6 +72,20 @@ describe("createKeyedLimiter", () => {
     expect(limiter.check("b")).toMatchObject({ allowed: false });
   });
 
+  it("release devuelve el último hueco reservado de una clave (y no falla con una que no existe)", () => {
+    const time = clock();
+    const limiter = createKeyedLimiter({ limit: 2, windowMs: MINUTE, now: time.now });
+    limiter.record("a");
+    time.advance(SECOND);
+    limiter.record("a");
+    expect(limiter.check("a").allowed).toBe(false);
+    limiter.release("a");
+    expect(limiter.check("a").allowed).toBe(true);
+    limiter.release("a");
+    expect(limiter.size()).toBe(0);
+    expect(() => limiter.release("nunca-vista")).not.toThrow();
+  });
+
   it("limpia las claves vencidas solas, para que un abuso no llene la memoria", () => {
     const time = clock();
     const limiter = createKeyedLimiter({ limit: 5, windowMs: MINUTE, sweepEveryMs: 30 * SECOND, now: time.now });

@@ -14,7 +14,7 @@ export interface AuthRouterDeps {
   authService: AuthService;
   tokens: TokenService;
   /** Límites de intentos; sin ellos no se limita nada (las pruebas que no los necesitan). */
-  limiters?: { loginFailures?: KeyedLimiter; register?: KeyedLimiter };
+  limiters?: { loginFailures?: KeyedLimiter; loginFailuresByIp?: KeyedLimiter; register?: KeyedLimiter };
 }
 
 const clientIp = (req: Request): string => req.ip ?? "desconocida";
@@ -61,22 +61,37 @@ export function createAuthRouter({ env, authService, tokens, limiters = {} }: Au
 
   router.post("/login", async (req, res) => {
     const input = loginSchema.parse(req.body);
-    // La clave lleva la IP y el correo: no es un bloqueo de la cuenta, así que nadie puede dejar fuera a otra persona
-    // escribiendo su correo. Solo cuentan los intentos fallidos; un inicio de sesión correcto reinicia la cuenta.
-    const attemptKey = `${clientIp(req)}|${input.email}`;
-    const status = limiters.loginFailures?.check(attemptKey);
-    if (status && !status.allowed) {
-      res.set("Retry-After", String(status.retryAfterSeconds));
-      throw tooManyRequests(status.retryAfterSeconds, "Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.");
+    // Dos cuentas de fallos: por IP y correo (no es un bloqueo de la cuenta: nadie puede dejar fuera a otra persona
+    // escribiendo su correo) y por IP sumando todos los correos (nadie puede probar una contraseña en muchas cuentas ni
+    // saturar el servidor con bcrypt). Solo cuentan los intentos fallidos; un inicio de sesión correcto reinicia la cuenta.
+    const ip = clientIp(req);
+    const attemptKey = `${ip}|${input.email}`;
+    const { loginFailures, loginFailuresByIp } = limiters;
+    const waits = [loginFailures?.check(attemptKey), loginFailuresByIp?.check(ip)].flatMap((status) =>
+      status && !status.allowed ? [status.retryAfterSeconds] : [],
+    );
+    if (waits.length > 0) {
+      const retryAfterSeconds = Math.max(...waits);
+      res.set("Retry-After", String(retryAfterSeconds));
+      throw tooManyRequests(retryAfterSeconds, "Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.");
     }
+    // El hueco se reserva ANTES de comprobar la contraseña (bcrypt tarda): si se contara al terminar, diez peticiones
+    // en paralelo pasarían todas la comprobación con la cuenta aún a cero.
+    loginFailures?.record(attemptKey);
+    loginFailuresByIp?.record(ip);
     let result: AuthResult;
     try {
       result = await authService.login(input);
     } catch (error) {
-      if (error instanceof AppError && error.code === "INVALID_CREDENTIALS") limiters.loginFailures?.record(attemptKey);
+      if (!(error instanceof AppError && error.code === "INVALID_CREDENTIALS")) {
+        // Un fallo nuestro (la base de datos, p. ej.) no es un intento fallido de la persona.
+        loginFailures?.release(attemptKey);
+        loginFailuresByIp?.release(ip);
+      }
       throw error;
     }
-    limiters.loginFailures?.reset(attemptKey);
+    loginFailures?.reset(attemptKey);
+    loginFailuresByIp?.release(ip);
     startSession(res, result);
     res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
   });
