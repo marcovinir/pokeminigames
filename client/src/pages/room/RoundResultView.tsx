@@ -1,22 +1,35 @@
 import type { RoundPlayerResult, Seat } from "@pokemon-minigames/shared";
+import { Badge } from "../../components/Badge";
+import { Card } from "../../components/Card";
 import { PokemonCard } from "../../components/PokemonCard";
 import { TypeChip } from "../../components/TypeChip";
 import { secondsLeft, useCountdown } from "../../game/clock";
+import { RESULT_PAUSE_MS } from "../../game/durations";
 import { PICK_RESULT_LABELS } from "../../i18n/es";
 import { useRoom } from "./use-room";
 
 function ResultCard({ title, result }: { title: string; result: RoundPlayerResult }) {
   const won = result.result === "VALID";
   return (
-    <section aria-label={`Resultado de ${title}`} className="framed rounded-card bg-surface p-4">
-      <h2 className="text-sm text-muted">{title}</h2>
-      <p className={`mt-1 font-medium ${won ? "text-success" : "text-danger"}`}>{PICK_RESULT_LABELS[result.result]}</p>
-      {result.text ? <p className="mt-1 text-sm text-muted">Escribió: «{result.text}»</p> : null}
-      <div className="mt-3">{result.pokemon ? <PokemonCard pokemon={result.pokemon} /> : null}</div>
-      <p className="mt-3 text-sm">
-        Total: <span className="font-num font-medium tabular-nums">{result.totalStats}</span> · {result.teamSize} Pokémon
+    <Card as="section" aria-label={`Resultado de ${title}`} data-result={result.result} className={`p-5 ${won ? "border-success" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
+        <Badge tone={won ? "success" : "danger"}>{PICK_RESULT_LABELS[result.result]}</Badge>
+      </div>
+      {result.text ? <p className="mt-2 text-sm text-muted">Escribió: «{result.text}»</p> : null}
+      <div className="mt-4">
+        {result.pokemon ? (
+          <PokemonCard pokemon={result.pokemon} size="lg" eager />
+        ) : (
+          <div data-empty-art aria-hidden="true" className="flex h-64 items-center justify-center rounded-card bg-surface-2 font-display text-6xl text-muted">
+            ?
+          </div>
+        )}
+      </div>
+      <p className="mt-4 text-sm">
+        Total: <span className="font-num font-semibold tabular-nums">{result.totalStats}</span> · {result.teamSize} Pokémon
       </p>
-    </section>
+    </Card>
   );
 }
 
@@ -36,14 +49,15 @@ export function RoundResultView() {
   const mine = result.results[view.mySeat];
   const rivalSeat: Seat = view.mySeat === 1 ? 2 : 1;
   const theirs = result.results[rivalSeat];
+  const remaining = result.nextRoundAt === null ? 0 : Math.min(100, (untilNext / RESULT_PAUSE_MS) * 100);
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-5">
       <div className="text-center">
-        <h1 className="text-xl font-medium">Resultado de la ronda {result.round}</h1>
-        <div className="mt-2 flex justify-center gap-2" aria-label="Par de tipos">
-          <TypeChip type={result.type1} />
-          <TypeChip type={result.type2} />
+        <h1 className="font-display text-2xl font-semibold">Resultado de la ronda {result.round}</h1>
+        <div className="mt-3 flex justify-center gap-3" aria-label="Par de tipos">
+          <TypeChip type={result.type1} size="lg" />
+          <TypeChip type={result.type2} size="lg" />
         </div>
       </div>
 
@@ -54,16 +68,19 @@ export function RoundResultView() {
         {theirs.pokemon ? `, ${theirs.pokemon.names.es}` : ""}.
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         <ResultCard title="Tú" result={mine} />
         <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} />
       </div>
 
-      <p className="text-center text-sm text-muted">
-        {result.nextRoundAt === null
-          ? "Calculando el resultado final…"
-          : `Siguiente ronda en ${secondsLeft(untilNext)} s`}
-      </p>
+      <div className="mx-auto w-64 text-center">
+        <p className="text-sm text-muted">
+          {result.nextRoundAt === null ? "Calculando el resultado final…" : `Siguiente ronda en ${secondsLeft(untilNext)} s`}
+        </p>
+        <div data-next-bar aria-hidden="true" className="mt-2 h-1.5 overflow-hidden rounded-pill bg-surface-2">
+          <div style={{ width: `${remaining}%` }} className="h-full rounded-pill bg-accent transition-[width] duration-300 ease-linear" />
+        </div>
+      </div>
     </section>
   );
 }

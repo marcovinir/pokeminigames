@@ -102,7 +102,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
       }}
       className="relative"
     >
-      <label htmlFor={inputId} className="mb-1 block text-sm font-medium">
+      <label htmlFor={inputId} className="mb-1.5 block text-sm font-semibold">
         Nombre del Pokémon
       </label>
       <div className="flex gap-2">
@@ -131,9 +131,9 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
           }}
           onKeyDown={onKeyDown}
           onBlur={() => setOpen(false)}
-          className="framed min-w-0 flex-1 rounded-ui bg-surface px-3 py-2 text-fg placeholder:text-muted"
+          className="framed min-w-0 flex-1 rounded-ui bg-surface px-4 py-3 text-lg text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)]"
         />
-        <Button type="submit" variant="primary" disabled={locked}>
+        <Button type="submit" variant="primary" size="lg" disabled={locked}>
           Enviar
         </Button>
       </div>
@@ -143,7 +143,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
           id={listId}
           role="listbox"
           aria-label="Sugerencias"
-          className="framed absolute left-0 right-0 z-10 mt-1 overflow-hidden rounded-ui bg-surface shadow-md"
+          className="framed absolute left-0 right-0 z-10 mt-1 overflow-hidden rounded-ui bg-surface shadow-pop"
         >
           {suggestions.map((name, i) => (
             <li
@@ -159,7 +159,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
                 setActive(-1);
                 inputRef.current?.focus();
               }}
-              className={`cursor-pointer px-3 py-2 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
+              className={`cursor-pointer px-4 py-2.5 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
             >
               {name.es}
               {name.en !== name.es ? <span className={i === active ? "ml-2" : "ml-2 text-muted"}>{name.en}</span> : null}

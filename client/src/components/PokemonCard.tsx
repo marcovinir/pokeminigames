@@ -14,9 +14,11 @@ export interface PokemonCardProps {
   showStats?: boolean;
   /** `lg` usa el arte oficial grande; solo donde hay pocas tarjetas a la vez. */
   size?: "sm" | "lg";
+  /** Sin carga perezosa de la imagen: para lo que se ve de inmediato (el resultado de la ronda). */
+  eager?: boolean;
 }
 
-export function PokemonCard({ pokemon, showStats = false, size = "sm" }: PokemonCardProps) {
+export function PokemonCard({ pokemon, showStats = false, size = "sm", eager = false }: PokemonCardProps) {
   const large = size === "lg";
   const { top, bottom } = typeGradient(pokemon.types[0]!);
 
@@ -28,7 +30,7 @@ export function PokemonCard({ pokemon, showStats = false, size = "sm" }: Pokemon
           style={{ background: `radial-gradient(circle at 30% 25%, ${top}, ${bottom})` }}
           className={`inline-flex shrink-0 items-center justify-center rounded-full ${large ? "size-44" : "size-[72px]"}`}
         >
-          <ArtImage id={pokemon.id} spriteUrl={pokemon.spriteUrl} size={large ? 144 : 64} variant={large ? "official" : "sprite"} className="rounded-full" />
+          <ArtImage id={pokemon.id} spriteUrl={pokemon.spriteUrl} size={large ? 144 : 64} variant={large ? "official" : "sprite"} eager={eager} className="rounded-full" />
         </span>
         <div className={large ? "min-w-0" : "min-w-0 flex-1"}>
           <h3 className={`truncate font-display font-semibold ${large ? "text-xl" : "text-lg"}`}>{pokemon.names.es}</h3>
