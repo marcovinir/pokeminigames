@@ -1,6 +1,6 @@
 import { type StoreApi, createStore } from "zustand";
-import type { Credentials, Endpoints, Registration } from "../api/endpoints";
-import type { AuthUser } from "../api/types";
+import type { Credentials, Endpoints, Registration, VerifyEmailInput } from "../api/endpoints";
+import type { AuthUser, VerificationRequired } from "../api/types";
 
 export type SessionStatus = "loading" | "authenticated" | "anonymous";
 
@@ -10,7 +10,10 @@ export interface SessionState {
   /** Al cargar la aplicación: intenta recuperar la sesión con la cookie de refresco. Solo corre una vez. */
   bootstrap(): Promise<void>;
   login(credentials: Credentials): Promise<void>;
-  register(registration: Registration): Promise<void>;
+  /** Abre la sesión (y devuelve `null`) o, con la verificación activa, deja la cuenta pendiente y devuelve el correo al que llegó el código. */
+  register(registration: Registration): Promise<VerificationRequired | null>;
+  /** Verifica el correo con el código que llegó y abre la sesión. */
+  verifyEmail(input: VerifyEmailInput): Promise<void>;
   logout(): Promise<void>;
   /** La sesión se perdió (no se pudo renovar): hay que volver a iniciar sesión. */
   expire(): void;
@@ -37,7 +40,14 @@ export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState>
     },
 
     async register(registration) {
-      const session = await endpoints.auth.register(registration);
+      const result = await endpoints.auth.register(registration);
+      if ("verification" in result) return result;
+      set({ status: "authenticated", user: result.user });
+      return null;
+    },
+
+    async verifyEmail(input) {
+      const session = await endpoints.auth.verifyEmail(input);
       set({ status: "authenticated", user: session.user });
     },
 

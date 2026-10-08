@@ -8,7 +8,7 @@ import type {
   ThemePreferences,
 } from "@pokemon-minigames/shared";
 import type { ApiClient } from "./client";
-import type { AuthSession, PokemonName } from "./types";
+import type { AuthSession, PokemonName, VerificationRequired } from "./types";
 
 export interface Credentials {
   email: string;
@@ -19,6 +19,17 @@ export interface Registration extends Credentials {
   username: string;
 }
 
+export interface VerifyEmailInput {
+  email: string;
+  code: string;
+}
+
+export interface ResetPasswordInput {
+  email: string;
+  code: string;
+  password: string;
+}
+
 export interface CurrentRoom {
   code: string;
   phase: GamePhase;
@@ -27,8 +38,19 @@ export interface CurrentRoom {
 /** Todas las llamadas al servidor que usa la interfaz, agrupadas por tema. */
 export interface Endpoints {
   auth: {
-    register(input: Registration): Promise<AuthSession>;
+    /** Con la verificación activa la cuenta queda pendiente y no hay sesión: llega un código por correo. */
+    register(input: Registration): Promise<AuthSession | VerificationRequired>;
     login(input: Credentials): Promise<AuthSession>;
+    /** ¿Verifica el servidor el correo de las cuentas nuevas? (de ello depende, p. ej., el enlace «olvidé mi contraseña»). */
+    options(): Promise<{ emailVerification: boolean }>;
+    /** Verifica el correo con el código que llegó y abre la sesión. */
+    verifyEmail(input: VerifyEmailInput): Promise<AuthSession>;
+    /** Pide otro código de verificación (el servidor contesta lo mismo exista o no la cuenta). */
+    resendCode(email: string): Promise<void>;
+    /** Pide el código para cambiar la contraseña (el servidor contesta lo mismo exista o no la cuenta). */
+    forgotPassword(email: string): Promise<void>;
+    /** Cambia la contraseña con el código; no abre sesión. */
+    resetPassword(input: ResetPasswordInput): Promise<void>;
     /** Renueva la sesión con la cookie de refresco; `null` si no hay sesión. */
     refresh(): Promise<AuthSession | null>;
     logout(): Promise<void>;
@@ -64,8 +86,23 @@ export function createEndpoints(api: ApiClient): Endpoints {
 
   return {
     auth: {
-      register: (input) => startSession("/auth/register", input),
+      async register(input) {
+        const result = await api.request<AuthSession | VerificationRequired>("POST", "/auth/register", { body: input, auth: false });
+        if ("accessToken" in result) api.setToken(result.accessToken);
+        return result;
+      },
       login: (input) => startSession("/auth/login", input),
+      options: () => api.request<{ emailVerification: boolean }>("GET", "/auth/options", { auth: false }),
+      verifyEmail: (input) => startSession("/auth/verify-email", input),
+      async resendCode(email) {
+        await api.request<unknown>("POST", "/auth/verification/resend", { body: { email }, auth: false });
+      },
+      async forgotPassword(email) {
+        await api.request<unknown>("POST", "/auth/password/forgot", { body: { email }, auth: false });
+      },
+      async resetPassword(input) {
+        await api.request<unknown>("POST", "/auth/password/reset", { body: input, auth: false });
+      },
       refresh: () => api.refreshSession(),
       async logout() {
         try {

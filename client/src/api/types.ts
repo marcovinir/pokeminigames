@@ -15,6 +15,12 @@ export interface AuthSession {
   accessToken: string;
 }
 
+/** La respuesta de registrarse con la verificación por correo activa: la cuenta queda pendiente y llega un código. */
+export interface VerificationRequired {
+  verification: "required";
+  email: string;
+}
+
 export interface PokemonName {
   id: number;
   es: string;
