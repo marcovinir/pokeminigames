@@ -82,7 +82,7 @@ describe("render.yaml", () => {
       NODE_ENV: "production",
       COOKIE_SECURE: true,
       COOKIE_SAME_SITE: "lax",
-      TRUST_PROXY: 1,
+      TRUST_PROXY: 2,
       CORS_ORIGIN: undefined,
     });
   });

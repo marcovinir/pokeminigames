@@ -19,10 +19,11 @@ services:
         value: "24"
       - key: NODE_ENV
         value: production
-      # Cuántos proxies hay delante del servidor (de él depende la IP que ven los límites). Se empieza en 1 y se verifica tras
-      # el primer despliegue (docs/despliegue.md, sección 5): hay informes de que Render pone más de uno.
+      # Cuántos proxies hay delante del servidor (de él depende la IP que ven los límites). Con 1 la prueba 1 de
+      # docs/despliegue.md (sección 5) dio seis 401 en el sitio en vivo: Render pone más de un proxy. Se prueba 2 y, si las dos
+      # pruebas no pasan, 3.
       - key: TRUST_PROXY
-        value: "1"
+        value: "2"
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_SAME_SITE
