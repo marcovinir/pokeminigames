@@ -26,7 +26,7 @@
 
 Condiciones que la spec no detalla pero que muerden a una persona real; cada una tiene su prueba en la tarea indicada (y su comprobación real en la Task 14).
 
-1. **Contraste de lo que realmente se ve, no solo de los tokens.** Texto sobre los dos extremos del degradado de la página y de cada chip de tipo, avatares de ocho colores, insignias, el borde dorado de «Ganaste», los textos sobre tarjetas elevadas, en los 4 temas y modos. → Task 1 (`tokens.test.ts`), Task 2 (colores de avatar), Task 4 (degradado de tipos) y Task 14 (auditoría real en el navegador).
+1. **Contraste de lo que realmente se ve, no solo de los tokens.** Texto sobre los dos extremos del degradado de la página y de cada chip de tipo, avatares de ocho colores, insignias, los textos sobre tarjetas elevadas (el borde dorado de «Ganaste» es decorativo, el veredicto va en texto y trofeo, y no se mide), en los 4 temas y modos. → Task 1 (`tokens.test.ts`), Task 2 (colores de avatar), Task 4 (degradado de tipos) y Task 14 (auditoría real en el navegador).
 2. **Movimiento y «reducir movimiento».** Las animaciones que nunca terminan (bola que gira, latido, halo) y las que mueven números deben apagarse con la preferencia del sistema; el cronómetro no debe anunciar cada segundo a los lectores de pantalla y el rojo de los últimos 5 s no debe aparecer en la cuenta atrás de inicio. → Task 1, Task 2 (`useCountUp`, `useReducedMotion`), Task 5 y Task 10.
 3. **Imágenes que fallan o tardan.** Arte oficial → sprite → bola neutra sin mostrar nunca una imagen rota, tamaño fijo sin saltos de diseño, carga perezosa salvo en el resultado de ronda, un esqueleto mientras carga, y un máximo de tres imágenes grandes por pantalla. → Task 2, Task 7, Task 11 y Task 12.
 4. **Controles nuevos accesibles con teclado y lector de pantalla.** El menú de apariencia (abrir, flechas entre radios, Escape devuelve el foco, un clic fuera cierra), las tarjetas de modo (radios reales ocultos con foco visible), los iconos decorativos (`aria-hidden`), los nombres accesibles que en móvil solo se ven como texto para lectores (`sr-only`), y que ningún adorno duplique texto que las pruebas buscan. → Task 3, Task 6, Task 9 y Task 10.
@@ -60,6 +60,7 @@ Las piezas se construyen de abajo arriba: tokens y movimiento, fundamentos (logo
 
 - Se parte de `main` con las etapas 1 a 5 completas (426 pruebas de cliente y 629 de servidor). Trabaja en una rama `etapa-6-rediseno`. Las pruebas del servidor no cambian: esta etapa solo ejecuta las del cliente (desde `client/`) y la E2E.
 - Todo el código de este plan se ejecutó antes de incluirlo, tarea por tarea, en un clon limpio de `main`: 637 pruebas de cliente en verde, `tsc` sin errores en todos los paquetes, la E2E con navegador real (4 pruebas más la de las capturas) y el recorrido manual de todas las pantallas en el navegador (escritorio y 375 px) contra el servidor real con un bot.
+- **Después de la revisión final (Task 16)** el cliente tiene 672 pruebas (los números de las tareas 1 a 15 son los de cada momento), la E2E 16 pruebas más la de las capturas, y se comprueban 29 mutaciones. Las tareas 1 a 15 describen cómo se construyó el rediseño; la 16 recoge lo que la revisión corrigió, con los diffs reales.
 - Si el equipo va justo de CPU, las pruebas de interfaz pueden agotar los 5 s por defecto: ejecútalas con `npx vitest run --testTimeout=30000 --maxWorkers=2` desde `client/` (no hace falta cambiar nada en el repositorio).
 - La E2E necesita un navegador: `npx playwright install chromium` desde `e2e/`, o `E2E_CHANNEL=msedge` / `chrome` para usar el que ya tienes. Entre la Task 6 y la Task 13 la prueba `theme.spec.ts` no se ejecuta (el menú de apariencia cambia en la Task 6 y la E2E se actualiza y vuelve a correr en la Task 13); si subes la rama a mitad de camino, el CI fallará en esa prueba.
 - Para la verificación manual (Tasks 13 y 14) hacen falta el servidor y Vite: `npm run dev` y `npm run dev:client` en dos terminales, una cuenta de prueba y `node client/scripts/dev-bot.mjs CODIGO` para el segundo jugador (usa `PORT=3000`).
@@ -5917,7 +5918,7 @@ Expected: **1266 pruebas pasan** (629 de servidor, una más omitida en Windows, 
 cd client && npx vite build
 ```
 
-Expected: el JavaScript comprimido ronda los 116 KB (partía de 109: no pasa de +40 KB), el CSS sin comprimir queda por debajo de 40 KB (unos 39,9 KB, con las reglas `@font-face` de todos los subconjuntos), y las tipografías latinas que descarga el navegador suman unos 109 KB (Fredoka 30 KB, Nunito 39 KB y JetBrains Mono 40 KB; con el tema Clásico solo se descargan las dos primeras).
+Expected: el JavaScript comprimido ronda los 116 KB (partía de 109: no pasa de +40 KB), el CSS sin comprimir queda por debajo de 40 KB (unos 39,9 KB, con las reglas `@font-face` de todos los subconjuntos; tras la Task 16, 36,5 KB con solo los dos subconjuntos que pide la spec), y las tipografías latinas que descarga el navegador suman unos 109 KB (Fredoka 30 KB, Nunito 39 KB y JetBrains Mono 40 KB; con el tema Clásico solo se descargan las dos primeras).
 
 - [ ] **Step 3: La E2E con navegadores reales**
 
@@ -5964,6 +5965,1945 @@ git push -u origin etapa-6-rediseno
 
 Expected: rama `etapa-6-rediseno` en `https://github.com/marcovinir/pokemon-minigames`; el primer resultado real de GitHub Actions confirma el CI (corre las 4 pruebas de la E2E y omite la de las capturas). La integración a `main` la decide Marco; al subir `main`, Render redespliega solo y el rediseño queda en https://pokemon-minigames.onrender.com.
 
+### Task 16: Revisión final y ajustes
+
+> Esta tarea no estaba en el plan original: la añadió la revisión final independiente (un revisor sobre la rama completa, con el modelo más capaz), que midió el diseño real en un navegador de 360 a 768 px y reprodujo todo lo que sigue. Se ejecutó con TDD (cada prueba se vio fallar antes del arreglo) en cinco tandas y un commit por tanda. Los diffs de abajo son los reales.
+
+**Qué encontró y cómo se calificó** (por el efecto en quien usa la aplicación, no por si la spec nombra el caso):
+
+| # | Hallazgo | Grado | Tanda |
+|---|---|---|---|
+| 1 | El menú de apariencia se sale de la pantalla por la izquierda en móvil con sesión iniciada | Crítico | 1 |
+| 2, 3, 6, 17 | Sala de espera, cuenta atrás, encabezado, resultado y perfil desbordan con nombres de 30 letras o 100 letras seguidas; el porcentaje se monta sobre su anillo | Importante | 1 |
+| 4, 5, 13 | Foco invisible en el encabezado de Pokédex claro (falta `--ring`), foco igual que la selección en las tarjetas de modo, bordes de campos por debajo de 3:1 | Importante | 2 |
+| 7, 9, 16a | Fundido y escalonado por pantalla, marcador fijo en móvil, número «gigante» de la cuenta atrás, «reducir movimiento» sin retardos (spec §5 y §6) | Importante | 3 |
+| 15 | Solo tipografías latino y latino extendido y CSS dentro de los 40 KB | Importante | 4 |
+| 8 | Las pruebas no medían el diseño real: ahora hay E2E de diseño, foco, movimiento y fuentes, y pares de contraste de componentes | Importante | 1 a 4 |
+| — | `color-scheme` ausente en los modos oscuros y dos fuentes en el encabezado (la revisión lo dejó fuera de juicio o como menor) | Menor visible | 5 |
+
+Diferidos como menores (no entran en este plan): Escape global y menú que no se cierra al perder el foco; `Notice` con acción comprime el texto en móvil; el borde dorado de «Ganaste» (decorativo: el veredicto va en texto y trofeo) tiene ~1,5:1 sobre la tarjeta en los modos claros; `artworkUrl` lanza con un id inválido. El resto de lo que la revisión dejó sin juzgar (TRUST_PROXY, `aria-label` sin rol, la fuente monoespaciada del código de sala, etc.) quedó decidido en el registro de ejecución.
+
+**Files:** `client/src` (componentes, pantallas, `index.css`, `tokens.css`, el nuevo `components/rise.ts`), `client/test`, `e2e/support/app.ts` y las E2E nuevas `layout.spec.ts`, `focus.spec.ts`, `motion.spec.ts` y `fonts.spec.ts`.
+
+**Interfaces:**
+- Produces: `rise(index?: number): CSSProperties` (en `client/src/components/rise.ts`) para el turno de entrada de una tarjeta `animate-rise`; los tokens `--ring`, `--field-edge` y `--header-h`; la clase `.framed-field`; `StatTile` gana `className?: string`; `ThemeMenu` gana `compact?: boolean`; en `e2e/support/app.ts`, `createRoomWithRounds(page, rounds)` (y `createOneRoundRoom` pasa a ser su caso de una ronda).
+
+#### Tanda 1 — nada se sale de la pantalla en móvil
+
+**Problema:** Medido en un navegador real (jsdom no calcula tamaños y las pruebas de clases no lo veían): con sesión iniciada el botón de apariencia queda a media fila y su panel de 20 rem, anclado a él, salía de la pantalla por la izquierda (x = −99 a 375 px y −114 a 360 px: «Clásico» y «Automático» eran inalcanzables y a la izquierda no se puede desplazar); el encabezado desbordaba entre 640 y 730 px **aunque el nombre fuera corto**; la sala de espera medía 399 px en 375 (una tarjeta `mx-auto` dentro de una columna flex mide lo que su contenido); la cuenta atrás desbordaba con un nombre de 30 letras (492 px); una respuesta de 100 letras seguidas ensanchaba el resultado a 697 px; el perfil con un nombre largo a 380 px; y el porcentaje de victorias se montaba 20 px sobre su anillo.
+
+**Arreglo:** El panel del menú se ancla al contenedor interior del encabezado (`relative`) con `right-4`; el encabezado deja solo iconos hasta `lg` (1024 px) y recorta el nombre (`truncate max-w-40`); las tarjetas de la sala llevan `w-full` y las casillas del código se encogen; los nombres y la respuesta usan `[overflow-wrap:anywhere]`; la ficha del porcentaje ocupa dos columnas y reserva sitio al anillo. Una E2E (`layout.spec.ts`) mide todo en Edge/Chromium de 360 a 1280 px con nombres de 30 letras.
+
+- [ ] **Step 1.1: Escribir las pruebas que fallan**
+
+```diff
+diff --git a/client/test/pages/mobile-layout.test.tsx b/client/test/pages/mobile-layout.test.tsx
+index 504d824..ba081e1 100644
+--- a/client/test/pages/mobile-layout.test.tsx
++++ b/client/test/pages/mobile-layout.test.tsx
+@@ -1,5 +1,7 @@
+ import { screen } from "@testing-library/react";
++import userEvent from "@testing-library/user-event";
+ import { Route, Routes } from "react-router";
+ import { describe, expect, it, vi } from "vitest";
++import { Header } from "../../src/components/Header";
+ import { LoginPage } from "../../src/pages/AuthPages";
+ import { LobbyPage } from "../../src/pages/Lobby";
+@@ -7,5 +9,5 @@ import { ProfilePage } from "../../src/pages/profile/ProfilePage";
+ import { event, pokemon } from "../helpers/events";
+ import { ash, misty, renderRoom, roundState } from "../helpers/room";
+-import { fakeServices, renderWithServices } from "../helpers/services";
++import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
+ 
+ /**
+@@ -85,2 +87,100 @@ describe("sin desbordes en pantallas estrechas", () => {
+   });
+ });
++
++/**
++ * jsdom no calcula tamaños: estas pruebas fijan las clases que evitan los desbordes que se midieron en un navegador de
++ * verdad (e2e/tests/layout.spec.ts, con nombres de 30 letras a 360 y 375 px), para que un cambio de clases salte rápido.
++ */
++describe("encabezado y menú de apariencia en pantallas estrechas", () => {
++  async function openMenu(username = "ash") {
++    const services = fakeServices();
++    signIn(services, { ...ASH, username });
++    renderWithServices(<Header />, { services });
++    const toggle = screen.getByRole("button", { name: "Apariencia" });
++    await userEvent.click(toggle);
++    return document.getElementById(toggle.getAttribute("aria-controls")!)!;
++  }
++
++  it("el panel se ancla al contenedor del encabezado y no al botón (con sesión el botón queda a media pantalla y el panel se salía por la izquierda)", async () => {
++    const panel = await openMenu();
++    expect(classesOf(panel)).toContain("absolute");
++    expect(classesOf(panel)).toContain("right-4");
++    expect(panel.parentElement!.closest(".relative")).toBe(panel.closest("header")!.firstElementChild);
++  });
++
++  it("el nombre largo se recorta en vez de ensanchar la fila, y las etiquetas de texto solo caben desde pantallas anchas", async () => {
++    const name = "a".repeat(30);
++    await openMenu(name);
++    const shown = screen.getByText(name);
++    expect(classesOf(shown)).toContain("truncate");
++    expect(classesOf(shown)).toContain("lg:inline");
++    for (const label of ["Apariencia", "Mi perfil", "Cerrar sesión"]) {
++      expect(classesOf(screen.getByText(label)), label).toContain("lg:not-sr-only");
++    }
++  });
++});
++
++describe("textos largos y tarjetas sueltas en pantallas estrechas", () => {
++  it("sala de espera: la tarjeta ocupa el ancho disponible, las casillas se encogen y los nombres se parten", () => {
++    const { container } = renderRoom([event.roomState({ phase: "waiting", players: [ash({ username: "a".repeat(30) })] })]);
++    expect(classesOf(container.querySelector("section"))).toContain("w-full");
++    expect(classesOf(screen.getByLabelText("Código de la sala").firstElementChild)).toContain("min-w-0");
++    const player = screen.getByRole("list", { name: "Jugadores" }).firstElementChild!;
++    expect(classesOf(player)).toContain("min-w-0");
++    expect(classesOf(screen.getByText("a".repeat(30)))).toContain("[overflow-wrap:anywhere]");
++  });
++
++  it("cuenta atrás: la tarjeta ocupa el ancho disponible y el título parte el nombre del rival", () => {
++    const { container } = renderRoom([
++      event.roomState({ phase: "starting", players: [ash(), misty({ username: "b".repeat(30) })] }),
++    ]);
++    expect(classesOf(container.querySelector("section"))).toContain("w-full");
++    expect(classesOf(screen.getByRole("heading", { name: /Partida contra/ }))).toContain("[overflow-wrap:anywhere]");
++  });
++
++  it("resultado de la ronda: la respuesta del rival, aunque sean 100 letras seguidas, se parte", () => {
++    renderRoom([
++      event.roomState({ phase: "round_result", roundsPlayed: 1, players: [ash(), misty()] }),
++      event.roundResult(),
++    ]);
++    expect(classesOf(screen.getByText(/Escribió: «zzz»/))).toContain("[overflow-wrap:anywhere]");
++  });
++
++  async function renderProfile() {
++    const services = fakeServices();
++    services.endpoints.stats.mine = vi.fn(async () => ({
++      username: "a".repeat(30),
++      stats: {
++        played: 2,
++        wins: 1,
++        draws: 0,
++        losses: 1,
++        winRate: 0.5,
++        currentStreak: 1,
++        bestStreak: 1,
++        averagePower: 300,
++        bestGameScore: 300,
++        topPokemon: [],
++      },
++    }));
++    renderWithServices(
++      <Routes>
++        <Route path="/perfil" element={<ProfilePage />} />
++      </Routes>,
++      { services, route: "/perfil" },
++    );
++    await screen.findByText("Victorias");
++  }
++
++  it("perfil: la ficha del porcentaje ocupa dos columnas y reserva sitio a la derecha para su anillo", async () => {
++    await renderProfile();
++    const tile = screen.getByText("Victorias").parentElement!;
++    expect(classesOf(tile)).toContain("col-span-2");
++    expect(classesOf(tile)).toContain("pr-20");
++  });
++
++  it("perfil: el nombre propio largo se recorta", async () => {
++    await renderProfile();
++    expect(classesOf(screen.getByText("a".repeat(30)))).toContain("truncate");
++  });
++});
+diff --git a/e2e/support/app.ts b/e2e/support/app.ts
+index b845de1..8d1ee4b 100644
+--- a/e2e/support/app.ts
++++ b/e2e/support/app.ts
+@@ -58,8 +58,8 @@ export async function logIn(page: Page, email: string, password: string): Promis
+ }
+ 
+-/** Crea una sala aleatoria de una sola ronda y devuelve su código. */
+-export async function createOneRoundRoom(page: Page): Promise<string> {
++/** Crea una sala aleatoria con ese número de rondas y devuelve su código. */
++export async function createRoomWithRounds(page: Page, rounds: number): Promise<string> {
+   await page.getByLabel("Largo de la partida").selectOption("custom-rounds");
+-  await page.getByLabel("Máximo de rondas").fill("1");
++  await page.getByLabel("Máximo de rondas").fill(String(rounds));
+   await page.getByRole("button", { name: "Crear sala" }).click();
+   const code = page.getByLabel("Código de la sala");
+@@ -68,4 +68,9 @@ export async function createOneRoundRoom(page: Page): Promise<string> {
+ }
+ 
++/** Crea una sala aleatoria de una sola ronda y devuelve su código. */
++export function createOneRoundRoom(page: Page): Promise<string> {
++  return createRoomWithRounds(page, 1);
++}
++
+ export async function joinRoom(page: Page, code: string): Promise<void> {
+   await page.getByLabel("Código de sala").fill(code);
+diff --git a/e2e/tests/layout.spec.ts b/e2e/tests/layout.spec.ts
+new file mode 100644
+index 0000000..4b306a9
+--- /dev/null
++++ b/e2e/tests/layout.spec.ts
+@@ -0,0 +1,183 @@
++import { type Locator, type Page, expect, test } from "@playwright/test";
++import { answer, createRoomWithRounds, fact, joinRoom, newPlayer, register, roundTypes, validAnswerFor } from "../support/app";
++
++/**
++ * El diseño se mide en un navegador de verdad: jsdom no calcula tamaños y las pruebas de clases no ven que el menú de
++ * apariencia se salga por la izquierda. Se usan nombres de usuario de 30 letras (el máximo que acepta el servidor) y una
++ * respuesta de 100 letras seguidas, que son lo peor que puede llegar a la pantalla.
++ */
++
++/** `newPlayer` le añade «_12345»: 24 + 6 = 30 caracteres. */
++const longName = (letter: string): string => letter.repeat(24);
++
++/** La página no se desplaza en horizontal. */
++async function expectNoSideScroll(page: Page, where: string): Promise<void> {
++  const { scroll, client } = await page.evaluate(() => ({
++    scroll: document.documentElement.scrollWidth,
++    client: document.documentElement.clientWidth,
++  }));
++  expect.soft(scroll, `${where}: la página se desplaza en horizontal (${scroll} px de contenido en ${client} px)`).toBeLessThanOrEqual(client);
++}
++
++/** La caja entera cabe en la pantalla: lo que se sale por la izquierda no se puede desplazar y `scrollWidth` no lo ve. */
++async function expectInsideViewport(page: Page, target: Locator, where: string): Promise<void> {
++  const box = await target.boundingBox();
++  expect(box, `${where}: no se ve`).not.toBeNull();
++  const width = page.viewportSize()!.width;
++  expect.soft(box!.x, `${where}: se sale por la izquierda (x = ${box!.x})`).toBeGreaterThanOrEqual(-0.5);
++  expect.soft(box!.x + box!.width, `${where}: se sale por la derecha (llega a ${box!.x + box!.width} de ${width} px)`).toBeLessThanOrEqual(width + 0.5);
++}
++
++/** El encabezado de la aplicación (el perfil tiene otro <header> propio, por eso el primero). */
++const appHeader = (page: Page): Locator => page.locator("header").first();
++
++/** El encabezado sigue siendo una sola fila (si se parte en dos líneas mide más del doble). */
++async function expectOneRowHeader(page: Page, where: string): Promise<void> {
++  const box = await appHeader(page).boundingBox();
++  expect.soft(box!.height, `${where}: el encabezado se parte en varias líneas (${box!.height} px de alto)`).toBeLessThan(70);
++}
++
++/** Abre el menú de apariencia y comprueba que el panel y cada una de sus opciones se alcanzan, y lo cierra. */
++async function expectThemeMenuReachable(page: Page, where: string): Promise<void> {
++  const toggle = page.getByRole("button", { name: "Apariencia" });
++  await toggle.click();
++  const panel = page.locator(`[id="${await toggle.getAttribute("aria-controls")}"]`);
++  await expect(panel).toBeVisible();
++  await expectInsideViewport(page, panel, `${where}: el menú de apariencia`);
++  for (const option of ["Clásico", "Pokédex", "Automático", "Claro", "Oscuro"]) {
++    await expectInsideViewport(page, panel.getByText(option, { exact: true }), `${where}: la opción «${option}»`);
++  }
++  await page.keyboard.press("Escape");
++  await expect(panel).toHaveCount(0);
++}
++
++const WIDTHS = [360, 375, 414, 640, 700, 768, 900, 1024, 1280];
++
++test("sin sesión el encabezado y el menú de apariencia caben en todos los anchos", async ({ browser }) => {
++  const visitor = await newPlayer(browser, "visita");
++  try {
++    for (const width of WIDTHS) {
++      await visitor.page.setViewportSize({ width, height: 740 });
++      await visitor.page.goto("/login");
++      await expect(visitor.page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
++      const where = `${width} px, acceso`;
++      await expectNoSideScroll(visitor.page, where);
++      await expectOneRowHeader(visitor.page, where);
++      await expectThemeMenuReachable(visitor.page, where);
++      await visitor.page.goto("/registro");
++      await expect(visitor.page.getByRole("heading", { name: "Crear cuenta" })).toBeVisible();
++      await expectNoSideScroll(visitor.page, `${width} px, registro`);
++    }
++  } finally {
++    await visitor.context.close();
++  }
++});
++
++for (const [kind, label] of [
++  ["corto", "ash"],
++  ["de 30 letras", longName("a")],
++] as const) {
++  test(`con sesión iniciada el encabezado y el menú de apariencia caben en todos los anchos con un nombre ${kind}`, async ({ browser }) => {
++    const ash = await newPlayer(browser, label);
++    try {
++      await register(ash);
++      for (const width of WIDTHS) {
++        await ash.page.setViewportSize({ width, height: 740 });
++        const where = `${width} px, lobby`;
++        await expectNoSideScroll(ash.page, where);
++        await expectOneRowHeader(ash.page, where);
++        await expectThemeMenuReachable(ash.page, where);
++      }
++    } finally {
++      await ash.context.close();
++    }
++  });
++}
++
++for (const width of [360, 375]) {
++  test(`a ${width} px la sala de espera cabe con un nombre de 30 letras`, async ({ browser }) => {
++    const ash = await newPlayer(browser, longName("a"));
++    try {
++      await ash.page.setViewportSize({ width, height: 740 });
++      await register(ash);
++      await createRoomWithRounds(ash.page, 2);
++      await expect(ash.page.getByRole("heading", { name: "Sala de espera" })).toBeVisible();
++      await expectNoSideScroll(ash.page, `${width} px, sala de espera`);
++      const card = ash.page.locator("section", { has: ash.page.getByRole("heading", { name: "Sala de espera" }) });
++      await expectInsideViewport(ash.page, card, `${width} px, sala de espera: la tarjeta`);
++      await expectInsideViewport(ash.page, ash.page.getByLabel("Código de la sala"), `${width} px, sala de espera: el código`);
++      await expectInsideViewport(ash.page, ash.page.getByRole("list", { name: "Jugadores" }), `${width} px, sala de espera: los jugadores`);
++    } finally {
++      await ash.context.close();
++    }
++  });
++}
++
++test("a 375 px toda la partida cabe con nombres de 30 letras y una respuesta de 100 letras seguidas", async ({ browser }) => {
++  const ash = await newPlayer(browser, longName("a"));
++  const misty = await newPlayer(browser, longName("b"));
++  try {
++    for (const player of [ash, misty]) await player.page.setViewportSize({ width: 375, height: 740 });
++    await register(ash);
++    await register(misty);
++
++    const code = await createRoomWithRounds(ash.page, 2);
++    await joinRoom(misty.page, code);
++
++    // La cuenta atrás de inicio: el título lleva el nombre del rival entero.
++    for (const player of [ash, misty]) {
++      await expect(player.page.getByRole("timer", { name: "Inicio de la partida" })).toBeVisible({ timeout: 15_000 });
++      await expectNoSideScroll(player.page, "375 px, cuenta atrás");
++      const title = player.page.getByRole("heading", { name: /^Partida contra / });
++      await expectInsideViewport(player.page, title, "375 px, cuenta atrás: el título");
++    }
++
++    const types = await roundTypes(ash.page);
++    await roundTypes(misty.page);
++    for (const player of [ash, misty]) await expectNoSideScroll(player.page, "375 px, ronda");
++
++    // Ash acierta; Misty escribe 100 letras seguidas, que no existen y cierran la ronda al instante.
++    await answer(ash.page, validAnswerFor(types));
++    await answer(misty.page, "z".repeat(100));
++    for (const player of [ash, misty]) {
++      await expect(player.page.getByRole("heading", { name: "Resultado de la ronda 1" })).toBeVisible({ timeout: 30_000 });
++      await expectNoSideScroll(player.page, "375 px, resultado de la ronda");
++    }
++
++    // La segunda ronda cierra la partida (el resultado de la última ronda no llega a mostrarse: pasa directo al resumen).
++    await expect(ash.page.getByRole("heading", { name: "Ronda 2 de 2" })).toBeVisible({ timeout: 30_000 });
++    await answer(ash.page, validAnswerFor(await roundTypes(ash.page)));
++    await answer(misty.page, "zzzzzz");
++
++    await expect(ash.page.getByRole("heading", { name: "Ganaste" })).toBeVisible({ timeout: 30_000 });
++    await expect(misty.page.getByRole("heading", { name: "Perdiste" })).toBeVisible({ timeout: 30_000 });
++    for (const player of [ash, misty]) await expectNoSideScroll(player.page, "375 px, resumen");
++
++    // El perfil, con el nombre largo en distintos anchos.
++    await ash.page.getByRole("link", { name: "Mi perfil" }).click();
++    await expect(ash.page.getByRole("heading", { name: "Tu perfil" })).toBeVisible();
++    await expect(fact(ash.page, "Partidas")).toHaveText("1");
++    for (const width of [375, 640, 700, 768, 1024]) {
++      await ash.page.setViewportSize({ width, height: 740 });
++      const where = `${width} px, perfil`;
++      await expectNoSideScroll(ash.page, where);
++      await expectOneRowHeader(ash.page, where);
++
++      // El porcentaje de victorias no se monta sobre el anillo de su ficha.
++      const overlap = await fact(ash.page, "Victorias").evaluate((value) => {
++        const tile = value.parentElement!;
++        const range = document.createRange();
++        range.selectNodeContents(value);
++        const text = range.getBoundingClientRect();
++        const ring = tile.querySelector("svg")!.getBoundingClientRect();
++        const across = Math.min(text.right, ring.right) - Math.max(text.left, ring.left);
++        const down = Math.min(text.bottom, ring.bottom) - Math.max(text.top, ring.top);
++        return across > 0.5 && down > 0.5 ? across : 0;
++      });
++      expect.soft(overlap, `${where}: el porcentaje se monta ${overlap} px sobre el anillo`).toBe(0);
++    }
++  } finally {
++    await ash.context.close();
++    await misty.context.close();
++  }
++});
+```
+
+- [ ] **Step 1.2: Ejecutarlas y ver que fallan**
+
+```bash
+npm run build -w client
+cd client && npx vitest run --testTimeout=30000 --maxWorkers=2
+cd .. && E2E_CHANNEL=msedge npm run e2e -w e2e
+```
+
+Expected: FAIL. La E2E falla con «el menú de apariencia: se sale por la izquierda (x = −99)», «la página se desplaza en horizontal (399 px de contenido en 375 px)», «(492 px…)» en la cuenta atrás, «(697 px…)» en el resultado, «(730 px…)» en el encabezado a 640 y 700 px y «el porcentaje se monta 20 px sobre el anillo»; las 7 pruebas de clases nuevas de `mobile-layout.test.tsx` fallan.
+
+- [ ] **Step 1.3: Aplicar el arreglo**
+
+```diff
+diff --git a/client/src/components/Header.tsx b/client/src/components/Header.tsx
+index 975b9fd..caea9b7 100644
+--- a/client/src/components/Header.tsx
++++ b/client/src/components/Header.tsx
+@@ -8,5 +8,5 @@ import { ThemeMenu } from "./ThemeMenu";
+ function UserIcon() {
+   return (
+-    <svg viewBox="0 0 24 24" className="size-5 sm:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
++    <svg viewBox="0 0 24 24" className="size-5 lg:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       <circle cx="12" cy="8" r="4" />
+       <path d="M4 21a8 8 0 0 1 16 0" />
+@@ -17,5 +17,5 @@ function UserIcon() {
+ function ExitIcon() {
+   return (
+-    <svg viewBox="0 0 24 24" className="size-5 sm:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
++    <svg viewBox="0 0 24 24" className="size-5 lg:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+       <path d="m16 17 5-5-5-5M21 12H9" />
+@@ -30,5 +30,6 @@ export function Header() {
+   return (
+     <header className="sticky top-0 z-20 border-b-(length:--frame) border-line bg-header text-header-fg">
+-      <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 sm:gap-3">
++      {/* `relative`: el panel del menú de apariencia se ancla a este contenedor y no a su botón, que con sesión queda a media fila. */}
++      <div className="relative mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 sm:gap-3">
+         {/* Luces de adorno: solo en el tema Pokédex (el encabezado rojo tipo consola). */}
+         <span data-leds aria-hidden="true" className="hidden items-center gap-1.5 in-data-[theme=pokedex]:flex">
+@@ -38,22 +39,22 @@ export function Header() {
+           <span className="size-2 rounded-full bg-danger" />
+         </span>
+-        <Link to="/" className="rounded-ui">
++        <Link to="/" className="shrink-0 rounded-ui">
+           <Logo hideNameOnMobile={Boolean(user)} />
+         </Link>
+-        <div className="ml-auto flex items-center gap-1 sm:gap-3">
+-          <ThemeMenu />
++        <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-3">
++          <ThemeMenu compact={Boolean(user)} />
+           {user ? (
+             <>
+-              <Link to="/perfil" className="inline-flex items-center gap-2 rounded-pill px-2 py-1.5 text-sm font-semibold hover:bg-header-fg/15">
++              <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 text-sm font-semibold hover:bg-header-fg/15">
+                 <UserIcon />
+-                <span className="sr-only sm:not-sr-only">Mi perfil</span>
++                <span className="sr-only lg:not-sr-only">Mi perfil</span>
+               </Link>
+-              <span className="flex items-center gap-2">
++              <span className="flex min-w-0 items-center gap-2">
+                 <Avatar name={user.username} size="sm" />
+-                <span className="hidden text-sm font-semibold sm:inline">{user.username}</span>
++                <span className="hidden max-w-40 truncate text-sm font-semibold lg:inline">{user.username}</span>
+               </span>
+-              <Button variant="header" onClick={() => void session.getState().logout()}>
++              <Button variant="header" className="shrink-0 max-lg:px-3" onClick={() => void session.getState().logout()}>
+                 <ExitIcon />
+-                <span className="sr-only sm:not-sr-only">Cerrar sesión</span>
++                <span className="sr-only lg:not-sr-only">Cerrar sesión</span>
+               </Button>
+             </>
+diff --git a/client/src/components/StatTile.tsx b/client/src/components/StatTile.tsx
+index 5e8bc29..ce37d4d 100644
+--- a/client/src/components/StatTile.tsx
++++ b/client/src/components/StatTile.tsx
+@@ -24,7 +24,8 @@ function Ring({ fraction }: { fraction: number }) {
+ 
+ /** Una ficha de estadística (etiqueta y valor), con un anillo opcional. Va dentro de un `<dl>`. */
+-export function StatTile({ label, value, hint, ring }: { label: string; value: string; hint?: string; ring?: number | null }) {
++export function StatTile({ label, value, hint, ring, className = "" }: { label: string; value: string; hint?: string; ring?: number | null; className?: string }) {
+   return (
+-    <div className="framed relative rounded-card bg-surface px-4 py-3 shadow-card">
++    // Con anillo reserva sitio a la derecha (el anillo es `absolute` y, sin esto, el número se le monta encima).
++    <div className={`framed relative rounded-card bg-surface px-4 py-3 shadow-card ${ring != null ? "pr-20" : ""} ${className}`}>
+       <dt className="text-sm text-muted">{label}</dt>
+       <dd className="font-num text-3xl font-semibold tabular-nums">{value}</dd>
+diff --git a/client/src/components/ThemeMenu.tsx b/client/src/components/ThemeMenu.tsx
+index 208298c..9582ddd 100644
+--- a/client/src/components/ThemeMenu.tsx
++++ b/client/src/components/ThemeMenu.tsx
+@@ -50,6 +50,11 @@ function Segmented<T extends string>({ legend, name, options, labels, value, onC
+ }
+ 
+-/** Elegir el tema visual (Clásico o Pokédex) y el modo (automático, claro u oscuro) desde un botón de paleta. */
+-export function ThemeMenu() {
++/**
++ * Elegir el tema visual (Clásico o Pokédex) y el modo (automático, claro u oscuro) desde un botón de paleta.
++ * El panel es `absolute` respecto del contenedor posicionado más cercano (el interior del encabezado), no del botón: con
++ * sesión iniciada el botón queda a media fila y un panel de 20 rem anclado a él se salía de la pantalla por la izquierda.
++ * `compact` deja solo el icono hasta pantallas anchas (cuando la fila lleva más botones).
++ */
++export function ThemeMenu({ compact = false }: { compact?: boolean }) {
+   const { theme: store } = useServices();
+   const theme = useTheme((s) => s.preference.theme);
+@@ -78,11 +83,17 @@ export function ThemeMenu() {
+ 
+   return (
+-    <div ref={root} className="relative">
+-      <Button variant="header" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setOpen((current) => !current)}>
++    <div ref={root}>
++      <Button
++        variant="header"
++        className={compact ? "shrink-0 max-lg:px-3" : "shrink-0 max-sm:px-3"}
++        aria-expanded={open}
++        aria-controls={open ? panelId : undefined}
++        onClick={() => setOpen((current) => !current)}
++      >
+         <PaletteIcon />
+-        <span className="sr-only sm:not-sr-only">Apariencia</span>
++        <span className={compact ? "sr-only lg:not-sr-only" : "sr-only sm:not-sr-only"}>Apariencia</span>
+       </Button>
+       {open ? (
+-        <div id={panelId} className="framed absolute right-0 top-full z-30 mt-2 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-4 rounded-card bg-surface p-4 text-fg shadow-pop">
++        <div id={panelId} className="framed absolute right-4 top-full z-30 mt-2 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-4 rounded-card bg-surface p-4 text-fg shadow-pop">
+           <Segmented<ThemeName>
+             legend="Tema"
+diff --git a/client/src/pages/profile/ProfilePage.tsx b/client/src/pages/profile/ProfilePage.tsx
+index eeb16d3..d062f0a 100644
+--- a/client/src/pages/profile/ProfilePage.tsx
++++ b/client/src/pages/profile/ProfilePage.tsx
+@@ -63,5 +63,5 @@ export function ProfilePage() {
+         <div className="min-w-0">
+           <h1 className="truncate font-display text-3xl font-semibold">{own ? "Tu perfil" : name}</h1>
+-          {own ? <p className="text-muted">{name}</p> : null}
++          {own ? <p className="truncate text-muted">{name}</p> : null}
+         </div>
+       </header>
+diff --git a/client/src/pages/profile/StatsView.tsx b/client/src/pages/profile/StatsView.tsx
+index ff43424..66a10d5 100644
+--- a/client/src/pages/profile/StatsView.tsx
++++ b/client/src/pages/profile/StatsView.tsx
+@@ -19,5 +19,5 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
+           <StatTile label="Empatadas" value={String(stats.draws)} />
+           <StatTile label="Perdidas" value={String(stats.losses)} />
+-          <StatTile label="Victorias" value={formatPercent(stats.winRate)} ring={stats.winRate} />
++          <StatTile label="Victorias" value={formatPercent(stats.winRate)} ring={stats.winRate} className="col-span-2" />
+           <StatTile label="Racha actual" value={String(stats.currentStreak)} />
+           <StatTile label="Mejor racha" value={String(stats.bestStreak)} />
+diff --git a/client/src/pages/room/CountdownView.tsx b/client/src/pages/room/CountdownView.tsx
+index 3d905fb..b618b3b 100644
+--- a/client/src/pages/room/CountdownView.tsx
++++ b/client/src/pages/room/CountdownView.tsx
+@@ -9,6 +9,6 @@ export function CountdownView() {
+ 
+   return (
+-    <Card as="section" tone="raised" className="mx-auto max-w-lg p-8 text-center">
+-      <h1 className="font-display text-2xl font-semibold">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
++    <Card as="section" tone="raised" className="mx-auto w-full max-w-lg p-6 text-center sm:p-8">
++      <h1 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
+       {me && opponent ? (
+         <div className="mt-6 flex items-center justify-center gap-6">
+diff --git a/client/src/pages/room/RoundResultView.tsx b/client/src/pages/room/RoundResultView.tsx
+index 32ea042..ec93530 100644
+--- a/client/src/pages/room/RoundResultView.tsx
++++ b/client/src/pages/room/RoundResultView.tsx
+@@ -17,5 +17,5 @@ function ResultCard({ title, result }: { title: string; result: RoundPlayerResul
+         <Badge tone={won ? "success" : "danger"}>{PICK_RESULT_LABELS[result.result]}</Badge>
+       </div>
+-      {result.text ? <p className="mt-2 text-sm text-muted">Escribió: «{result.text}»</p> : null}
++      {result.text ? <p className="mt-2 text-sm text-muted [overflow-wrap:anywhere]">Escribió: «{result.text}»</p> : null}
+       <div className="mt-4">
+         {result.pokemon ? (
+diff --git a/client/src/pages/room/WaitingView.tsx b/client/src/pages/room/WaitingView.tsx
+index 0532a7a..309ff22 100644
+--- a/client/src/pages/room/WaitingView.tsx
++++ b/client/src/pages/room/WaitingView.tsx
+@@ -38,5 +38,5 @@ export function WaitingView() {
+ 
+   return (
+-    <Card as="section" tone="raised" className="mx-auto max-w-md p-8 text-center">
++    <Card as="section" tone="raised" className="mx-auto w-full max-w-md p-6 text-center sm:p-8">
+       <h1 className="font-display text-2xl font-semibold">Sala de espera</h1>
+       <p className="mt-3 text-sm text-muted">Comparte este código con tu oponente:</p>
+@@ -46,5 +46,5 @@ export function WaitingView() {
+             key={index}
+             style={{ "--i": index } as React.CSSProperties}
+-            className="animate-rise inline-flex h-14 w-11 items-center justify-center rounded-ui bg-surface-2 font-num text-3xl font-semibold"
++            className="animate-rise inline-flex h-14 w-11 min-w-0 items-center justify-center rounded-ui bg-surface-2 font-num text-3xl font-semibold"
+           >
+             {letter}
+@@ -54,14 +54,14 @@ export function WaitingView() {
+       <CopyCodeButton code={code} />
+ 
+-      <ul className="mt-7 flex justify-center gap-8" aria-label="Jugadores">
++      <ul className="mt-7 flex justify-center gap-4 sm:gap-8" aria-label="Jugadores">
+         {view.players.map((player) => (
+-          <li key={player.seat} className="flex flex-col items-center gap-2">
++          <li key={player.seat} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+             <Avatar name={player.username} size="lg" />
+-            <span className="text-sm font-semibold">{player.username}</span>
++            <span className="max-w-full text-sm font-semibold [overflow-wrap:anywhere]">{player.username}</span>
+             {player.connected ? null : <span className="text-xs text-muted">(sin conectar)</span>}
+           </li>
+         ))}
+         {view.players.length < 2 ? (
+-          <li data-empty-seat aria-hidden="true" className="flex flex-col items-center gap-2">
++          <li data-empty-seat aria-hidden="true" className="flex min-w-0 flex-1 flex-col items-center gap-2">
+             <span className="animate-beat inline-flex size-14 items-center justify-center rounded-pill border-2 border-dashed border-line font-display text-2xl text-muted">
+               ?
+```
+
+- [ ] **Step 1.4: Ejecutarlas y ver que pasan**
+
+Expected: PASS. `layout.spec.ts`: 6 pruebas pasan; cliente: 644 pruebas; `tsc` sin errores.
+
+- [ ] **Step 1.5: Commit**
+
+```bash
+git add client e2e
+git commit -m "fix(client): el menú de apariencia, el encabezado, la sala de espera y los textos largos caben en móvil"
+```
+
+#### Tanda 2 — el foco del teclado se ve en todos los temas y los campos tienen borde con 3:1
+
+**Problema:** En Pokédex claro el aro de foco del encabezado era del mismo rojo que su fondo (`rgb(163, 45, 45)` sobre `rgb(163, 45, 45)` = 1,00:1) y la spec pedía un token `--ring` que no se había implementado; la tarjeta de modo enfocada se confundía con la marcada (las dos usaban el acento); y el borde de los campos (`--line`, 1,6:1 en Clásico) no cumplía el 3:1 de componentes de la spec §3.
+
+**Arreglo:** Dos tokens nuevos por tema: `--ring` (el segundo acento: ≥ 4,7:1 sobre todas las superficies) y `--field-edge` (3,5:1 en Clásico claro, 4,0:1 en Clásico oscuro; en Pokédex reutiliza `--line`). `:focus-visible` usa `--ring`; dentro del encabezado el aro es del color de su texto; los campos y las tarjetas de modo usan la clase `.framed-field`; el aro de la tarjeta enfocada va por fuera de su sombra de selección (`outline-offset-4`).
+
+- [ ] **Step 2.1: Escribir las pruebas que fallan**
+
+```diff
+diff --git a/client/test/components/autocomplete.test.tsx b/client/test/components/autocomplete.test.tsx
+index bfbd003..b7270c8 100644
+--- a/client/test/components/autocomplete.test.tsx
++++ b/client/test/components/autocomplete.test.tsx
+@@ -44,4 +44,9 @@ function setup(props: Partial<React.ComponentProps<typeof Autocomplete>> = {}) {
+ 
+ describe("Autocomplete", () => {
++  it("el campo lleva el borde de contraste de los campos", () => {
++    const { input } = setup();
++    expect(input.className.split(" ")).toContain("framed-field");
++  });
++
+   it("al escribir muestra las sugerencias y lo anuncia a los lectores de pantalla", async () => {
+     const { user, input } = setup();
+diff --git a/client/test/components/controls.test.tsx b/client/test/components/controls.test.tsx
+index 95e0d35..23e8cd2 100644
+--- a/client/test/components/controls.test.tsx
++++ b/client/test/components/controls.test.tsx
+@@ -54,10 +54,11 @@ describe("Button (etapa 6)", () => {
+ 
+ describe("TextField (etapa 6)", () => {
+-  it("es un campo alto y redondeado con el foco visible", () => {
++  it("es un campo alto y redondeado, con el borde de contraste de los campos (el foco lo pinta el aro del tema)", () => {
+     render(<TextField label="Email" />);
+-    const className = screen.getByLabelText("Email").className;
+-    expect(className).toContain("py-3");
+-    expect(className).toContain("rounded-ui");
+-    expect(className).toContain("framed");
++    const classes = screen.getByLabelText("Email").className.split(" ");
++    expect(classes).toContain("py-3");
++    expect(classes).toContain("rounded-ui");
++    expect(classes).toContain("framed-field");
++    expect(classes).not.toContain("framed");
+   });
+ });
+diff --git a/client/test/components/header-theme.test.tsx b/client/test/components/header-theme.test.tsx
+index 4e68a2c..9c98a5d 100644
+--- a/client/test/components/header-theme.test.tsx
++++ b/client/test/components/header-theme.test.tsx
+@@ -9,4 +9,12 @@ const openMenu = async () => userEvent.click(screen.getByRole("button", { name:
+ 
+ describe("ThemeMenu", () => {
++  it("la opción enfocada dibuja el aro con el color de foco del tema (el de acento ya es el de la opción marcada)", async () => {
++    renderWithServices(<ThemeMenu />);
++    await openMenu();
++    const option = screen.getByRole("radio", { name: "Pokédex" }).nextElementSibling!;
++    expect(option.className).toContain("peer-focus-visible:outline-ring");
++    expect(option.className).not.toContain("outline-accent");
++  });
++
+   it("empieza cerrado: solo se ve el botón de apariencia", () => {
+     renderWithServices(<ThemeMenu />);
+diff --git a/client/test/pages/lobby-design.test.tsx b/client/test/pages/lobby-design.test.tsx
+index 262abf7..e527bae 100644
+--- a/client/test/pages/lobby-design.test.tsx
++++ b/client/test/pages/lobby-design.test.tsx
+@@ -53,5 +53,16 @@ describe("lobby (etapa 6)", () => {
+   });
+ 
+-  it("el código de sala es un campo grande, monoespaciado, centrado y en mayúsculas", () => {
++  it("las tarjetas de modo y el selector usan el borde de contraste de los campos, y el foco de una tarjeta se separa de su selección", () => {
++    renderSignedIn();
++    const card = screen.getByRole("radio", { name: /Aleatorio/ }).closest("label")!.querySelector("span")!;
++    expect(card.className.split(" ")).toContain("framed-field");
++    // La marcada lleva borde y sombra de acento: el aro del foco es de otro color y va por fuera de esa sombra.
++    expect(card.className).toContain("peer-focus-visible:outline-ring");
++    expect(card.className).toContain("peer-focus-visible:outline-offset-4");
++    expect(card.className).not.toContain("outline-accent");
++    expect(screen.getByLabelText("Largo de la partida").className.split(" ")).toContain("framed-field");
++  });
++
++  it("el código de sala es un campo grande, con la fuente de números del tema (monoespaciada en Pokédex), centrado y en mayúsculas", () => {
+     renderSignedIn();
+     const className = screen.getByLabelText("Código de sala").className;
+diff --git a/client/test/theme/assets.test.ts b/client/test/theme/assets.test.ts
+index 861fc56..2d01cfe 100644
+--- a/client/test/theme/assets.test.ts
++++ b/client/test/theme/assets.test.ts
+@@ -37,4 +37,18 @@ describe("movimiento", () => {
+ });
+ 
++describe("foco y bordes de los campos", () => {
++  const css = read("src/index.css");
++
++  it("el aro de foco usa el color del tema y, dentro del encabezado, el de su texto (el del tema puede ser el del fondo)", () => {
++    expect(css).toMatch(/--color-ring:\s*var\(--ring\)/);
++    expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--ring\)/);
++    expect(css).toMatch(/header :focus-visible\s*\{[^}]*outline-color:\s*var\(--header-fg\)/);
++  });
++
++  it("los campos tienen su propia clase de borde con el color de contraste", () => {
++    expect(css).toMatch(/\.framed-field\s*\{[^}]*border:\s*var\(--frame\) solid var\(--field-edge\)/);
++  });
++});
++
+ describe("cabecera del documento", () => {
+   const html = read("index.html");
+diff --git a/client/test/theme/tokens.test.ts b/client/test/theme/tokens.test.ts
+index 17d2318..026b334 100644
+--- a/client/test/theme/tokens.test.ts
++++ b/client/test/theme/tokens.test.ts
+@@ -28,4 +28,6 @@ const REQUIRED = [
+   "art-1", "art-2", "mark", "accent-edge", "accent-2", "accent-2-fg", "gold", "gold-fg", "pill", "depth",
+   "elev-card", "elev-pop", "font-display",
++  // Revisión final: el aro de foco (--ring, de la spec) y el borde de los campos con contraste de componente.
++  "ring", "field-edge",
+ ];
+ 
+@@ -77,4 +79,25 @@ describe("tokens de los temas", () => {
+   });
+ 
++  // Componentes (no texto): WCAG 1.4.11 pide 3:1 al aro de foco y al borde que delimita un campo.
++  const COMPONENT_PAIRS: [string, string][] = [
++    ["ring", "surface"],
++    ["ring", "surface-2"],
++    ["ring", "bg"],
++    ["ring", "art-1"],
++    ["ring", "art-2"],
++    ["field-edge", "surface"],
++    ["field-edge", "surface-2"],
++    // Dentro del encabezado el aro es del color de su texto, porque el del tema puede ser del mismo color que el fondo.
++    ["header-fg", "header-bg"],
++  ];
++
++  it.each([...themes.keys()])("%s: el aro de foco y el borde de los campos cumplen 3:1", (name) => {
++    const tokens = themes.get(name)!;
++    for (const [foreground, background] of COMPONENT_PAIRS) {
++      const ratio = contrastRatio(tokens[foreground]!, tokens[background]!);
++      expect(ratio, `${name}: ${foreground} sobre ${background} = ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(3);
++    }
++  });
++
+   it("el tema Pokédex tiene bordes más rectos y marcados y números en monoespaciada", () => {
+     const classic = themes.get("clasico/claro")!;
+diff --git a/e2e/tests/focus.spec.ts b/e2e/tests/focus.spec.ts
+new file mode 100644
+index 0000000..ca5a472
+--- /dev/null
++++ b/e2e/tests/focus.spec.ts
+@@ -0,0 +1,78 @@
++import { type Locator, type Page, expect, test } from "@playwright/test";
++import { contrastRatio } from "../../client/src/theme/contrast";
++import { newPlayer } from "../support/app";
++
++/**
++ * El aro del foco del teclado se mide en un navegador de verdad, en los 4 temas y modos: debe distinguirse (3:1) del fondo
++ * sobre el que cae. En el encabezado de Pokédex claro el aro del tema era del mismo rojo que el encabezado y no se veía.
++ */
++
++const hex = (channel: string): string => Number(channel).toString(16).padStart(2, "0");
++/** `rgb(31, 95, 191)` → `#1f5fbf`. Solo entiende colores sólidos, que es lo que usan el aro de foco y los fondos. */
++function toHex(color: string): string {
++  const match = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(color);
++  if (!match) throw new Error(`Color que la prueba no sabe medir: ${color}`);
++  return `#${hex(match[1]!)}${hex(match[2]!)}${hex(match[3]!)}`;
++}
++
++/** Pone el tema y el modo antes de que cargue la página (la misma preferencia que guarda el menú de apariencia). */
++async function useTheme(page: Page, theme: "clasico" | "pokedex", mode: "claro" | "oscuro"): Promise<void> {
++  await page.addInitScript(([value]) => localStorage.setItem("pokemon-minigames:theme", value as string), [JSON.stringify({ theme, mode })]);
++}
++
++/** El color y el grosor del aro del elemento enfocado, y el fondo del contenedor sobre el que cae. */
++async function ringOf(target: Locator, container: string) {
++  return target.evaluate((element, selector) => {
++    const style = getComputedStyle(element);
++    return {
++      outline: style.outlineColor,
++      width: style.outlineWidth,
++      backdrop: getComputedStyle(element.closest(selector) ?? document.body).backgroundColor,
++    };
++  }, container);
++}
++
++/** Lleva el foco al elemento con el teclado (así `:focus-visible` se cumple siempre). */
++async function focusWithKeyboard(page: Page, target: Locator): Promise<void> {
++  await target.focus();
++  await page.keyboard.press("Shift+Tab");
++  await page.keyboard.press("Tab");
++  await expect(target).toBeFocused();
++}
++
++const COMBINATIONS = [
++  ["clasico", "claro"],
++  ["clasico", "oscuro"],
++  ["pokedex", "claro"],
++  ["pokedex", "oscuro"],
++] as const;
++
++for (const [theme, mode] of COMBINATIONS) {
++  test(`${theme} ${mode}: el foco del teclado se ve en el encabezado y en el formulario`, async ({ browser }) => {
++    const visitor = await newPlayer(browser, "foco");
++    try {
++      await visitor.page.setViewportSize({ width: 1280, height: 720 });
++      await useTheme(visitor.page, theme, mode);
++      await visitor.page.goto("/login");
++      await expect(visitor.page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
++
++      // Encabezado: el botón de apariencia enfocado con el teclado.
++      const toggle = visitor.page.getByRole("button", { name: "Apariencia" });
++      await focusWithKeyboard(visitor.page, toggle);
++      const inHeader = await ringOf(toggle, "header");
++      expect(inHeader.width).not.toBe("0px");
++      const headerContrast = contrastRatio(toHex(inHeader.outline), toHex(inHeader.backdrop));
++      expect.soft(headerContrast, `encabezado: aro ${inHeader.outline} sobre ${inHeader.backdrop} = ${headerContrast.toFixed(2)}:1`).toBeGreaterThanOrEqual(3);
++
++      // Formulario: el campo de email enfocado, sobre la tarjeta.
++      const email = visitor.page.getByLabel("Email");
++      await focusWithKeyboard(visitor.page, email);
++      const inForm = await ringOf(email, "section");
++      expect(inForm.width).not.toBe("0px");
++      const formContrast = contrastRatio(toHex(inForm.outline), toHex(inForm.backdrop));
++      expect.soft(formContrast, `formulario: aro ${inForm.outline} sobre ${inForm.backdrop} = ${formContrast.toFixed(2)}:1`).toBeGreaterThanOrEqual(3);
++    } finally {
++      await visitor.context.close();
++    }
++  });
++}
+```
+
+- [ ] **Step 2.2: Ejecutarlas y ver que fallan**
+
+```bash
+npm run build -w client
+cd client && npx vitest run --testTimeout=30000 --maxWorkers=2
+cd .. && E2E_CHANNEL=msedge npm run e2e -w e2e
+```
+
+Expected: FAIL. `focus.spec.ts` falla solo en Pokédex claro («encabezado: aro rgb(163, 45, 45) sobre rgb(163, 45, 45) = 1.00:1»); 14 pruebas de tokens, `assets`, controles, lobby, autocompletado y encabezado fallan.
+
+- [ ] **Step 2.3: Aplicar el arreglo**
+
+```diff
+diff --git a/client/src/components/Autocomplete.tsx b/client/src/components/Autocomplete.tsx
+index ab37516..3e15b34 100644
+--- a/client/src/components/Autocomplete.tsx
++++ b/client/src/components/Autocomplete.tsx
+@@ -132,5 +132,5 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
+           onKeyDown={onKeyDown}
+           onBlur={() => setOpen(false)}
+-          className="framed min-w-0 flex-1 rounded-ui bg-surface px-4 py-3 text-lg text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)]"
++          className="framed-field min-w-0 flex-1 rounded-ui bg-surface px-4 py-3 text-lg text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)]"
+         />
+         <Button type="submit" variant="primary" size="lg" disabled={locked}>
+diff --git a/client/src/components/TextField.tsx b/client/src/components/TextField.tsx
+index 4b13dc5..e0e8906 100644
+--- a/client/src/components/TextField.tsx
++++ b/client/src/components/TextField.tsx
+@@ -25,5 +25,5 @@ export function TextField({ label, error, hint, id, inputClassName = "", ...inpu
+         aria-invalid={error ? true : undefined}
+         aria-describedby={[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(" ") || undefined}
+-        className={`framed w-full rounded-ui bg-surface px-4 py-3 text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)] ${inputClassName}`}
++        className={`framed-field w-full rounded-ui bg-surface px-4 py-3 text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)] ${inputClassName}`}
+         {...input}
+       />
+diff --git a/client/src/components/ThemeMenu.tsx b/client/src/components/ThemeMenu.tsx
+index 9582ddd..2099bae 100644
+--- a/client/src/components/ThemeMenu.tsx
++++ b/client/src/components/ThemeMenu.tsx
+@@ -40,5 +40,5 @@ function Segmented<T extends string>({ legend, name, options, labels, value, onC
+           <label key={option} className="cursor-pointer">
+             <input type="radio" name={name} value={option} checked={value === option} onChange={() => onChange(option)} className="peer sr-only" />
+-            <span className="block rounded-pill px-3 py-1.5 text-sm font-semibold peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
++            <span className="block rounded-pill px-3 py-1.5 text-sm font-semibold peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
+               {labels[option]}
+             </span>
+diff --git a/client/src/index.css b/client/src/index.css
+index a16b2a5..6271976 100644
+--- a/client/src/index.css
++++ b/client/src/index.css
+@@ -17,4 +17,5 @@
+   --color-accent-2: var(--accent-2);
+   --color-accent-2-fg: var(--accent-2-fg);
++  --color-ring: var(--ring);
+   --color-gold: var(--gold);
+   --color-gold-fg: var(--gold-fg);
+@@ -88,11 +89,20 @@ body::before {
+     border: var(--frame) solid var(--line);
+   }
++  /* Los campos y las tarjetas que se eligen necesitan un borde con 3:1 de contraste (WCAG 1.4.11): el filo suave de --line no basta. */
++  .framed-field {
++    border: var(--frame) solid var(--field-edge);
++  }
+ }
+ 
+ :focus-visible {
+-  outline: 2px solid var(--accent);
++  outline: 2px solid var(--ring);
+   outline-offset: 2px;
+ }
+ 
++/* En el encabezado de color el aro del tema puede ser del mismo tono que el fondo (Pokédex claro): se usa el color de su texto. */
++header :focus-visible {
++  outline-color: var(--header-fg);
++}
++
+ /* Animaciones comunes. Las usan los componentes con las clases `animate-*` de más abajo. */
+ @keyframes rise {
+diff --git a/client/src/pages/Lobby.tsx b/client/src/pages/Lobby.tsx
+index f319580..5599a0b 100644
+--- a/client/src/pages/Lobby.tsx
++++ b/client/src/pages/Lobby.tsx
+@@ -152,5 +152,5 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
+                 className="peer sr-only"
+               />
+-              <span className="framed flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-checked:[&_[data-check]]:opacity-100">
++              <span className="framed-field flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ring peer-checked:[&_[data-check]]:opacity-100">
+                 <span className="min-w-0 flex-1">
+                   <span className="font-display font-semibold">{option.label}</span>
+@@ -175,5 +175,5 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
+                 setFieldError(null);
+               }}
+-              className="framed w-full appearance-none rounded-ui bg-surface px-4 py-3 pr-10 text-fg"
++              className="framed-field w-full appearance-none rounded-ui bg-surface px-4 py-3 pr-10 text-fg"
+             >
+               {(Object.keys(LENGTH_LABELS) as LengthKind[]).map((kind) => (
+diff --git a/client/src/theme/tokens.css b/client/src/theme/tokens.css
+index bb5bef3..c0a0997 100644
+--- a/client/src/theme/tokens.css
++++ b/client/src/theme/tokens.css
+@@ -19,4 +19,5 @@
+   --fg-muted: #40536e;
+   --line: #bcd0e6;
++  --field-edge: #738aa8;
+   --accent: #bd2a26;
+   --accent-fg: #ffffff;
+@@ -24,4 +25,5 @@
+   --accent-2: #1f5fbf;
+   --accent-2-fg: #ffffff;
++  --ring: #1f5fbf;
+   --gold: #ffcb05;
+   --gold-fg: #1c2a40;
+@@ -54,4 +56,5 @@
+   --fg-muted: #a9bad6;
+   --line: #2d4878;
++  --field-edge: #6785b5;
+   --accent: #ff6f61;
+   --accent-fg: #240604;
+@@ -59,4 +62,5 @@
+   --accent-2: #6fa8ff;
+   --accent-2-fg: #041a3d;
++  --ring: #6fa8ff;
+   --gold: #ffd84d;
+   --gold-fg: #1c1500;
+@@ -89,4 +93,5 @@
+   --fg-muted: #4a4943;
+   --line: #2c2c2a;
++  --field-edge: #2c2c2a;
+   --accent: #a32d2d;
+   --accent-fg: #fcebeb;
+@@ -94,4 +99,5 @@
+   --accent-2: #1d5aa0;
+   --accent-2-fg: #ffffff;
++  --ring: #1d5aa0;
+   --gold: #f2c230;
+   --gold-fg: #2c2c2a;
+@@ -124,4 +130,5 @@
+   --fg-muted: #c4c1b7;
+   --line: #9a968a;
++  --field-edge: #9a968a;
+   --accent: #f09595;
+   --accent-fg: #501313;
+@@ -129,4 +136,5 @@
+   --accent-2: #85b7eb;
+   --accent-2-fg: #042c53;
++  --ring: #85b7eb;
+   --gold: #f2c230;
+   --gold-fg: #2c2c2a;
+```
+
+- [ ] **Step 2.4: Ejecutarlas y ver que pasan**
+
+Expected: PASS. `focus.spec.ts`: 4 pruebas pasan; cliente: 653 pruebas.
+
+- [ ] **Step 2.5: Commit**
+
+```bash
+git add client e2e
+git commit -m "fix(client): el foco del teclado se ve en todos los temas (--ring) y los campos tienen borde con 3:1"
+```
+
+#### Tanda 3 — lo que la spec pedía y quedó a medias (§5 y §6), y «reducir movimiento» sin retardos
+
+**Problema:** `animate-rise` solo se usaba en las casillas del código y en las teselas de tipo: ninguna pantalla entraba con un fundido ni sus tarjetas escalonadas (§6); el marcador de la barra de la ronda no era fijo en móvil (§5: `y = −281` al desplazarse); el número de la cuenta atrás era `text-4xl` como en todos los cronómetros, no «gigante» (§5); y con «reducir movimiento» el retardo escalonado seguía vigente, así que las 18 teselas de tipo quedaban invisibles (pero pulsables) hasta 1 s, contra lo que decía el README.
+
+**Arreglo:** Ayudante `rise(index)` (`--i`, 60 ms por tarjeta) aplicado a cada pantalla; `--header-h` (`calc(3.5rem + var(--frame))`) fija la altura del encabezado y el marcador usa `sticky top-(--header-h)`; el número del cronómetro mide el 40 % del anillo; la regla global de «reducir movimiento» pone también `animation-delay` y `transition-delay` a 0.
+
+- [ ] **Step 3.1: Escribir las pruebas que fallan**
+
+```diff
+diff --git a/client/test/components/timer-ring.test.tsx b/client/test/components/timer-ring.test.tsx
+index 032d4a9..f7e6e2a 100644
+--- a/client/test/components/timer-ring.test.tsx
++++ b/client/test/components/timer-ring.test.tsx
+@@ -14,4 +14,12 @@ const dashoffset = (container: HTMLElement) => Number(progress(container).getAtt
+ 
+ describe("Timer como anillo", () => {
++  it("el número mide el 40 % del anillo: grande en la cuenta atrás de inicio (160 px) y proporcionado en los demás", () => {
++    const big = render(<Timer deadline={5_000} offset={0} totalMs={5_000} label="Inicio" size={160} now={() => 0} />);
++    expect(big.getByText("5").style.fontSize).toBe("64px");
++    big.unmount();
++    const normal = render(<Timer deadline={15_000} offset={0} totalMs={15_000} label="Ronda" now={() => 0} />);
++    expect(normal.getByText("15").style.fontSize).toBe("48px");
++  });
++
+   it("al empezar el anillo está lleno y a la mitad queda medio vacío", () => {
+     let now = 0;
+diff --git a/client/test/pages/mobile-layout.test.tsx b/client/test/pages/mobile-layout.test.tsx
+index ba081e1..0ce44a6 100644
+--- a/client/test/pages/mobile-layout.test.tsx
++++ b/client/test/pages/mobile-layout.test.tsx
+@@ -121,4 +121,24 @@ describe("encabezado y menú de apariencia en pantallas estrechas", () => {
+ });
+ 
++describe("marcador fijo de la ronda en pantallas estrechas", () => {
++  it("el encabezado mide siempre lo mismo (--header-h) y el marcador de la barra se pega justo debajo al desplazarse", () => {
++    const services = fakeServices();
++    signIn(services);
++    const header = renderWithServices(<Header />, { services });
++    expect(classesOf(header.container.querySelector("header"))).toContain("h-(--header-h)");
++    header.unmount();
++
++    renderRoom([
++      event.roomState({
++        phase: "round_active",
++        players: [ash({ totalStats: 500, teamSize: 1 }), misty({ totalStats: 400, teamSize: 1 })],
++        round: roundState({ number: 2 }),
++      }),
++    ]);
++    const score = screen.getByLabelText("Marcador");
++    for (const token of ["sticky", "top-(--header-h)", "z-10", "md:hidden"]) expect(classesOf(score), token).toContain(token);
++  });
++});
++
+ describe("textos largos y tarjetas sueltas en pantallas estrechas", () => {
+   it("sala de espera: la tarjeta ocupa el ancho disponible, las casillas se encogen y los nombres se parten", () => {
+diff --git a/client/test/pages/screen-motion.test.tsx b/client/test/pages/screen-motion.test.tsx
+new file mode 100644
+index 0000000..ad40a26
+--- /dev/null
++++ b/client/test/pages/screen-motion.test.tsx
+@@ -0,0 +1,108 @@
++import { screen } from "@testing-library/react";
++import { Route, Routes } from "react-router";
++import { describe, expect, it, vi } from "vitest";
++import { LoginPage } from "../../src/pages/AuthPages";
++import { LobbyPage } from "../../src/pages/Lobby";
++import { ProfilePage } from "../../src/pages/profile/ProfilePage";
++import { event, pokemon } from "../helpers/events";
++import { ash, misty, renderRoom, roundState } from "../helpers/room";
++import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
++
++/**
++ * Spec §6: cada pantalla entra con un fundido (`animate-rise`, --dur-base) y las tarjetas de una misma pantalla entran
++ * escalonadas, 60 ms una tras otra (`--i` multiplica ese retardo). «Reducir movimiento» lo apaga en el CSS global
++ * (assets.test.ts), así que aquí solo se fija qué entra y en qué orden.
++ */
++function rise(element: Element | null | undefined): { animated: boolean; index: string } {
++  const node = element as HTMLElement;
++  return { animated: (node.getAttribute("class") ?? "").split(" ").includes("animate-rise"), index: node.style.getPropertyValue("--i") };
++}
++
++describe("entrada de cada pantalla", () => {
++  it("acceso: el lema y el formulario entran uno tras otro", () => {
++    const { container } = renderWithServices(<LoginPage />);
++    const [hero, form] = Array.from(container.firstElementChild!.children);
++    expect(rise(hero)).toEqual({ animated: true, index: "0" });
++    expect(rise(form)).toEqual({ animated: true, index: "1" });
++  });
++
++  it("lobby: el saludo y las dos tarjetas entran escalonados", () => {
++    const services = fakeServices();
++    signIn(services, ASH);
++    renderWithServices(<LobbyPage />, { services });
++    expect(rise(screen.getByRole("heading", { level: 1, name: "Lobby" }).parentElement)).toEqual({ animated: true, index: "0" });
++    expect(rise(screen.getByRole("heading", { level: 2, name: "Crear sala" }).closest("section"))).toEqual({ animated: true, index: "1" });
++    expect(rise(screen.getByRole("heading", { level: 2, name: "Unirse a una sala" }).closest("section"))).toEqual({ animated: true, index: "2" });
++  });
++
++  it("sala de espera y cuenta atrás: la tarjeta entra con un fundido", () => {
++    const waiting = renderRoom([event.roomState({ phase: "waiting", players: [ash()] })]);
++    expect(rise(waiting.container.querySelector("section"))).toEqual({ animated: true, index: "0" });
++    waiting.unmount();
++    const starting = renderRoom([event.roomState({ phase: "starting", players: [ash(), misty()] })]);
++    expect(rise(starting.container.querySelector("section"))).toEqual({ animated: true, index: "0" });
++  });
++
++  it("elegir tipo: toda la pantalla entra con un fundido", () => {
++    const { container } = renderRoom([event.roomState({ phase: "choosing_types", config: { typeMode: "chosen", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null }, players: [ash(), misty()], round: roundState({ pair: null }) })]);
++    expect(rise(container.querySelector("section"))).toEqual({ animated: true, index: "0" });
++  });
++
++  it("ronda: tu equipo, la arena y el rival entran escalonados", () => {
++    const { container } = renderRoom([
++      event.roomState({ phase: "round_active", players: [ash({ totalStats: 500, teamSize: 1 }), misty({ totalStats: 400, teamSize: 1 })], round: roundState({ number: 2 }) }),
++    ]);
++    const [mine, arena, theirs] = Array.from(container.querySelector("[data-arena]")!.parentElement!.children);
++    expect(rise(mine)).toEqual({ animated: true, index: "0" });
++    expect(rise(arena)).toEqual({ animated: true, index: "1" });
++    expect(rise(theirs)).toEqual({ animated: true, index: "2" });
++  });
++
++  it("resultado de la ronda: las dos tarjetas entran una tras otra", () => {
++    const { container } = renderRoom([
++      event.roomState({ phase: "round_result", roundsPlayed: 1, players: [ash(), misty()] }),
++      event.roundResult(),
++    ]);
++    const [mine, theirs] = Array.from(container.querySelectorAll("section[data-result]"));
++    expect(rise(mine)).toEqual({ animated: true, index: "0" });
++    expect(rise(theirs)).toEqual({ animated: true, index: "1" });
++  });
++
++  it("resumen: la pantalla entra con un fundido y los dos equipos escalonados", () => {
++    const { container } = renderRoom([event.roomState({ phase: "finished", players: [ash(), misty()] }), event.gameEnded()]);
++    expect(rise(container.querySelector("[data-verdict]")!.parentElement)).toEqual({ animated: true, index: "0" });
++    const [mine, theirs] = Array.from(container.querySelectorAll("section[aria-label^='Equipo de']"));
++    expect(rise(mine)).toEqual({ animated: true, index: "1" });
++    expect(rise(theirs)).toEqual({ animated: true, index: "2" });
++  });
++
++  it("perfil: la cabecera y cada bloque de estadísticas entran escalonados", async () => {
++    const services = fakeServices();
++    services.endpoints.stats.mine = vi.fn(async () => ({
++      username: "ash",
++      stats: {
++        played: 2,
++        wins: 1,
++        draws: 0,
++        losses: 1,
++        winRate: 0.5,
++        currentStreak: 1,
++        bestStreak: 1,
++        averagePower: 300,
++        bestGameScore: 300,
++        topPokemon: [{ pokemon: pokemon(6, 534), wins: 1 }],
++      },
++    }));
++    renderWithServices(
++      <Routes>
++        <Route path="/perfil" element={<ProfilePage />} />
++      </Routes>,
++      { services, route: "/perfil" },
++    );
++    const header = (await screen.findByRole("heading", { level: 1, name: "Tu perfil" })).closest("header");
++    expect(rise(header)).toEqual({ animated: true, index: "0" });
++    expect(rise(screen.getByRole("region", { name: "Resumen" }))).toEqual({ animated: true, index: "1" });
++    expect(rise(screen.getByRole("region", { name: "Poder" }))).toEqual({ animated: true, index: "2" });
++    expect(rise(screen.getByRole("region", { name: "Pokémon más ganados" }))).toEqual({ animated: true, index: "3" });
++  });
++});
+diff --git a/client/test/theme/assets.test.ts b/client/test/theme/assets.test.ts
+index 2d01cfe..2f0f4c0 100644
+--- a/client/test/theme/assets.test.ts
++++ b/client/test/theme/assets.test.ts
+@@ -26,4 +26,14 @@ describe("movimiento", () => {
+   });
+ 
++  it("con «reducir movimiento» tampoco hay retardos: las tarjetas escalonadas no quedan invisibles esperando su turno", () => {
++    const block = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
++    expect(block).toMatch(/animation-delay:\s*0s\s*!important/);
++    expect(block).toMatch(/transition-delay:\s*0s\s*!important/);
++  });
++
++  it("define la altura fija del encabezado, de la que cuelga el marcador pegado debajo", () => {
++    expect(css).toMatch(/--header-h:\s*calc\(3\.5rem \+ var\(--frame/);
++  });
++
+   it("define las duraciones y la curva comunes", () => {
+     for (const token of ["--dur-fast: 120ms", "--dur-base: 220ms", "--dur-slow: 420ms", "--ease-out:"]) {
+diff --git a/e2e/tests/layout.spec.ts b/e2e/tests/layout.spec.ts
+index 4b306a9..863b081 100644
+--- a/e2e/tests/layout.spec.ts
++++ b/e2e/tests/layout.spec.ts
+@@ -133,7 +133,15 @@ test("a 375 px toda la partida cabe con nombres de 30 letras y una respuesta de
+     }
+ 
++    // La ronda: con una pantalla baja el marcador de la barra se queda pegado bajo el encabezado al desplazarse.
+     const types = await roundTypes(ash.page);
+     await roundTypes(misty.page);
+     for (const player of [ash, misty]) await expectNoSideScroll(player.page, "375 px, ronda");
++    await ash.page.setViewportSize({ width: 375, height: 380 });
++    await ash.page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
++    const [header, bar] = [await appHeader(ash.page).boundingBox(), await ash.page.getByLabel("Marcador").boundingBox()];
++    expect(bar, "375 px, ronda: el marcador no se ve al desplazarse").not.toBeNull();
++    expect.soft(bar!.y, `375 px, ronda: el marcador no queda fijo bajo el encabezado (y = ${bar!.y})`).toBeGreaterThanOrEqual(header!.y + header!.height - 1);
++    expect.soft(bar!.y, `375 px, ronda: el marcador se separó del encabezado (y = ${bar!.y})`).toBeLessThan(header!.y + header!.height + 12);
++    await ash.page.setViewportSize({ width: 375, height: 740 });
+ 
+     // Ash acierta; Misty escribe 100 letras seguidas, que no existen y cierran la ronda al instante.
+diff --git a/e2e/tests/motion.spec.ts b/e2e/tests/motion.spec.ts
+new file mode 100644
+index 0000000..9a62986
+--- /dev/null
++++ b/e2e/tests/motion.spec.ts
+@@ -0,0 +1,41 @@
++import { type Page, expect, test } from "@playwright/test";
++import { newPlayer } from "../support/app";
++
++/**
++ * «Reducir movimiento» se mide en un navegador de verdad. Una sola regla global lo apaga todo: ni las animaciones de
++ * entrada duran, ni esperan su turno (si no, las tarjetas escalonadas seguirían invisibles hasta que les llegara).
++ */
++async function timings(page: Page): Promise<{ delay: string; duration: string }[]> {
++  return page.locator(".animate-rise").evaluateAll((elements) =>
++    elements.map((element) => {
++      const style = getComputedStyle(element);
++      return { delay: style.animationDelay, duration: style.animationDuration };
++    }),
++  );
++}
++
++test("las pantallas entran escalonadas, y con «reducir movimiento» ya no esperan ni duran", async ({ browser }) => {
++  const visitor = await newPlayer(browser, "calma");
++  try {
++    const page = visitor.page;
++    await page.setViewportSize({ width: 1280, height: 720 });
++    await page.goto("/login");
++    await expect(page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
++
++    // Sin la preferencia: el lema entra primero y el formulario 60 ms después (--i = 1).
++    const normal = await timings(page);
++    expect(normal.map((t) => t.delay)).toEqual(expect.arrayContaining(["0s", "0.06s"]));
++    expect(normal.every((t) => t.duration === "0.22s")).toBe(true);
++
++    // Con la preferencia: nada espera y todo dura un instante.
++    await page.emulateMedia({ reducedMotion: "reduce" });
++    const calm = await timings(page);
++    expect(calm.length).toBeGreaterThan(0);
++    for (const t of calm) {
++      expect(t.delay).toBe("0s");
++      expect(Number.parseFloat(t.duration)).toBeLessThan(0.001);
++    }
++  } finally {
++    await visitor.context.close();
++  }
++});
+```
+
+- [ ] **Step 3.2: Ejecutarlas y ver que fallan**
+
+```bash
+npm run build -w client
+cd client && npx vitest run --testTimeout=30000 --maxWorkers=2
+cd .. && E2E_CHANNEL=msedge npm run e2e -w e2e
+```
+
+Expected: FAIL. La E2E falla con «el marcador no queda fijo bajo el encabezado (y = −281)» y, en `motion.spec.ts`, la pantalla de acceso no tiene ningún elemento animado; 12 pruebas nuevas de `screen-motion`, `mobile-layout`, `timer-ring` y `assets` fallan.
+
+- [ ] **Step 3.3: Aplicar el arreglo**
+
+```diff
+diff --git a/client/src/components/Header.tsx b/client/src/components/Header.tsx
+index caea9b7..0cb504c 100644
+--- a/client/src/components/Header.tsx
++++ b/client/src/components/Header.tsx
+@@ -29,7 +29,7 @@ export function Header() {
+ 
+   return (
+-    <header className="sticky top-0 z-20 border-b-(length:--frame) border-line bg-header text-header-fg">
++    <header className="sticky top-0 z-20 h-(--header-h) border-b-(length:--frame) border-line bg-header text-header-fg">
+       {/* `relative`: el panel del menú de apariencia se ancla a este contenedor y no a su botón, que con sesión queda a media fila. */}
+-      <div className="relative mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 sm:gap-3">
++      <div className="relative mx-auto flex h-full max-w-5xl items-center gap-2 px-4 sm:gap-3">
+         {/* Luces de adorno: solo en el tema Pokédex (el encabezado rojo tipo consola). */}
+         <span data-leds aria-hidden="true" className="hidden items-center gap-1.5 in-data-[theme=pokedex]:flex">
+diff --git a/client/src/components/Timer.tsx b/client/src/components/Timer.tsx
+index afa32ba..29c8e36 100644
+--- a/client/src/components/Timer.tsx
++++ b/client/src/components/Timer.tsx
+@@ -47,5 +47,6 @@ export function Timer({ deadline, offset, totalMs, label, size = 120, urgentAtMs
+       </svg>
+       <span
+-        className={`absolute inset-0 flex items-center justify-center font-num text-4xl font-semibold tabular-nums ${urgent ? "text-danger" : ""}`}
++        style={{ fontSize: Math.round(size * 0.4) }}
++        className={`absolute inset-0 flex items-center justify-center font-num font-semibold tabular-nums ${urgent ? "text-danger" : ""}`}
+       >
+         {secondsLeft(remaining)}
+diff --git a/client/src/components/rise.ts b/client/src/components/rise.ts
+new file mode 100644
+index 0000000..f24d918
+--- /dev/null
++++ b/client/src/components/rise.ts
+@@ -0,0 +1,7 @@
++import type { CSSProperties } from "react";
++
++/**
++ * El turno de entrada de una tarjeta con `animate-rise`: la número `index` entra `index × 60 ms` después de la primera
++ * (el retardo lo calcula el CSS a partir de `--i`; con «reducir movimiento» se apaga).
++ */
++export const rise = (index = 0): CSSProperties => ({ "--i": index }) as CSSProperties;
+diff --git a/client/src/index.css b/client/src/index.css
+index 6271976..648293d 100644
+--- a/client/src/index.css
++++ b/client/src/index.css
+@@ -42,4 +42,6 @@
+   --dur-slow: 420ms;
+   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
++  /* Altura fija del encabezado: de ella cuelga el marcador de la ronda, que en móvil se queda pegado justo debajo. */
++  --header-h: calc(3.5rem + var(--frame, 1px));
+ }
+ 
+@@ -184,4 +186,7 @@ header :focus-visible {
+     animation-iteration-count: 1 !important;
+     transition-duration: 0.01ms !important;
++    /* Sin esto las tarjetas escalonadas seguirían invisibles hasta que les llegara el turno (hasta 1 s en los 18 tipos). */
++    animation-delay: 0s !important;
++    transition-delay: 0s !important;
+     scroll-behavior: auto !important;
+   }
+diff --git a/client/src/pages/AuthForm.tsx b/client/src/pages/AuthForm.tsx
+index 26b20d4..20e79be 100644
+--- a/client/src/pages/AuthForm.tsx
++++ b/client/src/pages/AuthForm.tsx
+@@ -4,4 +4,5 @@ import { Button } from "../components/Button";
+ import { Card } from "../components/Card";
+ import { Notice } from "../components/Notice";
++import { rise } from "../components/rise";
+ import { TextField } from "../components/TextField";
+ import { errorMessage, rateLimitMessage, retryAfterOf } from "../i18n/es";
+@@ -56,5 +57,5 @@ export function AuthForm({ title, submitLabel, withUsername = false, validate, o
+ 
+   return (
+-    <Card as="section" tone="raised" className="mx-auto w-full max-w-sm p-6">
++    <Card as="section" tone="raised" style={rise(1)} className="animate-rise mx-auto w-full max-w-sm p-6">
+       <h1 className="mb-5 font-display text-2xl font-semibold">{title}</h1>
+       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+diff --git a/client/src/pages/AuthHero.tsx b/client/src/pages/AuthHero.tsx
+index ed56a7b..63cc216 100644
+--- a/client/src/pages/AuthHero.tsx
++++ b/client/src/pages/AuthHero.tsx
+@@ -1,3 +1,4 @@
+ import { Card } from "../components/Card";
++import { rise } from "../components/rise";
+ import { LogoMark } from "../components/Logo";
+ import { TypeChip } from "../components/TypeChip";
+@@ -15,5 +16,5 @@ const STEPS = [
+ export function AuthHero() {
+   return (
+-    <div className="flex flex-col gap-8">
++    <div style={rise(0)} className="animate-rise flex flex-col gap-8">
+       <div className="flex items-center gap-4">
+         <LogoMark size={64} className="animate-beat" />
+diff --git a/client/src/pages/Lobby.tsx b/client/src/pages/Lobby.tsx
+index 5599a0b..42dcbe6 100644
+--- a/client/src/pages/Lobby.tsx
++++ b/client/src/pages/Lobby.tsx
+@@ -7,4 +7,5 @@ import { Button } from "../components/Button";
+ import { Card } from "../components/Card";
+ import { Notice } from "../components/Notice";
++import { rise } from "../components/rise";
+ import { TextField } from "../components/TextField";
+ import { errorMessage } from "../i18n/es";
+@@ -135,5 +136,5 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
+ 
+   return (
+-    <Card as="section" className="p-6">
++    <Card as="section" style={rise(1)} className="animate-rise p-6">
+       <CardTitle icon={<PlusIcon />}>Crear sala</CardTitle>
+       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+@@ -245,5 +246,5 @@ function JoinRoomCard() {
+ 
+   return (
+-    <Card as="section" className="p-6">
++    <Card as="section" style={rise(2)} className="animate-rise p-6">
+       <CardTitle icon={<EnterIcon />}>Unirse a una sala</CardTitle>
+       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+@@ -277,5 +278,5 @@ export function LobbyPage() {
+   return (
+     <div className="flex flex-col gap-6">
+-      <div>
++      <div style={rise(0)} className="animate-rise">
+         {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
+         <h1 className="font-display text-3xl font-semibold">Lobby</h1>
+diff --git a/client/src/pages/profile/ProfilePage.tsx b/client/src/pages/profile/ProfilePage.tsx
+index d062f0a..9fcfa38 100644
+--- a/client/src/pages/profile/ProfilePage.tsx
++++ b/client/src/pages/profile/ProfilePage.tsx
+@@ -5,4 +5,5 @@ import { Button } from "../../components/Button";
+ import { LogoMark } from "../../components/Logo";
+ import { Notice } from "../../components/Notice";
++import { rise } from "../../components/rise";
+ import { errorMessage } from "../../i18n/es";
+ import { useServices } from "../../services";
+@@ -59,5 +60,5 @@ export function ProfilePage() {
+   return (
+     <div className="mx-auto flex max-w-3xl flex-col gap-5">
+-      <header className="flex items-center gap-4">
++      <header style={rise(0)} className="animate-rise flex items-center gap-4">
+         <Avatar name={name} size="xl" />
+         <div className="min-w-0">
+diff --git a/client/src/pages/profile/StatsView.tsx b/client/src/pages/profile/StatsView.tsx
+index 66a10d5..504f1c6 100644
+--- a/client/src/pages/profile/StatsView.tsx
++++ b/client/src/pages/profile/StatsView.tsx
+@@ -2,4 +2,5 @@ import type { Stats } from "@pokemon-minigames/shared";
+ import { Notice } from "../../components/Notice";
+ import { PokemonCard } from "../../components/PokemonCard";
++import { rise } from "../../components/rise";
+ import { StatTile } from "../../components/StatTile";
+ import { formatPercent, formatPower, formatScore, winsLabel } from "./format";
+@@ -13,5 +14,5 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
+   return (
+     <div className="flex flex-col gap-6">
+-      <section aria-label="Resumen">
++      <section aria-label="Resumen" style={rise(1)} className="animate-rise">
+         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+           <StatTile label="Partidas" value={String(stats.played)} />
+@@ -25,5 +26,5 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
+       </section>
+ 
+-      <section aria-label="Poder">
++      <section aria-label="Poder" style={rise(2)} className="animate-rise">
+         <dl className="grid grid-cols-2 gap-3">
+           <StatTile label="Poder promedio" value={formatPower(stats.averagePower)} />
+@@ -32,5 +33,5 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
+       </section>
+ 
+-      <section aria-label="Pokémon más ganados">
++      <section aria-label="Pokémon más ganados" style={rise(3)} className="animate-rise">
+         <h2 className="mb-3 font-display text-lg font-semibold">Pokémon más ganados</h2>
+         {stats.topPokemon.length === 0 ? (
+diff --git a/client/src/pages/room/CountdownView.tsx b/client/src/pages/room/CountdownView.tsx
+index b618b3b..5caab49 100644
+--- a/client/src/pages/room/CountdownView.tsx
++++ b/client/src/pages/room/CountdownView.tsx
+@@ -1,4 +1,5 @@
+ import { Avatar } from "../../components/Avatar";
+ import { Card } from "../../components/Card";
++import { rise } from "../../components/rise";
+ import { Timer } from "../../components/Timer";
+ import { START_COUNTDOWN_MS } from "../../game/durations";
+@@ -9,5 +10,5 @@ export function CountdownView() {
+ 
+   return (
+-    <Card as="section" tone="raised" className="mx-auto w-full max-w-lg p-6 text-center sm:p-8">
++    <Card as="section" tone="raised" style={rise(0)} className="animate-rise mx-auto w-full max-w-lg p-6 text-center sm:p-8">
+       <h1 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
+       {me && opponent ? (
+diff --git a/client/src/pages/room/RoundResultView.tsx b/client/src/pages/room/RoundResultView.tsx
+index ec93530..2f7cfa0 100644
+--- a/client/src/pages/room/RoundResultView.tsx
++++ b/client/src/pages/room/RoundResultView.tsx
+@@ -3,4 +3,5 @@ import { Badge } from "../../components/Badge";
+ import { Card } from "../../components/Card";
+ import { PokemonCard } from "../../components/PokemonCard";
++import { rise } from "../../components/rise";
+ import { TypeChip } from "../../components/TypeChip";
+ import { secondsLeft, useCountdown } from "../../game/clock";
+@@ -9,8 +10,8 @@ import { PICK_RESULT_LABELS } from "../../i18n/es";
+ import { useRoom } from "./use-room";
+ 
+-function ResultCard({ title, result }: { title: string; result: RoundPlayerResult }) {
++function ResultCard({ title, result, index }: { title: string; result: RoundPlayerResult; index: number }) {
+   const won = result.result === "VALID";
+   return (
+-    <Card as="section" aria-label={`Resultado de ${title}`} data-result={result.result} className={`p-5 ${won ? "border-success" : ""}`}>
++    <Card as="section" aria-label={`Resultado de ${title}`} data-result={result.result} style={rise(index)} className={`animate-rise p-5 ${won ? "border-success" : ""}`}>
+       <div className="flex items-center justify-between gap-2">
+         <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
+@@ -70,6 +71,6 @@ export function RoundResultView() {
+ 
+       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+-        <ResultCard title="Tú" result={mine} />
+-        <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} />
++        <ResultCard title="Tú" result={mine} index={0} />
++        <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} index={1} />
+       </div>
+ 
+diff --git a/client/src/pages/room/RoundView.tsx b/client/src/pages/room/RoundView.tsx
+index 4ecc4e9..fe7b6e4 100644
+--- a/client/src/pages/room/RoundView.tsx
++++ b/client/src/pages/room/RoundView.tsx
+@@ -2,4 +2,5 @@ import { Autocomplete } from "../../components/Autocomplete";
+ import { Card } from "../../components/Card";
+ import { Notice } from "../../components/Notice";
++import { rise } from "../../components/rise";
+ import { OpponentPanel, TeamPanel } from "../../components/Panels";
+ import { Timer } from "../../components/Timer";
+@@ -46,6 +47,6 @@ export function RoundView() {
+   return (
+     <section className="flex flex-col gap-4">
+-      {/* En pantallas estrechas los paneles de equipo se resumen en una sola barra. */}
+-      <p aria-label="Marcador" className="framed rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
++      {/* En pantallas estrechas los paneles de equipo se resumen en una sola barra que se queda pegada bajo el encabezado al desplazarse. */}
++      <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
+         Tú <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
+         {opponent?.username ?? "Rival"} <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
+@@ -53,9 +54,9 @@ export function RoundView() {
+ 
+       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
+-        <div className="hidden md:block">
++        <div style={rise(0)} className="animate-rise hidden md:block">
+           <TeamPanel team={view.myTeam} total={me?.totalStats ?? 0} />
+         </div>
+ 
+-        <Card data-arena tone="raised" className="flex min-w-0 flex-col gap-5 p-6">
++        <Card data-arena tone="raised" style={rise(1)} className="animate-rise flex min-w-0 flex-col gap-5 p-6">
+           <div className="text-center">
+             <h1 className="font-display text-sm font-semibold text-muted">{goal}</h1>
+@@ -80,5 +81,5 @@ export function RoundView() {
+         </Card>
+ 
+-        <div className="hidden md:block">
++        <div style={rise(2)} className="animate-rise hidden md:block">
+           <OpponentPanel
+             name={opponent?.username ?? "Tu rival"}
+diff --git a/client/src/pages/room/SummaryView.tsx b/client/src/pages/room/SummaryView.tsx
+index a58ee6e..2738b6c 100644
+--- a/client/src/pages/room/SummaryView.tsx
++++ b/client/src/pages/room/SummaryView.tsx
+@@ -4,4 +4,5 @@ import { Button } from "../../components/Button";
+ import { Card } from "../../components/Card";
+ import { PokemonCard } from "../../components/PokemonCard";
++import { rise } from "../../components/rise";
+ import { END_REASON_LABELS } from "../../i18n/es";
+ import { useRoom } from "./use-room";
+@@ -14,7 +15,7 @@ function bestFirst(team: PokemonView[]): PokemonView[] {
+ }
+ 
+-function TeamColumn({ title, team, total }: { title: string; team: PokemonView[]; total: number }) {
++function TeamColumn({ title, team, total, index }: { title: string; team: PokemonView[]; total: number; index: number }) {
+   return (
+-    <section aria-label={`Equipo de ${title}`} className="flex flex-col gap-3">
++    <section aria-label={`Equipo de ${title}`} style={rise(index)} className="animate-rise flex flex-col gap-3">
+       <div className="flex items-baseline justify-between gap-2">
+         <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
+@@ -67,5 +68,5 @@ export function SummaryView() {
+ 
+   return (
+-    <section className="flex flex-col gap-6">
++    <section style={rise(0)} className="animate-rise flex flex-col gap-6">
+       <Card data-verdict={kind} tone="raised" className={`p-8 text-center ${kind === "won" ? "border-gold animate-halo" : ""}`}>
+         {kind === "lost" ? null : (
+@@ -80,6 +81,6 @@ export function SummaryView() {
+ 
+       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+-        <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} />
+-        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} />
++        <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
++        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} />
+       </div>
+ 
+diff --git a/client/src/pages/room/TypePickerView.tsx b/client/src/pages/room/TypePickerView.tsx
+index 537000a..1622b4e 100644
+--- a/client/src/pages/room/TypePickerView.tsx
++++ b/client/src/pages/room/TypePickerView.tsx
+@@ -1,4 +1,5 @@
+ import { TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
+ import { useState } from "react";
++import { rise } from "../../components/rise";
+ import { Timer } from "../../components/Timer";
+ import { TYPE_CHOICE_MS } from "../../game/durations";
+@@ -19,5 +20,5 @@ export function TypePickerView() {
+ 
+   return (
+-    <section className="flex flex-col gap-5">
++    <section style={rise(0)} className="animate-rise flex flex-col gap-5">
+       <div className="text-center">
+         <h1 className="font-display text-2xl font-semibold">Elige un tipo</h1>
+diff --git a/client/src/pages/room/WaitingView.tsx b/client/src/pages/room/WaitingView.tsx
+index 309ff22..497844c 100644
+--- a/client/src/pages/room/WaitingView.tsx
++++ b/client/src/pages/room/WaitingView.tsx
+@@ -4,4 +4,5 @@ import { Avatar } from "../../components/Avatar";
+ import { Button } from "../../components/Button";
+ import { Card } from "../../components/Card";
++import { rise } from "../../components/rise";
+ import { useRoom } from "./use-room";
+ 
+@@ -38,5 +39,5 @@ export function WaitingView() {
+ 
+   return (
+-    <Card as="section" tone="raised" className="mx-auto w-full max-w-md p-6 text-center sm:p-8">
++    <Card as="section" tone="raised" style={rise(0)} className="animate-rise mx-auto w-full max-w-md p-6 text-center sm:p-8">
+       <h1 className="font-display text-2xl font-semibold">Sala de espera</h1>
+       <p className="mt-3 text-sm text-muted">Comparte este código con tu oponente:</p>
+```
+
+- [ ] **Step 3.4: Ejecutarlas y ver que pasan**
+
+Expected: PASS. `layout.spec.ts` (6) y `motion.spec.ts` pasan; cliente: 665 pruebas.
+
+- [ ] **Step 3.5: Commit**
+
+```bash
+git add client e2e
+git commit -m "feat(client): fundido de entrada y tarjetas escalonadas en cada pantalla, marcador fijo en móvil y cuenta atrás grande"
+```
+
+#### Tanda 4 — solo las tipografías latino y latino extendido, y el CSS vuelve a caber en 40 KB
+
+**Problema:** La spec §3 pide únicamente los subconjuntos latino y latino extendido, pero importar el CSS de cada paquete declaraba 14 reglas (también cirílico, griego, hebreo y vietnamita): no se descargan, pero el CSS rozaba el límite (39 899 de 40 000 B) y los arreglos anteriores lo pasaban (41,11 kB).
+
+**Arreglo:** Seis `@font-face` escritos a partir de los `wght.css` de cada paquete (mismos `unicode-range`, `src: url(@fontsource-variable/<familia>/files/…)`); Vite los resuelve y copia solo seis archivos. El CSS queda en 36,2 kB.
+
+- [ ] **Step 4.1: Escribir las pruebas que fallan**
+
+```diff
+diff --git a/client/test/theme/assets.test.ts b/client/test/theme/assets.test.ts
+index 2f0f4c0..9e8ecb9 100644
+--- a/client/test/theme/assets.test.ts
++++ b/client/test/theme/assets.test.ts
+@@ -1,3 +1,3 @@
+-import { readFileSync } from "node:fs";
++import { existsSync, readFileSync } from "node:fs";
+ import { join } from "node:path";
+ import { describe, expect, it } from "vitest";
+@@ -9,10 +9,42 @@ describe("tipografías empaquetadas", () => {
+   const css = read("src/index.css");
+   const pkg = JSON.parse(read("package.json")) as { dependencies: Record<string, string> };
++  const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((match) => match[1]!);
+ 
+-  it.each(["fredoka", "nunito", "jetbrains-mono"])("%s se instala y se importa desde el CSS (no se pide a un servicio externo)", (font) => {
++  it.each(["fredoka", "nunito", "jetbrains-mono"])("%s se instala con el proyecto (no se pide a un servicio externo)", (font) => {
+     expect(pkg.dependencies[`@fontsource-variable/${font}`]).toBeDefined();
+-    expect(css).toContain(`@import "@fontsource-variable/${font}`);
+     expect(css).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
+   });
++
++  // Spec §3: solo los subconjuntos latino y latino extendido, que cubren el español. Importar el CSS de cada paquete
++  // declaraba también cirílico, griego, hebreo y vietnamita (14 reglas): no se descargan, pero engordaban el CSS (estaba
++  // en 39 899 de 40 000 B) y copiaban al directorio de salida 8 archivos que nadie usa.
++  it("se declaran solo los subconjuntos latino y latino extendido de cada familia: seis reglas @font-face", () => {
++    expect(faces).toHaveLength(6);
++    for (const [family, folder] of [
++      ["Fredoka Variable", "fredoka"],
++      ["Nunito Variable", "nunito"],
++      ["JetBrains Mono Variable", "jetbrains-mono"],
++    ] as const) {
++      const own = faces.filter((face) => face.includes(`font-family: "${family}"`));
++      expect(own, family).toHaveLength(2);
++      expect(own.map((face) => /-(latin(?:-ext)?)-wght-normal\.woff2/.exec(face)?.[1]).sort()).toEqual(["latin", "latin-ext"]);
++      for (const face of own) {
++        expect(face).toContain(`url(@fontsource-variable/${folder}/files/`);
++        expect(face).toMatch(/font-display:\s*swap/);
++        expect(face).toMatch(/font-weight:\s*\d+ \d+/);
++        expect(face).toMatch(/unicode-range:\s*U\+/);
++      }
++    }
++    expect(css).not.toMatch(/cyrillic|greek|vietnamese|hebrew/);
++  });
++
++  it("los archivos de fuente que referencia el CSS existen en el paquete instalado", () => {
++    const files = [...css.matchAll(/url\(@fontsource-variable\/([\w-]+)\/files\/([\w.-]+)\)/g)];
++    expect(files).toHaveLength(6);
++    for (const [, folder, file] of files) {
++      const found = ["../node_modules", "node_modules"].some((base) => existsSync(join(client, base, "@fontsource-variable", folder!, "files", file!)));
++      expect(found, `${folder}/${file}`).toBe(true);
++    }
++  });
+ });
+ 
+diff --git a/e2e/tests/fonts.spec.ts b/e2e/tests/fonts.spec.ts
+new file mode 100644
+index 0000000..f74c6ed
+--- /dev/null
++++ b/e2e/tests/fonts.spec.ts
+@@ -0,0 +1,33 @@
++import { expect, test } from "@playwright/test";
++import { newPlayer } from "../support/app";
++
++/**
++ * Las tipografías se declaran a mano (solo latino y latino extendido) apuntando a los archivos del paquete: si Vite no
++ * los resolviera, la página saldría con la letra del sistema y ninguna prueba de clases lo notaría.
++ */
++test("las tipografías salen del propio servidor y solo se descargan las del alfabeto latino", async ({ browser }) => {
++  const visitor = await newPlayer(browser, "letras");
++  try {
++    const fonts: string[] = [];
++    visitor.page.on("request", (request) => {
++      if (request.resourceType() === "font") fonts.push(request.url());
++    });
++    await visitor.page.goto("/login");
++    await expect(visitor.page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
++    await visitor.page.evaluate(() => document.fonts.ready);
++
++    expect(fonts.length, "no se pidió ninguna tipografía").toBeGreaterThan(0);
++    const origin = new URL(visitor.page.url()).origin;
++    for (const url of fonts) {
++      expect(new URL(url).origin, url).toBe(origin);
++      expect(url, url).toMatch(/-latin(?:-ext)?-wght-normal-[\w-]+\.woff2$/);
++    }
++
++    // Clásico usa Fredoka (títulos y números) y Nunito (texto): las dos quedan cargadas, no solo declaradas.
++    const loaded = await visitor.page.evaluate(() => [...document.fonts].filter((face) => face.status === "loaded").map((face) => face.family));
++    expect(loaded.join(" ")).toContain("Fredoka Variable");
++    expect(loaded.join(" ")).toContain("Nunito Variable");
++  } finally {
++    await visitor.context.close();
++  }
++});
+```
+
+- [ ] **Step 4.2: Ejecutarlas y ver que fallan**
+
+```bash
+npm run build -w client
+cd client && npx vitest run --testTimeout=30000 --maxWorkers=2
+cd .. && E2E_CHANNEL=msedge npm run e2e -w e2e
+```
+
+Expected: FAIL. 2 pruebas de `assets.test.ts` fallan (no hay reglas `@font-face` propias).
+
+- [ ] **Step 4.3: Aplicar el arreglo**
+
+```diff
+diff --git a/client/src/index.css b/client/src/index.css
+index 648293d..0141713 100644
+--- a/client/src/index.css
++++ b/client/src/index.css
+@@ -1,8 +1,70 @@
+ @import "tailwindcss";
+-@import "@fontsource-variable/fredoka/wght.css";
+-@import "@fontsource-variable/nunito/wght.css";
+-@import "@fontsource-variable/jetbrains-mono/wght.css";
+ @import "./theme/tokens.css";
+ 
++/*
++ * Tipografías empaquetadas con el proyecto (@fontsource-variable): no se pide nada a servicios externos. Solo los
++ * subconjuntos latino y latino extendido, que cubren el español; el navegador descarga cada archivo únicamente si la página
++ * usa caracteres de su `unicode-range`. (Importar el CSS de cada paquete declararía también cirílico, griego, hebreo y vietnamita.)
++ */
++/* fredoka-latin-ext */
++@font-face {
++  font-family: "Fredoka Variable";
++  font-style: normal;
++  font-display: swap;
++  font-weight: 300 700;
++  src: url(@fontsource-variable/fredoka/files/fredoka-latin-ext-wght-normal.woff2) format("woff2-variations");
++  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
++}
++
++/* fredoka-latin */
++@font-face {
++  font-family: "Fredoka Variable";
++  font-style: normal;
++  font-display: swap;
++  font-weight: 300 700;
++  src: url(@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2) format("woff2-variations");
++  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
++}
++
++/* nunito-latin-ext */
++@font-face {
++  font-family: "Nunito Variable";
++  font-style: normal;
++  font-display: swap;
++  font-weight: 200 1000;
++  src: url(@fontsource-variable/nunito/files/nunito-latin-ext-wght-normal.woff2) format("woff2-variations");
++  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
++}
++
++/* nunito-latin */
++@font-face {
++  font-family: "Nunito Variable";
++  font-style: normal;
++  font-display: swap;
++  font-weight: 200 1000;
++  src: url(@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2) format("woff2-variations");
++  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
++}
++
++/* jetbrains-mono-latin-ext */
++@font-face {
++  font-family: "JetBrains Mono Variable";
++  font-style: normal;
++  font-display: swap;
++  font-weight: 100 800;
++  src: url(@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2) format("woff2-variations");
++  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
++}
++
++/* jetbrains-mono-latin */
++@font-face {
++  font-family: "JetBrains Mono Variable";
++  font-style: normal;
++  font-display: swap;
++  font-weight: 100 800;
++  src: url(@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2) format("woff2-variations");
++  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
++}
++
+ @theme inline {
+   --color-page: var(--bg);
+```
+
+- [ ] **Step 4.4: Ejecutarlas y ver que pasan**
+
+Expected: PASS. `fonts.spec.ts` pasa (las fuentes salen del propio origen y solo se piden `-latin` y `-latin-ext`); cliente: 667 pruebas; CSS 36 242 B.
+
+- [ ] **Step 4.5: Commit**
+
+```bash
+git add client e2e
+git commit -m "fix(client): solo las tipografías latino y latino extendido, y el CSS vuelve a caber en 40 KB"
+```
+
+#### Tanda 5 — detalles visibles de una etapa de aspecto
+
+**Problema:** Sin `color-scheme`, en los modos oscuros el navegador seguía pintando claras las barras de desplazamiento y la lista de los selectores; y en el encabezado «Mi perfil» y el nombre salían en Nunito junto a «Apariencia» y «Cerrar sesión» en la fuente de títulos.
+
+**Arreglo:** Los cuatro bloques de tokens declaran `color-scheme: light|dark`; el enlace del perfil y el nombre usan `font-display`.
+
+- [ ] **Step 5.1: Escribir las pruebas que fallan**
+
+```diff
+diff --git a/client/test/components/header-theme.test.tsx b/client/test/components/header-theme.test.tsx
+index 9c98a5d..962a55b 100644
+--- a/client/test/components/header-theme.test.tsx
++++ b/client/test/components/header-theme.test.tsx
+@@ -143,4 +143,14 @@ describe("Header", () => {
+   });
+ 
++  it("los botones, el enlace al perfil y el nombre usan la misma fuente de títulos (el encabezado no mezcla dos letras)", () => {
++    const services = fakeServices();
++    signIn(services);
++    renderWithServices(<Header />, { services });
++    expect(screen.getByRole("button", { name: "Apariencia" }).className).toContain("font-display");
++    expect(screen.getByRole("button", { name: "Cerrar sesión" }).className).toContain("font-display");
++    expect(screen.getByRole("link", { name: "Mi perfil" }).className).toContain("font-display");
++    expect(screen.getByText(ASH.username).className).toContain("font-display");
++  });
++
+   it("sin sesión no hay enlace al perfil", () => {
+     renderWithServices(<Header />);
+diff --git a/client/test/theme/tokens.test.ts b/client/test/theme/tokens.test.ts
+index 026b334..f4a06b1 100644
+--- a/client/test/theme/tokens.test.ts
++++ b/client/test/theme/tokens.test.ts
+@@ -100,4 +100,11 @@ describe("tokens de los temas", () => {
+   });
+ 
++  // Sin esto, en los modos oscuros el navegador sigue pintando claros las barras de desplazamiento y los controles nativos.
++  it.each([...themes.keys()])("%s: declara su modo al navegador (color-scheme) para las barras de desplazamiento y los controles nativos", (name) => {
++    const [theme, mode] = name.split("/");
++    const block = new RegExp(`:root\\[data-theme="${theme}"\\]\\[data-mode="${mode}"\\]\\s*\\{([^}]*)\\}`).exec(css)![1]!;
++    expect(block).toContain(`color-scheme: ${mode === "oscuro" ? "dark" : "light"};`);
++  });
++
+   it("el tema Pokédex tiene bordes más rectos y marcados y números en monoespaciada", () => {
+     const classic = themes.get("clasico/claro")!;
+```
+
+- [ ] **Step 5.2: Ejecutarlas y ver que fallan**
+
+```bash
+npm run build -w client
+cd client && npx vitest run --testTimeout=30000 --maxWorkers=2
+cd .. && E2E_CHANNEL=msedge npm run e2e -w e2e
+```
+
+Expected: FAIL. 4 pruebas de `tokens.test.ts` y 1 de `header-theme.test.tsx` fallan.
+
+- [ ] **Step 5.3: Aplicar el arreglo**
+
+```diff
+diff --git a/client/src/components/Header.tsx b/client/src/components/Header.tsx
+index 0cb504c..57c4642 100644
+--- a/client/src/components/Header.tsx
++++ b/client/src/components/Header.tsx
+@@ -46,5 +46,5 @@ export function Header() {
+           {user ? (
+             <>
+-              <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 text-sm font-semibold hover:bg-header-fg/15">
++              <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
+                 <UserIcon />
+                 <span className="sr-only lg:not-sr-only">Mi perfil</span>
+@@ -52,5 +52,5 @@ export function Header() {
+               <span className="flex min-w-0 items-center gap-2">
+                 <Avatar name={user.username} size="sm" />
+-                <span className="hidden max-w-40 truncate text-sm font-semibold lg:inline">{user.username}</span>
++                <span className="hidden max-w-40 truncate font-display text-sm font-semibold lg:inline">{user.username}</span>
+               </span>
+               <Button variant="header" className="shrink-0 max-lg:px-3" onClick={() => void session.getState().logout()}>
+diff --git a/client/src/theme/tokens.css b/client/src/theme/tokens.css
+index c0a0997..2cfa06a 100644
+--- a/client/src/theme/tokens.css
++++ b/client/src/theme/tokens.css
+@@ -7,7 +7,10 @@
+  * redondeada); Pokédex es la piel retro del mismo diseño (bordes marcados, sin sombras difusas, monoespaciada).
+  * `art-1` y `art-2` son los extremos del degradado de la página: el texto debe leerse sobre los dos.
++ * `color-scheme` le dice al navegador el modo, para que las barras de desplazamiento y los controles nativos (como la lista
++ * de un `<select>`) sean oscuros en los modos oscuros.
+  */
+ 
+ :root[data-theme="clasico"][data-mode="claro"] {
++  color-scheme: light;
+   --bg: #e8f3ff;
+   --art-1: #cfe6ff;
+@@ -47,4 +50,5 @@
+ 
+ :root[data-theme="clasico"][data-mode="oscuro"] {
++  color-scheme: dark;
+   --bg: #0b1730;
+   --art-1: #13284f;
+@@ -84,4 +88,5 @@
+ 
+ :root[data-theme="pokedex"][data-mode="claro"] {
++  color-scheme: light;
+   --bg: #e9e4d4;
+   --art-1: #efeadb;
+@@ -121,4 +126,5 @@
+ 
+ :root[data-theme="pokedex"][data-mode="oscuro"] {
++  color-scheme: dark;
+   --bg: #1c1a17;
+   --art-1: #24211d;
+```
+
+- [ ] **Step 5.4: Ejecutarlas y ver que pasan**
+
+Expected: PASS. cliente: 672 pruebas.
+
+- [ ] **Step 5.5: Commit**
+
+```bash
+git add client e2e
+git commit -m "fix(client): barras de desplazamiento y controles oscuros en los modos oscuros, y una sola fuente en el encabezado"
+```
+
+#### Cierre de la tarea
+
+- [ ] **Step 6: Capturas del README.** Con la interfaz ya definitiva (el borde de los campos, el encabezado y el aro de foco cambiaron), se regeneran: `E2E_SCREENSHOTS=1 E2E_CHANNEL=msedge npm run e2e -w e2e -- screenshots`. La captura de Pokédex quita antes el foco del botón de apariencia (`document.activeElement.blur()`), porque ahora su aro se ve. Commit: `docs: capturas del README regeneradas con la interfaz tras la revisión final`.
+- [ ] **Step 7: Mutaciones de lo nuevo.** Además de las 20 de la Task 15 (que siguen detectándose sobre el código final), estas 9, restaurando cada archivo con `git checkout -- <archivo>`:
+
+| # | Archivo y cambio | Prueba que debe fallar |
+|---|---|---|
+| 21 | `client/src/components/ThemeMenu.tsx`: el panel de apariencia vuelve a anclarse a la derecha de su botón: `right-4` → `right-0` | `mobile-layout.test.tsx` → «el panel se ancla al contenedor del encabezado y no al botón (con sesión el botón queda a media pantalla y el panel se salía por la izquierda)» |
+| 22 | `client/src/pages/room/RoundView.tsx`: el marcador de la barra ya no se queda fijo: se quita `sticky top-(--header-h) z-10` | `mobile-layout.test.tsx` → «el encabezado mide siempre lo mismo (--header-h) y el marcador de la barra se pega justo debajo al desplazarse» |
+| 23 | `client/src/index.css`: el aro de foco del encabezado vuelve a ser el del tema (invisible en Pokédex claro): se quita `header :focus-visible` | `assets.test.ts` → «el aro de foco usa el color del tema y, dentro del encabezado, el de su texto (el del tema puede ser el del fondo)» |
+| 24 | `client/src/index.css`: «reducir movimiento» deja el retardo escalonado: se quita `animation-delay: 0s !important;` | `assets.test.ts` → «con «reducir movimiento» tampoco hay retardos: las tarjetas escalonadas no quedan invisibles esperando su turno» |
+| 25 | `client/src/pages/profile/StatsView.tsx`: la ficha del porcentaje deja de ocupar dos columnas (el número se monta sobre el anillo): se quita `col-span-2` | `mobile-layout.test.tsx` → «perfil: la ficha del porcentaje ocupa dos columnas y reserva sitio a la derecha para su anillo» |
+| 26 | `client/src/pages/room/WaitingView.tsx`: la tarjeta de la sala de espera vuelve a medir lo que mide su contenido (desborda a 375 px): se quita `w-full` | `mobile-layout.test.tsx` → «sala de espera: la tarjeta ocupa el ancho disponible, las casillas se encogen y los nombres se parten» |
+| 27 | `client/src/components/Timer.tsx`: el número del cronómetro mide el 30 % del anillo en vez del 40 %: `size * 0.4` → `size * 0.3` | `timer-ring.test.tsx` → «el número mide el 40 % del anillo: grande en la cuenta atrás de inicio (160 px) y proporcionado en los demás» |
+| 28 | `client/src/theme/tokens.css`: el aro de foco de Clásico claro es blanco (1:1 sobre las tarjetas): `--ring: #1f5fbf` → `#ffffff` | `tokens.test.ts` → «clasico/claro: el aro de foco y el borde de los campos cumplen 3:1» |
+| 29 | `client/src/pages/Lobby.tsx`: el aro de foco de la tarjeta de modo se pega a la selección: `outline-offset-4` → `outline-offset-2` | `lobby-design.test.tsx` → «las tarjetas de modo y el selector usan el borde de contraste de los campos, y el foco de una tarjeta se separa de su selección» |
+
+- [ ] **Step 8: Verificación final.** `npm test` (servidor 629 y una omitida en Windows; cliente **672**), `npm run typecheck`, `npm run build` (CSS **36,5 KB** sin comprimir, JavaScript 116 KB comprimido, tipografías latinas 109 KB) y `E2E_CHANNEL=msedge npm run e2e` (**16 pruebas pasan** y 1 se omite, la de las capturas).
+
 ---
 
 ## Self-Review
@@ -5990,11 +7930,14 @@ Expected: rama `etapa-6-rediseno` en `https://github.com/marcovinir/pokemon-mini
 | §6 Arte (cadena de respaldo, tamaños, carga) y movimiento (`reducir movimiento`) | 1, 2, 5, 7, 11 y 12 |
 | §7 Verificación real en 4 temas y modos, 375 px y escritorio; contraste real | 14 |
 | §7 Mutaciones, E2E, presupuestos | 15 |
+| §3 `--ring` y 3:1 en componentes, §3 solo tipografías latinas, §5 marcador fijo y número gigante, §6 fundido y escalonado, diseño real en móvil | 16 (revisión final) |
 
 **Decisiones tomadas al escribir el plan (la spec ya las recoge o no las contradice):** el largo de la partida sigue siendo un `<select>` (con flecha propia) y no botones segmentados, porque cuatro opciones con textos largos no caben en una fila en móvil y así las pruebas del lobby no cambian; la barra del marcador de móvil no lleva avatares, porque su texto («Tú 500 · misty 400») es lo que leen las pruebas y los lectores de pantalla; `TYPE_STYLES` conserva su forma (fondo sólido) y el degradado va aparte (`typeGradient`), así las pruebas de colores de tipo no cambian; el arte oficial grande se limita a los resultados, el podio y el mejor Pokémon de cada equipo (y no a todas las listas), para no pedir decenas de imágenes pesadas; y la E2E de las capturas es una prueba que solo corre si se pide (`E2E_SCREENSHOTS=1`) para no alargar el CI.
 
 **Lo que encontró la verificación real (ya corregido en el código de este plan):** (1) la auditoría de contraste del navegador medía contra blanco el texto sobre el degradado de la página y daba avisos falsos en los modos oscuros (los chips de tipo «roca» y «acero»), así que ahora entiende los degradados; (2) en un móvil de 375 px la tarjeta de la ronda medía 407 px por culpa de un aviso largo y del campo de respuesta, porque una columna de cuadrícula sin `grid-cols-1` mide lo que mide su contenido (`min-w-0` y `grid-cols-1` en todas las pantallas, con una prueba); (3) `theme.spec.ts` de la E2E seguía usando los `<select>` del tema, y se actualiza con el menú nuevo; y (4) al generar las capturas, el tema Pokédex no se aplicaba porque la preferencia guardada en el perfil gana al iniciar sesión: la captura lo elige desde el menú de apariencia.
 
+**Lo que encontró la revisión final (Task 16):** que el menú de apariencia se salía de la pantalla por la izquierda en móvil con sesión iniciada (ninguna prueba de jsdom ni la comprobación de `scrollWidth` lo ve, porque lo que se sale por la izquierda no se puede desplazar), que el encabezado desbordaba entre 640 y 730 px con cualquier nombre, que los nombres de 30 letras y las respuestas de 100 letras seguidas ensanchaban varias pantallas, que el aro de foco del encabezado de Pokédex claro no se veía, y que partes de la spec (`--ring`, fundido y escalonado por pantalla, marcador fijo, número gigante, solo tipografías latinas) habían quedado a medias. Lección: lo que se mide con una regla de jsdom o con `scrollWidth` hay que medirlo también con la caja de cada pieza en un navegador real.
+
 **Fuera de esta etapa:** sonido, confeti, funciones nuevas, cambios en `server/` o `shared/`, otros idiomas, modo sin conexión y reemplazar PokeAPI como origen del arte. **Aparte (no es de esta etapa):** el valor de `TRUST_PROXY` en Render (la prueba 1 de la sección 5 de `docs/despliegue.md` sobre el sitio en vivo dio seis `401` en vez de `401 401 401 401 401 429`: el servidor no ve una IP estable por visitante; probablemente haya que subirlo a `2`).
 
-**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo: 637 pruebas de cliente en verde, `tsc` sin errores, la E2E con navegador real, 20 mutaciones a propósito detectadas por las pruebas, y el recorrido de todas las pantallas en escritorio y en 375 px con la auditoría de contraste real limpia en los 4 temas y modos.
+**Consistencia de tipos:** los nombres se reutilizan tal como están en los bloques `Interfaces` de cada tarea. Todo el código se escribió y ejecutó antes de incluirlo (la Task 16 con los diffs reales de la revisión): 672 pruebas de cliente en verde (637 antes de la Task 16), `tsc` sin errores, la E2E con navegador real, 20 mutaciones a propósito detectadas por las pruebas, y el recorrido de todas las pantallas en escritorio y en 375 px con la auditoría de contraste real limpia en los 4 temas y modos.

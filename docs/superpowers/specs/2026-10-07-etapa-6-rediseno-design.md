@@ -1,6 +1,6 @@
 # Pokémon Minigames — Etapa 6: Rediseño visual del cliente
 
-Fecha: 2026-10-07 · Estado: pendiente de revisión
+Fecha: 2026-10-07 · Estado: implementada en la rama `etapa-6-rediseno`, con revisión final independiente y sus correcciones (Task 16 del plan)
 
 Complementa la spec general (`2026-09-30-pokemon-minigames-design.md`) y las de las etapas 2 a 5. Donde esta spec es más específica, manda esta. Las etapas 1 a 5 (juego completo, estadísticas, despliegue en Render y Neon) ya están en `main` y funcionan en https://pokemon-minigames.onrender.com.
 
@@ -32,7 +32,7 @@ Los componentes siguen usando solo variables CSS (tokens) a través de utilidade
 **Pokédex (claro y oscuro):**
 - Misma estructura y mismos componentes. Bordes de 2 px marcados, esquinas de 2 a 4 px, sin sombras difusas, números y etiquetas en monoespaciada, encabezado rojo tipo consola con luces LED decorativas y fondo de cuadrícula tipo pantalla.
 
-**Capa nueva de tokens** (se añade sin renombrar nada): sombras (`--shadow-card`, `--shadow-pop`), aro de foco (`--ring`), fondos de arte (`--bg-art`, `--bg-mark`), radios por tamaño, duraciones (`--dur-fast` 120 ms, `--dur-base` 220 ms, `--dur-slow` 420 ms) y curva de aceleración (`--ease-out`).
+**Capa nueva de tokens** (se añade sin renombrar nada): sombras (`--elev-card`, `--elev-pop`), aro de foco (`--ring`), borde de los campos con 3:1 (`--field-edge`), extremos del degradado de la página y marca de agua (`--art-1`, `--art-2`, `--mark`), segundo acento, dorado y relieve (`--accent-2`, `--gold`, `--accent-edge`, `--depth`), radios por tamaño (`--radius`, `--radius-lg`, `--pill`), tipografía de títulos (`--font-display`), duraciones (`--dur-fast` 120 ms, `--dur-base` 220 ms, `--dur-slow` 420 ms), curva de aceleración (`--ease-out`) y la altura fija del encabezado (`--header-h`). Cada bloque de tema declara además su `color-scheme` (claro u oscuro) para las barras de desplazamiento y los controles nativos. *(Los nombres de sombras y fondos son los que usó la implementación; esta spec decía `--shadow-*` y `--bg-*`.)*
 
 **Tipografía** (empaquetada con el proyecto mediante `@fontsource-variable`, sin pedir nada a servicios externos; solo los subconjuntos latino y latino extendido, que cubren el español):
 - Clásico: Fredoka para títulos y números grandes, Nunito para el texto.
