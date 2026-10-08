@@ -17,6 +17,16 @@ export interface RateLimitConfig {
   registerFailures: WindowLimit;
   /** Peticiones a toda la API por IP. */
   api: WindowLimit;
+  /** Espera entre dos envíos de código al mismo correo, exista o no una cuenta con ese correo. */
+  codeCooldown: WindowLimit;
+  /** Envíos de código por correo. */
+  codeSendsByEmail: WindowLimit;
+  /** Envíos de código por IP, a cualquier correo (contra usar el formulario para escribir a terceros y gastar la cuota del proveedor). */
+  codeSendsByIp: WindowLimit;
+  /** Códigos equivocados por correo, exista o no la cuenta: el límite no puede delatarlo. */
+  codeFailuresByEmail: WindowLimit;
+  /** Códigos equivocados por IP sumando todos los correos. */
+  codeFailuresByIp: WindowLimit;
   /** Reloj inyectable para las pruebas. */
   now?: () => number;
 }
@@ -27,6 +37,11 @@ export const DEFAULT_RATE_LIMITS: RateLimitConfig = {
   register: { limit: 5, windowMs: HOUR },
   registerFailures: { limit: 20, windowMs: HOUR },
   api: { limit: 300, windowMs: MINUTE },
+  codeCooldown: { limit: 1, windowMs: MINUTE },
+  codeSendsByEmail: { limit: 5, windowMs: HOUR },
+  codeSendsByIp: { limit: 10, windowMs: HOUR },
+  codeFailuresByEmail: { limit: 5, windowMs: 10 * MINUTE },
+  codeFailuresByIp: { limit: 20, windowMs: HOUR },
 };
 
 /**
