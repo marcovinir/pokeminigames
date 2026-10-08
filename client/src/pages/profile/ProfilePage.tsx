@@ -62,7 +62,7 @@ export function ProfilePage() {
         <Avatar name={name} size="xl" />
         <div className="min-w-0">
           <h1 className="truncate font-display text-3xl font-semibold">{own ? "Tu perfil" : name}</h1>
-          {own ? <p className="text-muted">{name}</p> : null}
+          {own ? <p className="truncate text-muted">{name}</p> : null}
         </div>
       </header>
       <StatsView stats={stats} own={own} />

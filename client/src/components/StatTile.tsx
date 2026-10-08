@@ -23,9 +23,10 @@ function Ring({ fraction }: { fraction: number }) {
 }
 
 /** Una ficha de estadística (etiqueta y valor), con un anillo opcional. Va dentro de un `<dl>`. */
-export function StatTile({ label, value, hint, ring }: { label: string; value: string; hint?: string; ring?: number | null }) {
+export function StatTile({ label, value, hint, ring, className = "" }: { label: string; value: string; hint?: string; ring?: number | null; className?: string }) {
   return (
-    <div className="framed relative rounded-card bg-surface px-4 py-3 shadow-card">
+    // Con anillo reserva sitio a la derecha (el anillo es `absolute` y, sin esto, el número se le monta encima).
+    <div className={`framed relative rounded-card bg-surface px-4 py-3 shadow-card ${ring != null ? "pr-20" : ""} ${className}`}>
       <dt className="text-sm text-muted">{label}</dt>
       <dd className="font-num text-3xl font-semibold tabular-nums">{value}</dd>
       {hint ? <dd className="text-xs text-muted">{hint}</dd> : null}

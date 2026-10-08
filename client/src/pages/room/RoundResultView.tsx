@@ -16,7 +16,7 @@ function ResultCard({ title, result }: { title: string; result: RoundPlayerResul
         <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
         <Badge tone={won ? "success" : "danger"}>{PICK_RESULT_LABELS[result.result]}</Badge>
       </div>
-      {result.text ? <p className="mt-2 text-sm text-muted">Escribió: «{result.text}»</p> : null}
+      {result.text ? <p className="mt-2 text-sm text-muted [overflow-wrap:anywhere]">Escribió: «{result.text}»</p> : null}
       <div className="mt-4">
         {result.pokemon ? (
           <PokemonCard pokemon={result.pokemon} size="lg" eager />

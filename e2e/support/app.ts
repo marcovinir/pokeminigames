@@ -57,14 +57,19 @@ export async function logIn(page: Page, email: string, password: string): Promis
   await page.getByRole("button", { name: "Entrar" }).click();
 }
 
-/** Crea una sala aleatoria de una sola ronda y devuelve su código. */
-export async function createOneRoundRoom(page: Page): Promise<string> {
+/** Crea una sala aleatoria con ese número de rondas y devuelve su código. */
+export async function createRoomWithRounds(page: Page, rounds: number): Promise<string> {
   await page.getByLabel("Largo de la partida").selectOption("custom-rounds");
-  await page.getByLabel("Máximo de rondas").fill("1");
+  await page.getByLabel("Máximo de rondas").fill(String(rounds));
   await page.getByRole("button", { name: "Crear sala" }).click();
   const code = page.getByLabel("Código de la sala");
   await expect(code).toBeVisible();
   return ((await code.textContent()) ?? "").trim();
+}
+
+/** Crea una sala aleatoria de una sola ronda y devuelve su código. */
+export function createOneRoundRoom(page: Page): Promise<string> {
+  return createRoomWithRounds(page, 1);
 }
 
 export async function joinRoom(page: Page, code: string): Promise<void> {

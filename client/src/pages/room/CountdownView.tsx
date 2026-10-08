@@ -8,8 +8,8 @@ export function CountdownView() {
   const { view, me, opponent } = useRoom();
 
   return (
-    <Card as="section" tone="raised" className="mx-auto max-w-lg p-8 text-center">
-      <h1 className="font-display text-2xl font-semibold">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
+    <Card as="section" tone="raised" className="mx-auto w-full max-w-lg p-6 text-center sm:p-8">
+      <h1 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
       {me && opponent ? (
         <div className="mt-6 flex items-center justify-center gap-6">
           <Avatar name={me.username} size="xl" />

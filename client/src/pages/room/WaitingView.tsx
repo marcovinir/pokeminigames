@@ -37,7 +37,7 @@ export function WaitingView() {
   const code = view.code ?? "";
 
   return (
-    <Card as="section" tone="raised" className="mx-auto max-w-md p-8 text-center">
+    <Card as="section" tone="raised" className="mx-auto w-full max-w-md p-6 text-center sm:p-8">
       <h1 className="font-display text-2xl font-semibold">Sala de espera</h1>
       <p className="mt-3 text-sm text-muted">Comparte este código con tu oponente:</p>
       <p aria-label="Código de la sala" className="my-4 flex justify-center gap-2">
@@ -45,7 +45,7 @@ export function WaitingView() {
           <span
             key={index}
             style={{ "--i": index } as React.CSSProperties}
-            className="animate-rise inline-flex h-14 w-11 items-center justify-center rounded-ui bg-surface-2 font-num text-3xl font-semibold"
+            className="animate-rise inline-flex h-14 w-11 min-w-0 items-center justify-center rounded-ui bg-surface-2 font-num text-3xl font-semibold"
           >
             {letter}
           </span>
@@ -53,16 +53,16 @@ export function WaitingView() {
       </p>
       <CopyCodeButton code={code} />
 
-      <ul className="mt-7 flex justify-center gap-8" aria-label="Jugadores">
+      <ul className="mt-7 flex justify-center gap-4 sm:gap-8" aria-label="Jugadores">
         {view.players.map((player) => (
-          <li key={player.seat} className="flex flex-col items-center gap-2">
+          <li key={player.seat} className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <Avatar name={player.username} size="lg" />
-            <span className="text-sm font-semibold">{player.username}</span>
+            <span className="max-w-full text-sm font-semibold [overflow-wrap:anywhere]">{player.username}</span>
             {player.connected ? null : <span className="text-xs text-muted">(sin conectar)</span>}
           </li>
         ))}
         {view.players.length < 2 ? (
-          <li data-empty-seat aria-hidden="true" className="flex flex-col items-center gap-2">
+          <li data-empty-seat aria-hidden="true" className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <span className="animate-beat inline-flex size-14 items-center justify-center rounded-pill border-2 border-dashed border-line font-display text-2xl text-muted">
               ?
             </span>

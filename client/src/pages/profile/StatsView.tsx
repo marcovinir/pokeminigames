@@ -18,7 +18,7 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
           <StatTile label="Ganadas" value={String(stats.wins)} />
           <StatTile label="Empatadas" value={String(stats.draws)} />
           <StatTile label="Perdidas" value={String(stats.losses)} />
-          <StatTile label="Victorias" value={formatPercent(stats.winRate)} ring={stats.winRate} />
+          <StatTile label="Victorias" value={formatPercent(stats.winRate)} ring={stats.winRate} className="col-span-2" />
           <StatTile label="Racha actual" value={String(stats.currentStreak)} />
           <StatTile label="Mejor racha" value={String(stats.bestStreak)} />
         </dl>

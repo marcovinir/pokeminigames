@@ -1,12 +1,14 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+import { Header } from "../../src/components/Header";
 import { LoginPage } from "../../src/pages/AuthPages";
 import { LobbyPage } from "../../src/pages/Lobby";
 import { ProfilePage } from "../../src/pages/profile/ProfilePage";
 import { event, pokemon } from "../helpers/events";
 import { ash, misty, renderRoom, roundState } from "../helpers/room";
-import { fakeServices, renderWithServices } from "../helpers/services";
+import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
 
 /**
  * Una columna de cuadrícula sin `grid-cols-1` mide lo que mide su contenido (`min-width: auto`): un campo de texto o un
@@ -82,5 +84,103 @@ describe("sin desbordes en pantallas estrechas", () => {
     );
     const top = await screen.findByRole("region", { name: "Pokémon más ganados" });
     expect(classesOf(top.querySelector("ul"))).toContain("grid-cols-1");
+  });
+});
+
+/**
+ * jsdom no calcula tamaños: estas pruebas fijan las clases que evitan los desbordes que se midieron en un navegador de
+ * verdad (e2e/tests/layout.spec.ts, con nombres de 30 letras a 360 y 375 px), para que un cambio de clases salte rápido.
+ */
+describe("encabezado y menú de apariencia en pantallas estrechas", () => {
+  async function openMenu(username = "ash") {
+    const services = fakeServices();
+    signIn(services, { ...ASH, username });
+    renderWithServices(<Header />, { services });
+    const toggle = screen.getByRole("button", { name: "Apariencia" });
+    await userEvent.click(toggle);
+    return document.getElementById(toggle.getAttribute("aria-controls")!)!;
+  }
+
+  it("el panel se ancla al contenedor del encabezado y no al botón (con sesión el botón queda a media pantalla y el panel se salía por la izquierda)", async () => {
+    const panel = await openMenu();
+    expect(classesOf(panel)).toContain("absolute");
+    expect(classesOf(panel)).toContain("right-4");
+    expect(panel.parentElement!.closest(".relative")).toBe(panel.closest("header")!.firstElementChild);
+  });
+
+  it("el nombre largo se recorta en vez de ensanchar la fila, y las etiquetas de texto solo caben desde pantallas anchas", async () => {
+    const name = "a".repeat(30);
+    await openMenu(name);
+    const shown = screen.getByText(name);
+    expect(classesOf(shown)).toContain("truncate");
+    expect(classesOf(shown)).toContain("lg:inline");
+    for (const label of ["Apariencia", "Mi perfil", "Cerrar sesión"]) {
+      expect(classesOf(screen.getByText(label)), label).toContain("lg:not-sr-only");
+    }
+  });
+});
+
+describe("textos largos y tarjetas sueltas en pantallas estrechas", () => {
+  it("sala de espera: la tarjeta ocupa el ancho disponible, las casillas se encogen y los nombres se parten", () => {
+    const { container } = renderRoom([event.roomState({ phase: "waiting", players: [ash({ username: "a".repeat(30) })] })]);
+    expect(classesOf(container.querySelector("section"))).toContain("w-full");
+    expect(classesOf(screen.getByLabelText("Código de la sala").firstElementChild)).toContain("min-w-0");
+    const player = screen.getByRole("list", { name: "Jugadores" }).firstElementChild!;
+    expect(classesOf(player)).toContain("min-w-0");
+    expect(classesOf(screen.getByText("a".repeat(30)))).toContain("[overflow-wrap:anywhere]");
+  });
+
+  it("cuenta atrás: la tarjeta ocupa el ancho disponible y el título parte el nombre del rival", () => {
+    const { container } = renderRoom([
+      event.roomState({ phase: "starting", players: [ash(), misty({ username: "b".repeat(30) })] }),
+    ]);
+    expect(classesOf(container.querySelector("section"))).toContain("w-full");
+    expect(classesOf(screen.getByRole("heading", { name: /Partida contra/ }))).toContain("[overflow-wrap:anywhere]");
+  });
+
+  it("resultado de la ronda: la respuesta del rival, aunque sean 100 letras seguidas, se parte", () => {
+    renderRoom([
+      event.roomState({ phase: "round_result", roundsPlayed: 1, players: [ash(), misty()] }),
+      event.roundResult(),
+    ]);
+    expect(classesOf(screen.getByText(/Escribió: «zzz»/))).toContain("[overflow-wrap:anywhere]");
+  });
+
+  async function renderProfile() {
+    const services = fakeServices();
+    services.endpoints.stats.mine = vi.fn(async () => ({
+      username: "a".repeat(30),
+      stats: {
+        played: 2,
+        wins: 1,
+        draws: 0,
+        losses: 1,
+        winRate: 0.5,
+        currentStreak: 1,
+        bestStreak: 1,
+        averagePower: 300,
+        bestGameScore: 300,
+        topPokemon: [],
+      },
+    }));
+    renderWithServices(
+      <Routes>
+        <Route path="/perfil" element={<ProfilePage />} />
+      </Routes>,
+      { services, route: "/perfil" },
+    );
+    await screen.findByText("Victorias");
+  }
+
+  it("perfil: la ficha del porcentaje ocupa dos columnas y reserva sitio a la derecha para su anillo", async () => {
+    await renderProfile();
+    const tile = screen.getByText("Victorias").parentElement!;
+    expect(classesOf(tile)).toContain("col-span-2");
+    expect(classesOf(tile)).toContain("pr-20");
+  });
+
+  it("perfil: el nombre propio largo se recorta", async () => {
+    await renderProfile();
+    expect(classesOf(screen.getByText("a".repeat(30)))).toContain("truncate");
   });
 });

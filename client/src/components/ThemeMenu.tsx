@@ -49,8 +49,13 @@ function Segmented<T extends string>({ legend, name, options, labels, value, onC
   );
 }
 
-/** Elegir el tema visual (Clásico o Pokédex) y el modo (automático, claro u oscuro) desde un botón de paleta. */
-export function ThemeMenu() {
+/**
+ * Elegir el tema visual (Clásico o Pokédex) y el modo (automático, claro u oscuro) desde un botón de paleta.
+ * El panel es `absolute` respecto del contenedor posicionado más cercano (el interior del encabezado), no del botón: con
+ * sesión iniciada el botón queda a media fila y un panel de 20 rem anclado a él se salía de la pantalla por la izquierda.
+ * `compact` deja solo el icono hasta pantallas anchas (cuando la fila lleva más botones).
+ */
+export function ThemeMenu({ compact = false }: { compact?: boolean }) {
   const { theme: store } = useServices();
   const theme = useTheme((s) => s.preference.theme);
   const mode = useTheme((s) => s.preference.mode);
@@ -77,13 +82,19 @@ export function ThemeMenu() {
   }, [open]);
 
   return (
-    <div ref={root} className="relative">
-      <Button variant="header" aria-expanded={open} aria-controls={open ? panelId : undefined} onClick={() => setOpen((current) => !current)}>
+    <div ref={root}>
+      <Button
+        variant="header"
+        className={compact ? "shrink-0 max-lg:px-3" : "shrink-0 max-sm:px-3"}
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        onClick={() => setOpen((current) => !current)}
+      >
         <PaletteIcon />
-        <span className="sr-only sm:not-sr-only">Apariencia</span>
+        <span className={compact ? "sr-only lg:not-sr-only" : "sr-only sm:not-sr-only"}>Apariencia</span>
       </Button>
       {open ? (
-        <div id={panelId} className="framed absolute right-0 top-full z-30 mt-2 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-4 rounded-card bg-surface p-4 text-fg shadow-pop">
+        <div id={panelId} className="framed absolute right-4 top-full z-30 mt-2 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-4 rounded-card bg-surface p-4 text-fg shadow-pop">
           <Segmented<ThemeName>
             legend="Tema"
             name="theme"
