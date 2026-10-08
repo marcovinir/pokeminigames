@@ -57,4 +57,13 @@ describe("mensajes de error", () => {
     expect(errorMessage("USER_NOT_FOUND")).toBe("No encontramos a ese jugador.");
     expect(errorMessage("USER_NOT_FOUND")).not.toBe(errorMessage("INTERNAL_ERROR"));
   });
+
+  it("los códigos de la verificación por correo tienen su propio mensaje, no el genérico", () => {
+    expect(errorMessage("INVALID_CODE")).toBe("Código incorrecto o vencido. Revisa tu correo o pide uno nuevo.");
+    expect(errorMessage("EMAIL_SEND_FAILED")).toBe("No pudimos enviar el correo. Inténtalo de nuevo en un momento.");
+    expect(errorMessage("EMAIL_NOT_VERIFIED")).toBe("Tu correo aún no está verificado.");
+    for (const code of ["INVALID_CODE", "EMAIL_SEND_FAILED", "EMAIL_NOT_VERIFIED"]) {
+      expect(errorMessage(code)).not.toBe(errorMessage("INTERNAL_ERROR"));
+    }
+  });
 });
