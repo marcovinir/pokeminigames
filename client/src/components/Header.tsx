@@ -45,13 +45,13 @@ export function Header() {
           <ThemeMenu compact={Boolean(user)} />
           {user ? (
             <>
-              <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 text-sm font-semibold hover:bg-header-fg/15">
+              <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
                 <UserIcon />
                 <span className="sr-only lg:not-sr-only">Mi perfil</span>
               </Link>
               <span className="flex min-w-0 items-center gap-2">
                 <Avatar name={user.username} size="sm" />
-                <span className="hidden max-w-40 truncate text-sm font-semibold lg:inline">{user.username}</span>
+                <span className="hidden max-w-40 truncate font-display text-sm font-semibold lg:inline">{user.username}</span>
               </span>
               <Button variant="header" className="shrink-0 max-lg:px-3" onClick={() => void session.getState().logout()}>
                 <ExitIcon />

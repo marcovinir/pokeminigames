@@ -6,9 +6,12 @@
  * Etapa 6: Clásico es el estilo moderno y colorido (esquinas muy redondeadas, relieve, degradados suaves, fuente
  * redondeada); Pokédex es la piel retro del mismo diseño (bordes marcados, sin sombras difusas, monoespaciada).
  * `art-1` y `art-2` son los extremos del degradado de la página: el texto debe leerse sobre los dos.
+ * `color-scheme` le dice al navegador el modo, para que las barras de desplazamiento y los controles nativos (como la lista
+ * de un `<select>`) sean oscuros en los modos oscuros.
  */
 
 :root[data-theme="clasico"][data-mode="claro"] {
+  color-scheme: light;
   --bg: #e8f3ff;
   --art-1: #cfe6ff;
   --art-2: #f5faff;
@@ -46,6 +49,7 @@
 }
 
 :root[data-theme="clasico"][data-mode="oscuro"] {
+  color-scheme: dark;
   --bg: #0b1730;
   --art-1: #13284f;
   --art-2: #08122a;
@@ -83,6 +87,7 @@
 }
 
 :root[data-theme="pokedex"][data-mode="claro"] {
+  color-scheme: light;
   --bg: #e9e4d4;
   --art-1: #efeadb;
   --art-2: #ddd6c0;
@@ -120,6 +125,7 @@
 }
 
 :root[data-theme="pokedex"][data-mode="oscuro"] {
+  color-scheme: dark;
   --bg: #1c1a17;
   --art-1: #24211d;
   --art-2: #161411;

@@ -142,6 +142,16 @@ describe("Header", () => {
     expect(screen.getByText("AS")).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("los botones, el enlace al perfil y el nombre usan la misma fuente de títulos (el encabezado no mezcla dos letras)", () => {
+    const services = fakeServices();
+    signIn(services);
+    renderWithServices(<Header />, { services });
+    expect(screen.getByRole("button", { name: "Apariencia" }).className).toContain("font-display");
+    expect(screen.getByRole("button", { name: "Cerrar sesión" }).className).toContain("font-display");
+    expect(screen.getByRole("link", { name: "Mi perfil" }).className).toContain("font-display");
+    expect(screen.getByText(ASH.username).className).toContain("font-display");
+  });
+
   it("sin sesión no hay enlace al perfil", () => {
     renderWithServices(<Header />);
     expect(screen.queryByRole("link", { name: "Mi perfil" })).not.toBeInTheDocument();

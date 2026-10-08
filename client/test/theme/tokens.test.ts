@@ -99,6 +99,13 @@ describe("tokens de los temas", () => {
     }
   });
 
+  // Sin esto, en los modos oscuros el navegador sigue pintando claros las barras de desplazamiento y los controles nativos.
+  it.each([...themes.keys()])("%s: declara su modo al navegador (color-scheme) para las barras de desplazamiento y los controles nativos", (name) => {
+    const [theme, mode] = name.split("/");
+    const block = new RegExp(`:root\\[data-theme="${theme}"\\]\\[data-mode="${mode}"\\]\\s*\\{([^}]*)\\}`).exec(css)![1]!;
+    expect(block).toContain(`color-scheme: ${mode === "oscuro" ? "dark" : "light"};`);
+  });
+
   it("el tema Pokédex tiene bordes más rectos y marcados y números en monoespaciada", () => {
     const classic = themes.get("clasico/claro")!;
     const pokedex = themes.get("pokedex/claro")!;
