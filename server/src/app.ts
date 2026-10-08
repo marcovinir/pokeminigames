@@ -3,6 +3,8 @@ import cors from "cors";
 import express, { type Express } from "express";
 import { createAuthRouter } from "./auth/auth.routes.js";
 import { AuthService } from "./auth/auth.service.js";
+import { createCodeLimits } from "./auth/code-limits.js";
+import { EmailCodeStore, createCodeHasher } from "./auth/email-codes.js";
 import { createPasswordHasher } from "./auth/password.js";
 import type { TokenService } from "./auth/tokens.js";
 import { createCatalogRouter } from "./catalog/catalog.routes.js";
@@ -16,6 +18,8 @@ import { errorHandler, notFoundHandler } from "./http/errors.js";
 import { DEFAULT_RATE_LIMITS, type RateLimitConfig } from "./http/limits.js";
 import { createOriginCheck } from "./http/origin-check.js";
 import { createKeyedLimiter, rateLimitMiddleware } from "./http/rate-limit.js";
+import { createMailer } from "./mail/create-mailer.js";
+import type { Mailer } from "./mail/mailer.js";
 import { createRoomsRouter } from "./rooms/rooms.routes.js";
 import { createStatsRouter } from "./stats/stats.routes.js";
 import { StatsService } from "./stats/stats.service.js";
@@ -31,9 +35,11 @@ export interface AppDeps {
   rateLimits?: RateLimitConfig | "off";
   /** Directorio del cliente construido; si existe con su index.html, el servidor lo sirve (un solo origen). */
   clientDist?: string;
+  /** Quien envía los correos (por defecto, el que dice la configuración: Resend, la consola o la memoria). */
+  mailer?: Mailer;
 }
 
-export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimits = DEFAULT_RATE_LIMITS, clientDist }: AppDeps): Express {
+export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimits = DEFAULT_RATE_LIMITS, clientDist, mailer = createMailer(env) }: AppDeps): Express {
   const limits = rateLimits === "off" ? null : rateLimits;
   const limiters = limits && {
     loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
@@ -42,12 +48,25 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
     registerFailures: createKeyedLimiter({ ...limits.registerFailures, now: limits.now }),
     api: createKeyedLimiter({ ...limits.api, now: limits.now }),
   };
+  const codeLimits = createCodeLimits(
+    limits
+      ? {
+          cooldown: createKeyedLimiter({ ...limits.codeCooldown, now: limits.now }),
+          sendsByEmail: createKeyedLimiter({ ...limits.codeSendsByEmail, now: limits.now }),
+          sendsByIp: createKeyedLimiter({ ...limits.codeSendsByIp, now: limits.now }),
+          failuresByEmail: createKeyedLimiter({ ...limits.codeFailuresByEmail, now: limits.now }),
+          failuresByIp: createKeyedLimiter({ ...limits.codeFailuresByIp, now: limits.now }),
+        }
+      : undefined,
+  );
 
   const authService = new AuthService({
     prisma,
     hasher: createPasswordHasher(env.BCRYPT_COST),
     tokens,
     refreshTtlMs: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+    emailVerification: env.EMAIL_VERIFICATION,
+    email: { codes: new EmailCodeStore({ prisma, hash: createCodeHasher(env.JWT_ACCESS_SECRET) }), mailer },
   });
 
   const app = express();
@@ -65,7 +84,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
-  app.use("/auth", createAuthRouter({ env, authService, tokens, limiters: limiters ?? undefined }));
+  app.use("/auth", createAuthRouter({ env, authService, tokens, limiters: limiters ?? undefined, codeLimits, mailer }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));

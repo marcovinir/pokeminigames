@@ -3,6 +3,8 @@ import { createApp } from "../../src/app.js";
 import type { RateLimitConfig } from "../../src/http/limits.js";
 import type { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
 import { createTokenService } from "../../src/auth/tokens.js";
+import type { Mailer } from "../../src/mail/mailer.js";
+import { MemoryMailer } from "../../src/mail/memory-mailer.js";
 import { loadEnv } from "../../src/config/env.js";
 import { createPrismaGameRepository } from "../../src/game/prisma-game-repository.js";
 import { type Rng, cryptoRng } from "../../src/game/rng.js";
@@ -22,6 +24,8 @@ export interface TestContextOptions {
   catalog?: PokemonCatalog;
   /** Límites de peticiones (por defecto apagados: muchas pruebas registran a más personas de las que permite la IP). */
   rateLimits?: RateLimitConfig;
+  /** Quien envía los correos (por defecto un buzón en memoria; pasa uno propio para leer lo enviado). */
+  mailer?: Mailer;
 }
 
 /**
@@ -46,8 +50,9 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
     store,
     persistRetryDelayMs: 0,
   });
-  const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off" });
-  return { app, env, tokens, time, broadcaster, store, roomManager, catalog };
+  const mailer = options.mailer ?? new MemoryMailer();
+  const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off", mailer });
+  return { app, env, tokens, time, broadcaster, store, roomManager, catalog, mailer };
 }
 
 export function buildTestApp(overrides: Record<string, string> = {}): Express {
