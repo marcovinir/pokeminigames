@@ -1,6 +1,7 @@
 import { Autocomplete } from "../../components/Autocomplete";
 import { Card } from "../../components/Card";
 import { Notice } from "../../components/Notice";
+import { rise } from "../../components/rise";
 import { OpponentPanel, TeamPanel } from "../../components/Panels";
 import { Timer } from "../../components/Timer";
 import { TypeChip } from "../../components/TypeChip";
@@ -45,18 +46,18 @@ export function RoundView() {
 
   return (
     <section className="flex flex-col gap-4">
-      {/* En pantallas estrechas los paneles de equipo se resumen en una sola barra. */}
-      <p aria-label="Marcador" className="framed rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
+      {/* En pantallas estrechas los paneles de equipo se resumen en una sola barra que se queda pegada bajo el encabezado al desplazarse. */}
+      <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
         Tú <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
         {opponent?.username ?? "Rival"} <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
       </p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="hidden md:block">
+        <div style={rise(0)} className="animate-rise hidden md:block">
           <TeamPanel team={view.myTeam} total={me?.totalStats ?? 0} />
         </div>
 
-        <Card data-arena tone="raised" className="flex min-w-0 flex-col gap-5 p-6">
+        <Card data-arena tone="raised" style={rise(1)} className="animate-rise flex min-w-0 flex-col gap-5 p-6">
           <div className="text-center">
             <h1 className="font-display text-sm font-semibold text-muted">{goal}</h1>
             {config?.roundsLimit != null ? <RoundDots total={config.roundsLimit} current={round.number} /> : null}
@@ -79,7 +80,7 @@ export function RoundView() {
           <Autocomplete names={names} submitted={round.answered} autoFocus onSubmit={(text) => client.submit(text)} />
         </Card>
 
-        <div className="hidden md:block">
+        <div style={rise(2)} className="animate-rise hidden md:block">
           <OpponentPanel
             name={opponent?.username ?? "Tu rival"}
             total={opponent?.totalStats ?? 0}

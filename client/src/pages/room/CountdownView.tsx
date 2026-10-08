@@ -1,5 +1,6 @@
 import { Avatar } from "../../components/Avatar";
 import { Card } from "../../components/Card";
+import { rise } from "../../components/rise";
 import { Timer } from "../../components/Timer";
 import { START_COUNTDOWN_MS } from "../../game/durations";
 import { useRoom } from "./use-room";
@@ -8,7 +9,7 @@ export function CountdownView() {
   const { view, me, opponent } = useRoom();
 
   return (
-    <Card as="section" tone="raised" className="mx-auto w-full max-w-lg p-6 text-center sm:p-8">
+    <Card as="section" tone="raised" style={rise(0)} className="animate-rise mx-auto w-full max-w-lg p-6 text-center sm:p-8">
       <h1 className="font-display text-2xl font-semibold [overflow-wrap:anywhere]">{opponent ? `Partida contra ${opponent.username}` : "Preparando la partida"}</h1>
       {me && opponent ? (
         <div className="mt-6 flex items-center justify-center gap-6">

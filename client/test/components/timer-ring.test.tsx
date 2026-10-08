@@ -13,6 +13,14 @@ const progress = (container: HTMLElement) => container.querySelectorAll("circle"
 const dashoffset = (container: HTMLElement) => Number(progress(container).getAttribute("stroke-dashoffset"));
 
 describe("Timer como anillo", () => {
+  it("el número mide el 40 % del anillo: grande en la cuenta atrás de inicio (160 px) y proporcionado en los demás", () => {
+    const big = render(<Timer deadline={5_000} offset={0} totalMs={5_000} label="Inicio" size={160} now={() => 0} />);
+    expect(big.getByText("5").style.fontSize).toBe("64px");
+    big.unmount();
+    const normal = render(<Timer deadline={15_000} offset={0} totalMs={15_000} label="Ronda" now={() => 0} />);
+    expect(normal.getByText("15").style.fontSize).toBe("48px");
+  });
+
   it("al empezar el anillo está lleno y a la mitad queda medio vacío", () => {
     let now = 0;
     const { container } = render(<Timer deadline={15_000} offset={0} totalMs={15_000} label="Tiempo" now={() => now} />);

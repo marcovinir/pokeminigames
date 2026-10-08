@@ -6,6 +6,7 @@ import type { CurrentRoom } from "../api/endpoints";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Notice } from "../components/Notice";
+import { rise } from "../components/rise";
 import { TextField } from "../components/TextField";
 import { errorMessage } from "../i18n/es";
 import { useServices, useSession } from "../services";
@@ -134,7 +135,7 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
   }
 
   return (
-    <Card as="section" className="p-6">
+    <Card as="section" style={rise(1)} className="animate-rise p-6">
       <CardTitle icon={<PlusIcon />}>Crear sala</CardTitle>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         {formError ? <Notice tone="danger">{formError}</Notice> : null}
@@ -244,7 +245,7 @@ function JoinRoomCard() {
   }
 
   return (
-    <Card as="section" className="p-6">
+    <Card as="section" style={rise(2)} className="animate-rise p-6">
       <CardTitle icon={<EnterIcon />}>Unirse a una sala</CardTitle>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         {formError ? <Notice tone="danger">{formError}</Notice> : null}
@@ -276,7 +277,7 @@ export function LobbyPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div style={rise(0)} className="animate-rise">
         {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
         <h1 className="font-display text-3xl font-semibold">Lobby</h1>
       </div>

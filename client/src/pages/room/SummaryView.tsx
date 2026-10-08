@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { PokemonCard } from "../../components/PokemonCard";
+import { rise } from "../../components/rise";
 import { END_REASON_LABELS } from "../../i18n/es";
 import { useRoom } from "./use-room";
 
@@ -13,9 +14,9 @@ function bestFirst(team: PokemonView[]): PokemonView[] {
   return [team[best]!, ...team.filter((_, index) => index !== best)];
 }
 
-function TeamColumn({ title, team, total }: { title: string; team: PokemonView[]; total: number }) {
+function TeamColumn({ title, team, total, index }: { title: string; team: PokemonView[]; total: number; index: number }) {
   return (
-    <section aria-label={`Equipo de ${title}`} className="flex flex-col gap-3">
+    <section aria-label={`Equipo de ${title}`} style={rise(index)} className="animate-rise flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
         <p className="font-num text-3xl font-semibold tabular-nums">{total}</p>
@@ -66,7 +67,7 @@ export function SummaryView() {
   const kind = ended.winnerSeat === null ? "drawn" : ended.winnerSeat === mySeat ? "won" : "lost";
 
   return (
-    <section className="flex flex-col gap-6">
+    <section style={rise(0)} className="animate-rise flex flex-col gap-6">
       <Card data-verdict={kind} tone="raised" className={`p-8 text-center ${kind === "won" ? "border-gold animate-halo" : ""}`}>
         {kind === "lost" ? null : (
           <span aria-hidden="true" className={`mx-auto mb-3 inline-flex size-16 items-center justify-center rounded-full ${kind === "won" ? "bg-gold text-gold-fg" : "bg-surface-2 text-fg"}`}>
@@ -79,8 +80,8 @@ export function SummaryView() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} />
-        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} />
+        <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
+        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} />
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">

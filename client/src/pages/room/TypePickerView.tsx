@@ -1,5 +1,6 @@
 import { TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
 import { useState } from "react";
+import { rise } from "../../components/rise";
 import { Timer } from "../../components/Timer";
 import { TYPE_CHOICE_MS } from "../../game/durations";
 import { TYPE_LABELS } from "../../i18n/es";
@@ -18,7 +19,7 @@ export function TypePickerView() {
   const waiting = chosen !== null && !view.lastError;
 
   return (
-    <section className="flex flex-col gap-5">
+    <section style={rise(0)} className="animate-rise flex flex-col gap-5">
       <div className="text-center">
         <h1 className="font-display text-2xl font-semibold">Elige un tipo</h1>
         <p className="mt-1 text-sm text-muted">Tú y tu rival eligen uno; con los dos se forma el par de la ronda {round?.number}.</p>

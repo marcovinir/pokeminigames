@@ -41,6 +41,8 @@
   --dur-base: 220ms;
   --dur-slow: 420ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Altura fija del encabezado: de ella cuelga el marcador de la ronda, que en móvil se queda pegado justo debajo. */
+  --header-h: calc(3.5rem + var(--frame, 1px));
 }
 
 body {
@@ -183,6 +185,9 @@ header :focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    /* Sin esto las tarjetas escalonadas seguirían invisibles hasta que les llegara el turno (hasta 1 s en los 18 tipos). */
+    animation-delay: 0s !important;
+    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 }

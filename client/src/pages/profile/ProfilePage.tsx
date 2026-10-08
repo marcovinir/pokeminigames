@@ -4,6 +4,7 @@ import { Avatar } from "../../components/Avatar";
 import { Button } from "../../components/Button";
 import { LogoMark } from "../../components/Logo";
 import { Notice } from "../../components/Notice";
+import { rise } from "../../components/rise";
 import { errorMessage } from "../../i18n/es";
 import { useServices } from "../../services";
 import { HistoryList } from "./HistoryList";
@@ -58,7 +59,7 @@ export function ProfilePage() {
   const { username: name, stats } = state.data;
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <header className="flex items-center gap-4">
+      <header style={rise(0)} className="animate-rise flex items-center gap-4">
         <Avatar name={name} size="xl" />
         <div className="min-w-0">
           <h1 className="truncate font-display text-3xl font-semibold">{own ? "Tu perfil" : name}</h1>

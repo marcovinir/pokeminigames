@@ -1,4 +1,5 @@
 import { Card } from "../components/Card";
+import { rise } from "../components/rise";
 import { LogoMark } from "../components/Logo";
 import { TypeChip } from "../components/TypeChip";
 
@@ -14,7 +15,7 @@ const STEPS = [
  */
 export function AuthHero() {
   return (
-    <div className="flex flex-col gap-8">
+    <div style={rise(0)} className="animate-rise flex flex-col gap-8">
       <div className="flex items-center gap-4">
         <LogoMark size={64} className="animate-beat" />
         <p className="font-display text-3xl font-semibold leading-tight sm:text-4xl">

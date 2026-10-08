@@ -2,16 +2,17 @@ import type { RoundPlayerResult, Seat } from "@pokemon-minigames/shared";
 import { Badge } from "../../components/Badge";
 import { Card } from "../../components/Card";
 import { PokemonCard } from "../../components/PokemonCard";
+import { rise } from "../../components/rise";
 import { TypeChip } from "../../components/TypeChip";
 import { secondsLeft, useCountdown } from "../../game/clock";
 import { RESULT_PAUSE_MS } from "../../game/durations";
 import { PICK_RESULT_LABELS } from "../../i18n/es";
 import { useRoom } from "./use-room";
 
-function ResultCard({ title, result }: { title: string; result: RoundPlayerResult }) {
+function ResultCard({ title, result, index }: { title: string; result: RoundPlayerResult; index: number }) {
   const won = result.result === "VALID";
   return (
-    <Card as="section" aria-label={`Resultado de ${title}`} data-result={result.result} className={`p-5 ${won ? "border-success" : ""}`}>
+    <Card as="section" aria-label={`Resultado de ${title}`} data-result={result.result} style={rise(index)} className={`animate-rise p-5 ${won ? "border-success" : ""}`}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
         <Badge tone={won ? "success" : "danger"}>{PICK_RESULT_LABELS[result.result]}</Badge>
@@ -69,8 +70,8 @@ export function RoundResultView() {
       </p>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <ResultCard title="Tú" result={mine} />
-        <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} />
+        <ResultCard title="Tú" result={mine} index={0} />
+        <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} index={1} />
       </div>
 
       <div className="mx-auto w-64 text-center">

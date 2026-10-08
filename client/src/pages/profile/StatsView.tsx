@@ -1,6 +1,7 @@
 import type { Stats } from "@pokemon-minigames/shared";
 import { Notice } from "../../components/Notice";
 import { PokemonCard } from "../../components/PokemonCard";
+import { rise } from "../../components/rise";
 import { StatTile } from "../../components/StatTile";
 import { formatPercent, formatPower, formatScore, winsLabel } from "./format";
 
@@ -12,7 +13,7 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <section aria-label="Resumen">
+      <section aria-label="Resumen" style={rise(1)} className="animate-rise">
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile label="Partidas" value={String(stats.played)} />
           <StatTile label="Ganadas" value={String(stats.wins)} />
@@ -24,14 +25,14 @@ export function StatsView({ stats, own }: { stats: Stats; own: boolean }) {
         </dl>
       </section>
 
-      <section aria-label="Poder">
+      <section aria-label="Poder" style={rise(2)} className="animate-rise">
         <dl className="grid grid-cols-2 gap-3">
           <StatTile label="Poder promedio" value={formatPower(stats.averagePower)} />
           <StatTile label="Mejor partida" value={formatScore(stats.bestGameScore)} />
         </dl>
       </section>
 
-      <section aria-label="Pokémon más ganados">
+      <section aria-label="Pokémon más ganados" style={rise(3)} className="animate-rise">
         <h2 className="mb-3 font-display text-lg font-semibold">Pokémon más ganados</h2>
         {stats.topPokemon.length === 0 ? (
           <p className="text-sm text-muted">

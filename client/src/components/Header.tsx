@@ -28,9 +28,9 @@ export function Header() {
   const { session } = useServices();
 
   return (
-    <header className="sticky top-0 z-20 border-b-(length:--frame) border-line bg-header text-header-fg">
+    <header className="sticky top-0 z-20 h-(--header-h) border-b-(length:--frame) border-line bg-header text-header-fg">
       {/* `relative`: el panel del menú de apariencia se ancla a este contenedor y no a su botón, que con sesión queda a media fila. */}
-      <div className="relative mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 sm:gap-3">
+      <div className="relative mx-auto flex h-full max-w-5xl items-center gap-2 px-4 sm:gap-3">
         {/* Luces de adorno: solo en el tema Pokédex (el encabezado rojo tipo consola). */}
         <span data-leds aria-hidden="true" className="hidden items-center gap-1.5 in-data-[theme=pokedex]:flex">
           <span className="size-6 rounded-full border-2 border-header-fg bg-accent-2" />

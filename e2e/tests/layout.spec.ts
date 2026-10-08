@@ -132,9 +132,17 @@ test("a 375 px toda la partida cabe con nombres de 30 letras y una respuesta de 
       await expectInsideViewport(player.page, title, "375 px, cuenta atrás: el título");
     }
 
+    // La ronda: con una pantalla baja el marcador de la barra se queda pegado bajo el encabezado al desplazarse.
     const types = await roundTypes(ash.page);
     await roundTypes(misty.page);
     for (const player of [ash, misty]) await expectNoSideScroll(player.page, "375 px, ronda");
+    await ash.page.setViewportSize({ width: 375, height: 380 });
+    await ash.page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const [header, bar] = [await appHeader(ash.page).boundingBox(), await ash.page.getByLabel("Marcador").boundingBox()];
+    expect(bar, "375 px, ronda: el marcador no se ve al desplazarse").not.toBeNull();
+    expect.soft(bar!.y, `375 px, ronda: el marcador no queda fijo bajo el encabezado (y = ${bar!.y})`).toBeGreaterThanOrEqual(header!.y + header!.height - 1);
+    expect.soft(bar!.y, `375 px, ronda: el marcador se separó del encabezado (y = ${bar!.y})`).toBeLessThan(header!.y + header!.height + 12);
+    await ash.page.setViewportSize({ width: 375, height: 740 });
 
     // Ash acierta; Misty escribe 100 letras seguidas, que no existen y cierran la ronda al instante.
     await answer(ash.page, validAnswerFor(types));

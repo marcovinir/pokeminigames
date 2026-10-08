@@ -46,7 +46,8 @@ export function Timer({ deadline, offset, totalMs, label, size = 120, urgentAtMs
         />
       </svg>
       <span
-        className={`absolute inset-0 flex items-center justify-center font-num text-4xl font-semibold tabular-nums ${urgent ? "text-danger" : ""}`}
+        style={{ fontSize: Math.round(size * 0.4) }}
+        className={`absolute inset-0 flex items-center justify-center font-num font-semibold tabular-nums ${urgent ? "text-danger" : ""}`}
       >
         {secondsLeft(remaining)}
       </span>

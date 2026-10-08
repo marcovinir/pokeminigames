@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
+import { rise } from "../../components/rise";
 import { useRoom } from "./use-room";
 
 /** Copia el código de la sala al portapapeles; si el navegador no lo permite, lo dice. */
@@ -37,7 +38,7 @@ export function WaitingView() {
   const code = view.code ?? "";
 
   return (
-    <Card as="section" tone="raised" className="mx-auto w-full max-w-md p-6 text-center sm:p-8">
+    <Card as="section" tone="raised" style={rise(0)} className="animate-rise mx-auto w-full max-w-md p-6 text-center sm:p-8">
       <h1 className="font-display text-2xl font-semibold">Sala de espera</h1>
       <p className="mt-3 text-sm text-muted">Comparte este código con tu oponente:</p>
       <p aria-label="Código de la sala" className="my-4 flex justify-center gap-2">

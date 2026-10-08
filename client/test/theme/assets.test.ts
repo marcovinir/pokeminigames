@@ -25,6 +25,16 @@ describe("movimiento", () => {
     expect(block).toMatch(/transition-duration:\s*0\.01ms\s*!important/);
   });
 
+  it("con «reducir movimiento» tampoco hay retardos: las tarjetas escalonadas no quedan invisibles esperando su turno", () => {
+    const block = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? "";
+    expect(block).toMatch(/animation-delay:\s*0s\s*!important/);
+    expect(block).toMatch(/transition-delay:\s*0s\s*!important/);
+  });
+
+  it("define la altura fija del encabezado, de la que cuelga el marcador pegado debajo", () => {
+    expect(css).toMatch(/--header-h:\s*calc\(3\.5rem \+ var\(--frame/);
+  });
+
   it("define las duraciones y la curva comunes", () => {
     for (const token of ["--dur-fast: 120ms", "--dur-base: 220ms", "--dur-slow: 420ms", "--ease-out:"]) {
       expect(css).toContain(token);

@@ -120,6 +120,26 @@ describe("encabezado y menú de apariencia en pantallas estrechas", () => {
   });
 });
 
+describe("marcador fijo de la ronda en pantallas estrechas", () => {
+  it("el encabezado mide siempre lo mismo (--header-h) y el marcador de la barra se pega justo debajo al desplazarse", () => {
+    const services = fakeServices();
+    signIn(services);
+    const header = renderWithServices(<Header />, { services });
+    expect(classesOf(header.container.querySelector("header"))).toContain("h-(--header-h)");
+    header.unmount();
+
+    renderRoom([
+      event.roomState({
+        phase: "round_active",
+        players: [ash({ totalStats: 500, teamSize: 1 }), misty({ totalStats: 400, teamSize: 1 })],
+        round: roundState({ number: 2 }),
+      }),
+    ]);
+    const score = screen.getByLabelText("Marcador");
+    for (const token of ["sticky", "top-(--header-h)", "z-10", "md:hidden"]) expect(classesOf(score), token).toContain(token);
+  });
+});
+
 describe("textos largos y tarjetas sueltas en pantallas estrechas", () => {
   it("sala de espera: la tarjeta ocupa el ancho disponible, las casillas se encogen y los nombres se parten", () => {
     const { container } = renderRoom([event.roomState({ phase: "waiting", players: [ash({ username: "a".repeat(30) })] })]);
