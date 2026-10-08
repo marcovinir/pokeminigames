@@ -1,11 +1,10 @@
 import { type FormEvent, type ReactNode, useState } from "react";
 import { ApiError } from "../api/client";
 import { Button } from "../components/Button";
-import { Card } from "../components/Card";
 import { Notice } from "../components/Notice";
-import { rise } from "../components/rise";
 import { TextField } from "../components/TextField";
 import { errorMessage, rateLimitMessage, retryAfterOf } from "../i18n/es";
+import { AuthCard } from "./AuthCard";
 import { type FieldErrors, serverFieldErrors } from "./auth-validation";
 
 export interface AuthFormProps {
@@ -56,8 +55,7 @@ export function AuthForm({ title, submitLabel, withUsername = false, validate, o
   }
 
   return (
-    <Card as="section" tone="raised" style={rise(1)} className="animate-rise mx-auto w-full max-w-sm p-6">
-      <h1 className="mb-5 font-display text-2xl font-semibold">{title}</h1>
+    <AuthCard title={title} footer={footer}>
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         {formError ? <Notice tone="danger">{formError}</Notice> : null}
         <TextField
@@ -91,7 +89,6 @@ export function AuthForm({ title, submitLabel, withUsername = false, validate, o
           {submitLabel}
         </Button>
       </form>
-      <p className="mt-5 border-t-(length:--frame) border-line pt-4 text-sm text-muted">{footer}</p>
-    </Card>
+    </AuthCard>
   );
 }

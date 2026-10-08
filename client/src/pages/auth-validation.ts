@@ -23,6 +23,19 @@ export function validateLogin(input: { email: string; password: string }): Field
   return errors;
 }
 
+/** Solo el correo (para pedir un código). */
+export function validateEmail(email: string): { email?: string } {
+  const message = emailError(email);
+  return message ? { email: message } : {};
+}
+
+/** El correo y el código de seis dígitos que llegó. */
+export function validateVerification(input: { email: string; code: string }): { email?: string; code?: string } {
+  const errors: { email?: string; code?: string } = { ...validateEmail(input.email) };
+  if (!/^\d{6}$/.test(input.code)) errors.code = "El código son 6 dígitos.";
+  return errors;
+}
+
 export function validateRegistration(input: { email: string; username: string; password: string }): FieldErrors {
   const errors: FieldErrors = {};
   const email = emailError(input.email);

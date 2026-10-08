@@ -4,6 +4,7 @@ import { useSession } from "./services";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { LobbyPage } from "./pages/Lobby";
 import { ProfilePage } from "./pages/profile/ProfilePage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { RoomPage } from "./pages/room/RoomPage";
 
 /** Rutas que exigen sesión: sin ella llevan a /login y, tras entrar, vuelven a donde se iba. */
@@ -29,6 +30,7 @@ export function AppRoutes() {
       <Route element={<PublicOnly />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/verificar" element={<VerifyEmailPage />} />
       </Route>
       <Route element={<RequireAuth />}>
         <Route path="/" element={<LobbyPage />} />
