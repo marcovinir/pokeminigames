@@ -151,7 +151,7 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
                 onChange={() => setForm({ ...form, typeMode: option.value })}
                 className="peer sr-only"
               />
-              <span className="framed flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-checked:[&_[data-check]]:opacity-100">
+              <span className="framed-field flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ring peer-checked:[&_[data-check]]:opacity-100">
                 <span className="min-w-0 flex-1">
                   <span className="font-display font-semibold">{option.label}</span>
                   <span className="block text-sm text-muted">{option.hint}</span>
@@ -174,7 +174,7 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
                 setForm({ ...form, lengthKind: event.target.value as LengthKind });
                 setFieldError(null);
               }}
-              className="framed w-full appearance-none rounded-ui bg-surface px-4 py-3 pr-10 text-fg"
+              className="framed-field w-full appearance-none rounded-ui bg-surface px-4 py-3 pr-10 text-fg"
             >
               {(Object.keys(LENGTH_LABELS) as LengthKind[]).map((kind) => (
                 <option key={kind} value={kind}>

@@ -39,7 +39,7 @@ function Segmented<T extends string>({ legend, name, options, labels, value, onC
         {options.map((option) => (
           <label key={option} className="cursor-pointer">
             <input type="radio" name={name} value={option} checked={value === option} onChange={() => onChange(option)} className="peer sr-only" />
-            <span className="block rounded-pill px-3 py-1.5 text-sm font-semibold peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent">
+            <span className="block rounded-pill px-3 py-1.5 text-sm font-semibold peer-checked:bg-accent peer-checked:text-accent-fg peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring">
               {labels[option]}
             </span>
           </label>

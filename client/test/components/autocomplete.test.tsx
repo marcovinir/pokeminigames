@@ -43,6 +43,11 @@ function setup(props: Partial<React.ComponentProps<typeof Autocomplete>> = {}) {
 }
 
 describe("Autocomplete", () => {
+  it("el campo lleva el borde de contraste de los campos", () => {
+    const { input } = setup();
+    expect(input.className.split(" ")).toContain("framed-field");
+  });
+
   it("al escribir muestra las sugerencias y lo anuncia a los lectores de pantalla", async () => {
     const { user, input } = setup();
     await user.type(input, "alf");

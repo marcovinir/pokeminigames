@@ -24,7 +24,7 @@ export function TextField({ label, error, hint, id, inputClassName = "", ...inpu
         id={fieldId}
         aria-invalid={error ? true : undefined}
         aria-describedby={[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(" ") || undefined}
-        className={`framed w-full rounded-ui bg-surface px-4 py-3 text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)] ${inputClassName}`}
+        className={`framed-field w-full rounded-ui bg-surface px-4 py-3 text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)] ${inputClassName}`}
         {...input}
       />
       {hint ? (

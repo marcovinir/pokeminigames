@@ -53,12 +53,13 @@ describe("Button (etapa 6)", () => {
 });
 
 describe("TextField (etapa 6)", () => {
-  it("es un campo alto y redondeado con el foco visible", () => {
+  it("es un campo alto y redondeado, con el borde de contraste de los campos (el foco lo pinta el aro del tema)", () => {
     render(<TextField label="Email" />);
-    const className = screen.getByLabelText("Email").className;
-    expect(className).toContain("py-3");
-    expect(className).toContain("rounded-ui");
-    expect(className).toContain("framed");
+    const classes = screen.getByLabelText("Email").className.split(" ");
+    expect(classes).toContain("py-3");
+    expect(classes).toContain("rounded-ui");
+    expect(classes).toContain("framed-field");
+    expect(classes).not.toContain("framed");
   });
 });
 

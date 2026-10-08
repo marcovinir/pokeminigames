@@ -8,6 +8,14 @@ import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/servic
 const openMenu = async () => userEvent.click(screen.getByRole("button", { name: "Apariencia" }));
 
 describe("ThemeMenu", () => {
+  it("la opción enfocada dibuja el aro con el color de foco del tema (el de acento ya es el de la opción marcada)", async () => {
+    renderWithServices(<ThemeMenu />);
+    await openMenu();
+    const option = screen.getByRole("radio", { name: "Pokédex" }).nextElementSibling!;
+    expect(option.className).toContain("peer-focus-visible:outline-ring");
+    expect(option.className).not.toContain("outline-accent");
+  });
+
   it("empieza cerrado: solo se ve el botón de apariencia", () => {
     renderWithServices(<ThemeMenu />);
     const button = screen.getByRole("button", { name: "Apariencia" });

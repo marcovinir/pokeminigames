@@ -131,7 +131,7 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
           }}
           onKeyDown={onKeyDown}
           onBlur={() => setOpen(false)}
-          className="framed min-w-0 flex-1 rounded-ui bg-surface px-4 py-3 text-lg text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)]"
+          className="framed-field min-w-0 flex-1 rounded-ui bg-surface px-4 py-3 text-lg text-fg transition-shadow duration-(--dur-fast) placeholder:text-muted focus:shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_25%,transparent)]"
         />
         <Button type="submit" variant="primary" size="lg" disabled={locked}>
           Enviar

@@ -27,6 +27,8 @@ const REQUIRED = [
   // Etapa 6: fondo con degradado, segundo acento, dorado, forma y tipografía de títulos.
   "art-1", "art-2", "mark", "accent-edge", "accent-2", "accent-2-fg", "gold", "gold-fg", "pill", "depth",
   "elev-card", "elev-pop", "font-display",
+  // Revisión final: el aro de foco (--ring, de la spec) y el borde de los campos con contraste de componente.
+  "ring", "field-edge",
 ];
 
 describe("tokens de los temas", () => {
@@ -73,6 +75,27 @@ describe("tokens de los temas", () => {
     for (const [foreground, background] of PAIRS) {
       const ratio = contrastRatio(tokens[foreground]!, tokens[background]!);
       expect(ratio, `${name}: ${foreground} sobre ${background} = ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  // Componentes (no texto): WCAG 1.4.11 pide 3:1 al aro de foco y al borde que delimita un campo.
+  const COMPONENT_PAIRS: [string, string][] = [
+    ["ring", "surface"],
+    ["ring", "surface-2"],
+    ["ring", "bg"],
+    ["ring", "art-1"],
+    ["ring", "art-2"],
+    ["field-edge", "surface"],
+    ["field-edge", "surface-2"],
+    // Dentro del encabezado el aro es del color de su texto, porque el del tema puede ser del mismo color que el fondo.
+    ["header-fg", "header-bg"],
+  ];
+
+  it.each([...themes.keys()])("%s: el aro de foco y el borde de los campos cumplen 3:1", (name) => {
+    const tokens = themes.get(name)!;
+    for (const [foreground, background] of COMPONENT_PAIRS) {
+      const ratio = contrastRatio(tokens[foreground]!, tokens[background]!);
+      expect(ratio, `${name}: ${foreground} sobre ${background} = ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(3);
     }
   });
 

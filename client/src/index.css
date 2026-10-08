@@ -16,6 +16,7 @@
   --color-accent-edge: var(--accent-edge);
   --color-accent-2: var(--accent-2);
   --color-accent-2-fg: var(--accent-2-fg);
+  --color-ring: var(--ring);
   --color-gold: var(--gold);
   --color-gold-fg: var(--gold-fg);
   --color-danger: var(--danger);
@@ -87,11 +88,20 @@ body::before {
   .framed {
     border: var(--frame) solid var(--line);
   }
+  /* Los campos y las tarjetas que se eligen necesitan un borde con 3:1 de contraste (WCAG 1.4.11): el filo suave de --line no basta. */
+  .framed-field {
+    border: var(--frame) solid var(--field-edge);
+  }
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* En el encabezado de color el aro del tema puede ser del mismo tono que el fondo (Pokédex claro): se usa el color de su texto. */
+header :focus-visible {
+  outline-color: var(--header-fg);
 }
 
 /* Animaciones comunes. Las usan los componentes con las clases `animate-*` de más abajo. */

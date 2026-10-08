@@ -52,7 +52,18 @@ describe("lobby (etapa 6)", () => {
     expect(select.parentElement!.querySelector("svg[aria-hidden='true']")).not.toBeNull();
   });
 
-  it("el código de sala es un campo grande, monoespaciado, centrado y en mayúsculas", () => {
+  it("las tarjetas de modo y el selector usan el borde de contraste de los campos, y el foco de una tarjeta se separa de su selección", () => {
+    renderSignedIn();
+    const card = screen.getByRole("radio", { name: /Aleatorio/ }).closest("label")!.querySelector("span")!;
+    expect(card.className.split(" ")).toContain("framed-field");
+    // La marcada lleva borde y sombra de acento: el aro del foco es de otro color y va por fuera de esa sombra.
+    expect(card.className).toContain("peer-focus-visible:outline-ring");
+    expect(card.className).toContain("peer-focus-visible:outline-offset-4");
+    expect(card.className).not.toContain("outline-accent");
+    expect(screen.getByLabelText("Largo de la partida").className.split(" ")).toContain("framed-field");
+  });
+
+  it("el código de sala es un campo grande, con la fuente de números del tema (monoespaciada en Pokédex), centrado y en mayúsculas", () => {
     renderSignedIn();
     const className = screen.getByLabelText("Código de sala").className;
     expect(className).toContain("font-num");

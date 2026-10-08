@@ -36,6 +36,20 @@ describe("movimiento", () => {
   });
 });
 
+describe("foco y bordes de los campos", () => {
+  const css = read("src/index.css");
+
+  it("el aro de foco usa el color del tema y, dentro del encabezado, el de su texto (el del tema puede ser el del fondo)", () => {
+    expect(css).toMatch(/--color-ring:\s*var\(--ring\)/);
+    expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--ring\)/);
+    expect(css).toMatch(/header :focus-visible\s*\{[^}]*outline-color:\s*var\(--header-fg\)/);
+  });
+
+  it("los campos tienen su propia clase de borde con el color de contraste", () => {
+    expect(css).toMatch(/\.framed-field\s*\{[^}]*border:\s*var\(--frame\) solid var\(--field-edge\)/);
+  });
+});
+
 describe("cabecera del documento", () => {
   const html = read("index.html");
 
