@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import type { Prisma, PrismaClient } from "../../src/generated/prisma/client.js";
 import { PENDING_ACCOUNT_TTL_MS } from "../../src/auth/code-policy.js";
 import { AuthService } from "../../src/auth/auth.service.js";
 import { EmailCodeStore, createCodeHasher } from "../../src/auth/email-codes.js";
@@ -18,9 +19,9 @@ const mailer = new MemoryMailer();
 const codes = new EmailCodeStore({ prisma, hash: createCodeHasher("s".repeat(40)), now: () => current });
 const logged: string[] = [];
 
-function newService(emailVerification: boolean) {
+function newService(emailVerification: boolean, db: PrismaClient = prisma) {
   return new AuthService({
-    prisma,
+    prisma: db,
     hasher: createPasswordHasher(4),
     tokens,
     refreshTtlMs: REFRESH_TTL_MS,
@@ -198,6 +199,48 @@ describe("registerPending", () => {
     for (const result of results) {
       if (result.status === "rejected") expect(result.reason).toBeInstanceOf(AppError);
     }
+  });
+
+  it("si la cuenta pendiente se verifica justo mientras otra persona la reemplaza, no se pisa: el reemplazo da EMAIL_TAKEN y la verificada queda como estaba", async () => {
+    await service.registerPending(ash);
+    const code = lastCode(ash.email);
+    const before = await prisma.user.findUniqueOrThrow({ where: { email: ash.email } });
+
+    // Entre comprobar que la cuenta sigue pendiente y escribir el reemplazo (justo después de mirar si el usuario nuevo está
+    // libre), la dueña del correo verifica: la transacción del reemplazo ya no ve una cuenta pendiente, pero no se entera.
+    let raced = false;
+    const racing = new Proxy(prisma, {
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        if (property !== "$transaction") return value;
+        return (callback: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
+          target.$transaction((tx) =>
+            callback(
+              new Proxy(tx, {
+                get(inner, key, innerReceiver) {
+                  const member = Reflect.get(inner, key, innerReceiver);
+                  if (key !== "$queryRaw") return member;
+                  return async (...args: unknown[]) => {
+                    const rows = await (member as (...a: unknown[]) => Promise<unknown>).apply(inner, args);
+                    if (!raced) {
+                      raced = true;
+                      await service.verifyEmail({ email: ash.email, code });
+                    }
+                    return rows;
+                  };
+                },
+              }),
+            ),
+          );
+      },
+    });
+
+    await expectAppError(newService(true, racing).registerPending({ email: ash.email, username: "Atacante", password: "otra-clave-9" }), "EMAIL_TAKEN", 409);
+    expect(raced).toBe(true);
+    const after = await prisma.user.findUniqueOrThrow({ where: { email: ash.email } });
+    expect(after.emailVerifiedAt).not.toBeNull();
+    expect(after.username).toBe("Ash");
+    expect(after.passwordHash).toBe(before.passwordHash);
   });
 });
 

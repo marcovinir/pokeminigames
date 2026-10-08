@@ -203,7 +203,13 @@ export class AuthService {
           // Solo se reemplaza una cuenta pendiente: una verificada, o una sin verificar que ya tiene historial, no se toca.
           if (!(await this.isPending(tx, existing))) throw emailTakenError();
           await this.assertUsernameFree(tx, input.username, existing.id);
-          await tx.user.update({ where: { id: existing.id }, data: { username: input.username, passwordHash, createdAt: now } });
+          // La condición va en el propio UPDATE: si entre mirar y escribir la dueña del correo verificó (o restableció la
+          // contraseña), la cuenta ya no es pendiente y no se pisa (Postgres vuelve a evaluar la condición tras esperar el bloqueo).
+          const replaced = await tx.user.updateMany({
+            where: { id: existing.id, emailVerifiedAt: null },
+            data: { username: input.username, passwordHash, createdAt: now },
+          });
+          if (replaced.count !== 1) throw emailTakenError();
           userId = existing.id;
         } else {
           await this.assertUsernameFree(tx, input.username, null);
