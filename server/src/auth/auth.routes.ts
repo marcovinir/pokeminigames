@@ -84,10 +84,14 @@ export function createAuthRouter({ env, authService, tokens, limiters = {}, code
         result = await authService.register(input);
       }
     } catch (error) {
-      created?.release(ip);
+      const providerDown = error instanceof AppError && error.code === "EMAIL_SEND_FAILED";
+      // Con el proveedor caído la cuenta pendiente SÍ se creó (y costó un bcrypt, una transacción y una llamada al proveedor):
+      // ese hueco no se devuelve, o se podrían crear cuentas pendientes y repetir ese trabajo sin tope mientras el correo falla.
+      if (!providerDown) created?.release(ip);
       // Lo que no es culpa de quien se registra (nuestro límite de envíos o un proveedor caído) no cuenta como intento fallido.
-      const ours = error instanceof AppError && (error.code === "RATE_LIMITED" || error.code === "EMAIL_SEND_FAILED");
+      const ours = error instanceof AppError && (error.code === "RATE_LIMITED" || providerDown);
       if (!ours) failed?.record(ip);
+      // Los huecos de los envíos sí se devuelven: no salió ningún correo, y así se puede reintentar enseguida.
       if (pendingEmail !== null) codeLimits.releaseSend(ip, pendingEmail);
       throw error;
     }

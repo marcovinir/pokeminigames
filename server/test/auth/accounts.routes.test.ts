@@ -432,6 +432,33 @@ describe("límites con los valores de producción", () => {
     expect((await request(env.app).post("/auth/register").set(from("1.1.1.1")).send(ash)).status).toBe(202);
   });
 
+  it("con el proveedor caído los registros siguen contando contra el tope de cuentas por IP: el sexto da 429 y nada se envía", async () => {
+    const env = limited();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    env.mailer.failWith = new MailerError(503, "Resend respondió 503");
+    // Cada intento hace el trabajo (bcrypt, cuenta pendiente, llamada al proveedor): no puede ser gratis para quien lo repite.
+    for (let i = 0; i < 5; i++) {
+      const response = await request(env.app)
+        .post("/auth/register")
+        .set(from("1.1.1.1"))
+        .send({ email: `persona${i}@example.com`, username: `persona${i}`, password: "pikachu-123" });
+      expect(response.status, `intento ${i}`).toBe(502);
+    }
+    const blocked = await request(env.app)
+      .post("/auth/register")
+      .set(from("1.1.1.1"))
+      .send({ email: "otra@example.com", username: "otra", password: "pikachu-123" });
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.error.code).toBe("RATE_LIMITED");
+    expect(env.mailer.sent).toHaveLength(0);
+    expect(await prisma.user.count()).toBe(5);
+
+    // Otra IP no se ve afectada, y los huecos de los envíos sí se devolvieron (no salió ningún correo).
+    env.mailer.failWith = null;
+    const other = await request(env.app).post("/auth/register").set(from("2.2.2.2")).send({ email: "persona0@example.com", username: "persona0", password: "pikachu-123" });
+    expect(other.status).toBe(202);
+  });
+
   it("registrarse también envía código: el mismo correo dos veces seguidas espera 60 s", async () => {
     const env = limited();
     expect((await request(env.app).post("/auth/register").set(from("1.1.1.1")).send(ash)).status).toBe(202);
