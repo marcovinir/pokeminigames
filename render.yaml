@@ -33,3 +33,11 @@ services:
       # La cadena de conexión de Neon (la directa, no la del pooler): se pega al crear el servicio y no se versiona.
       - key: DATABASE_URL
         sync: false
+      # Cuentas con código por correo (guía: docs/correo.md). Se activan desde el panel de Render, no desde este archivo:
+      # EMAIL_VERIFICATION=on y MAIL_PROVIDER=resend, junto con estas dos. Sin ellas (o con la verificación apagada) la
+      # aplicación funciona como antes. Aquí solo quedan declaradas, sin valor (la clave es un secreto y no se versiona):
+      # Render ignora las variables `sync: false` al actualizar un Blueprint que ya existe, así que se añaden a mano.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false

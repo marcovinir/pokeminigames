@@ -60,6 +60,19 @@ export type Env = z.infer<typeof envSchema>;
 type Source = Record<string, string | undefined>;
 
 /**
+ * Una variable del correo que queda en blanco en el panel de Render (la clave que aún no se pegó, por ejemplo) cuenta como no
+ * definida: de otro modo el servicio no arrancaría por algo que, con el correo apagado, nadie usa. Solo se perdonan las del
+ * correo; cualquier otra variable en blanco sigue siendo un error.
+ */
+const MAIL_VARIABLES = ["EMAIL_VERIFICATION", "MAIL_PROVIDER", "RESEND_API_KEY", "MAIL_FROM", "ALLOW_MEMORY_MAIL"] as const;
+
+function withoutBlankMailSettings(source: Source): Source {
+  const kept = { ...source };
+  for (const name of MAIL_VARIABLES) if (kept[name]?.trim() === "") delete kept[name];
+  return kept;
+}
+
+/**
  * Las reglas de producción se miran sobre los valores crudos, no sobre el resultado de zod: zod no ejecuta las reglas
  * cruzadas si falta una variable obligatoria, y así olvidar DATABASE_URL ocultaría el resto de los problemas.
  */
@@ -83,7 +96,8 @@ function productionProblems(source: Source): string[] {
   return problems;
 }
 
-export function loadEnv(source: Source = process.env): Env {
+export function loadEnv(rawSource: Source = process.env): Env {
+  const source = withoutBlankMailSettings(rawSource);
   const result = envSchema.safeParse(source);
   const problems = [
     ...(result.success ? [] : result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)),

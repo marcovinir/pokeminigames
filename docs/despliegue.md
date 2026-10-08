@@ -80,17 +80,27 @@ Imprime `401 401 401 401 401`. Ahora, desde otra red (el celular con datos móvi
 | `DATABASE_URL` | la cadena de Neon | Conexión a la base de datos |
 | `NODE_VERSION` | `24` | Versión de Node |
 | `CORS_ORIGIN` | *(no se define)* | Con un solo origen no hay CORS; solo se usaría si se alojara el cliente en otro dominio |
+| `EMAIL_VERIFICATION` | *(no se define)*: apagada | `on` activa las cuentas con código por correo (registro y «olvidé mi contraseña»); apagada, la aplicación funciona como siempre. Se cambia en el panel, no en `render.yaml` |
+| `MAIL_PROVIDER` | `resend` al activarla | Quién envía los correos. Con la verificación activa en producción solo se admite `resend` (`console` escribiría los códigos en el registro y `memory` es solo de la prueba E2E) |
+| `RESEND_API_KEY` | la clave de Resend (secreto) | Se añade a mano en el panel: `render.yaml` solo la declara, sin valor (Render ignora las variables `sync: false` al actualizar un Blueprint que ya existe). Con permiso solo de envío |
+| `MAIL_FROM` | `Pokémon Minigames <no-responder@tu-dominio.me>` | El remitente, con un dominio verificado en Resend |
 
 ## Seguridad: qué hay y qué no
 
 - Cookie `Secure` + `SameSite=Lax` y comprobación de origen en todas las peticiones que cambian algo (`POST`, `PUT`, `PATCH` y `DELETE`): una petición que el navegador dice venir de otro sitio se rechaza con 403.
 - Límites de peticiones por IP, en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo y 30 por IP sumando todos los correos (un login correcto reinicia la cuenta), 5 registros por hora por IP y 300 peticiones por minuto a la API. Al pasarse responde 429 con `Retry-After`.
-- No hay Helmet ni política de contenido (CSP), recuperación de contraseña por correo ni verificación de correo. El servicio es una sola instancia: los límites y las salas viven en su memoria.
+- Con las cuentas con código por correo activadas (apagadas de partida; ver más abajo), el código de 6 dígitos dura 10 minutos, vale una vez y se bloquea tras 5 intentos; se guarda solo como huella y nunca se escribe en el registro, y las respuestas no revelan si un correo tiene cuenta. Los envíos están limitados por correo y por IP (un código por minuto, 5 por hora por correo, 10 por hora por IP).
+- No hay Helmet ni política de contenido (CSP). El servicio es una sola instancia: los límites y las salas viven en su memoria.
+
+## Activar y desactivar las cuentas con código por correo
+
+Vienen **apagadas**: el despliegue con este código no cambia nada visible. Para activarlas hace falta un dominio, una cuenta de Resend y cuatro variables en el panel de Render; todo el camino, paso a paso, está en [`docs/correo.md`](correo.md). Para volver atrás basta con poner `EMAIL_VERIFICATION=off` en el panel.
 
 ## Actualizar y solucionar problemas
 
 - Cada `push` a `main` redespliega solo (`autoDeployTrigger: commit`). Las migraciones nuevas se aplican en cada compilación. Un redespliegue abandona las partidas en curso.
-- **"Variables de entorno inválidas" al arrancar:** el mensaje dice cuál falta (`COOKIE_SECURE`, `COOKIE_SAME_SITE` o `TRUST_PROXY`).
+- **"Variables de entorno inválidas" al arrancar:** el mensaje dice cuál falta (`COOKIE_SECURE`, `COOKIE_SAME_SITE` o `TRUST_PROXY`; con el correo activado, `MAIL_PROVIDER`, `RESEND_API_KEY` o `MAIL_FROM`). Mientras el arranque falle, Render sigue sirviendo el despliegue anterior.
 - **403 `FORBIDDEN` al iniciar sesión:** la petición llegó con un `Origin` distinto del propio servicio. Si usas un dominio propio asegúrate de entrar siempre por él.
 - **429 `RATE_LIMITED`:** se superó un límite; la respuesta dice cuántos segundos esperar.
+- **502 `EMAIL_SEND_FAILED` al registrarse o pedir un código:** Resend rechazó el envío (clave, dominio sin verificar, remitente de otro dominio o cuota diaria agotada). Ver [`docs/correo.md`](correo.md).
 - **La primera visita tarda:** es el servicio despertando. La prueba de humo y el aviso en pantalla ya lo esperan.

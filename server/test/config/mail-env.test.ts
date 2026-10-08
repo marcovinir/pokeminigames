@@ -90,3 +90,36 @@ describe("producción con la verificación activada", () => {
     expect(message).toMatch(/MAIL_FROM/);
   });
 });
+
+describe("variables de correo en blanco", () => {
+  // Una variable que se deja en blanco en el panel de Render (la clave que aún no se pegó, por ejemplo) es lo mismo que no
+  // tenerla: el servicio no debe quedarse sin arrancar por eso.
+  const blank = { EMAIL_VERIFICATION: "", MAIL_PROVIDER: "", RESEND_API_KEY: "", MAIL_FROM: "", ALLOW_MEMORY_MAIL: "" };
+
+  it("en producción arranca con el correo apagado, como si no estuvieran", () => {
+    const env = loadEnv({ ...production, ...blank });
+    expect(env).toMatchObject({ EMAIL_VERIFICATION: false, MAIL_PROVIDER: undefined, ALLOW_MEMORY_MAIL: false });
+    expect(env.RESEND_API_KEY).toBeUndefined();
+    expect(env.MAIL_FROM).toBeUndefined();
+  });
+
+  it("también las que solo tienen espacios", () => {
+    const env = loadEnv({ ...production, RESEND_API_KEY: "  ", MAIL_FROM: " " });
+    expect(env.RESEND_API_KEY).toBeUndefined();
+    expect(env.MAIL_FROM).toBeUndefined();
+  });
+
+  it("con la verificación encendida, un proveedor en blanco no vale: hay que decir resend", () => {
+    expect(() => loadEnv({ ...production, EMAIL_VERIFICATION: "on", MAIL_PROVIDER: "" })).toThrow(/debe ser resend/);
+  });
+
+  it("con resend, una clave o un remitente en blanco cuentan como faltantes", () => {
+    expect(() => loadEnv({ ...production, ...resend, RESEND_API_KEY: "" })).toThrow(/RESEND_API_KEY/);
+    expect(() => loadEnv({ ...production, ...resend, MAIL_FROM: "" })).toThrow(/MAIL_FROM/);
+  });
+
+  it("solo se perdona el correo: las demás variables en blanco siguen siendo un error", () => {
+    expect(() => loadEnv({ ...production, JWT_ACCESS_SECRET: "" })).toThrow(/JWT_ACCESS_SECRET/);
+    expect(() => loadEnv({ ...production, COOKIE_SECURE: "" })).toThrow(/COOKIE_SECURE/);
+  });
+});
