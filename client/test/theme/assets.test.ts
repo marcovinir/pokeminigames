@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -8,11 +8,43 @@ const read = (path: string): string => readFileSync(join(client, path), "utf8");
 describe("tipografías empaquetadas", () => {
   const css = read("src/index.css");
   const pkg = JSON.parse(read("package.json")) as { dependencies: Record<string, string> };
+  const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((match) => match[1]!);
 
-  it.each(["fredoka", "nunito", "jetbrains-mono"])("%s se instala y se importa desde el CSS (no se pide a un servicio externo)", (font) => {
+  it.each(["fredoka", "nunito", "jetbrains-mono"])("%s se instala con el proyecto (no se pide a un servicio externo)", (font) => {
     expect(pkg.dependencies[`@fontsource-variable/${font}`]).toBeDefined();
-    expect(css).toContain(`@import "@fontsource-variable/${font}`);
     expect(css).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
+  });
+
+  // Spec §3: solo los subconjuntos latino y latino extendido, que cubren el español. Importar el CSS de cada paquete
+  // declaraba también cirílico, griego, hebreo y vietnamita (14 reglas): no se descargan, pero engordaban el CSS (estaba
+  // en 39 899 de 40 000 B) y copiaban al directorio de salida 8 archivos que nadie usa.
+  it("se declaran solo los subconjuntos latino y latino extendido de cada familia: seis reglas @font-face", () => {
+    expect(faces).toHaveLength(6);
+    for (const [family, folder] of [
+      ["Fredoka Variable", "fredoka"],
+      ["Nunito Variable", "nunito"],
+      ["JetBrains Mono Variable", "jetbrains-mono"],
+    ] as const) {
+      const own = faces.filter((face) => face.includes(`font-family: "${family}"`));
+      expect(own, family).toHaveLength(2);
+      expect(own.map((face) => /-(latin(?:-ext)?)-wght-normal\.woff2/.exec(face)?.[1]).sort()).toEqual(["latin", "latin-ext"]);
+      for (const face of own) {
+        expect(face).toContain(`url(@fontsource-variable/${folder}/files/`);
+        expect(face).toMatch(/font-display:\s*swap/);
+        expect(face).toMatch(/font-weight:\s*\d+ \d+/);
+        expect(face).toMatch(/unicode-range:\s*U\+/);
+      }
+    }
+    expect(css).not.toMatch(/cyrillic|greek|vietnamese|hebrew/);
+  });
+
+  it("los archivos de fuente que referencia el CSS existen en el paquete instalado", () => {
+    const files = [...css.matchAll(/url\(@fontsource-variable\/([\w-]+)\/files\/([\w.-]+)\)/g)];
+    expect(files).toHaveLength(6);
+    for (const [, folder, file] of files) {
+      const found = ["../node_modules", "node_modules"].some((base) => existsSync(join(client, base, "@fontsource-variable", folder!, "files", file!)));
+      expect(found, `${folder}/${file}`).toBe(true);
+    }
   });
 });
 
