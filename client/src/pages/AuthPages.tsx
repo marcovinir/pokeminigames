@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError } from "../api/client";
 import { useServices } from "../services";
+import { useEmailVerification } from "../session/auth-options";
 import { AuthForm } from "./AuthForm";
 import { AuthLayout } from "./AuthLayout";
 import { validateLogin, validateRegistration } from "./auth-validation";
@@ -15,6 +16,9 @@ export function LoginPage() {
   const { session } = useServices();
   const navigate = useNavigate();
   const returnTo = useReturnPath();
+  // Con la verificación apagada no hay correos que enviar: no se ofrece recuperar la contraseña.
+  const emailVerification = useEmailVerification();
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
 
   return (
     <AuthLayout>
@@ -22,6 +26,14 @@ export function LoginPage() {
         title="Iniciar sesión"
         submitLabel="Entrar"
         validate={validateLogin}
+        notice={notice}
+        extra={
+          emailVerification ? (
+            <Link to="/olvide" className="text-sm font-semibold text-accent underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          ) : undefined
+        }
         onSubmit={async ({ email, password }) => {
           try {
             await session.getState().login({ email, password });

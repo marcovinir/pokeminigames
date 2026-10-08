@@ -1,15 +1,14 @@
 import { type FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ApiError } from "../api/client";
 import { Button } from "../components/Button";
 import { CodeField } from "../components/CodeField";
 import { Notice } from "../components/Notice";
 import { TextField } from "../components/TextField";
-import { errorMessage } from "../i18n/es";
 import { useServices } from "../services";
 import { AuthCard } from "./AuthCard";
 import { AuthLayout } from "./AuthLayout";
 import { validateEmail, validateVerification } from "./auth-validation";
+import { describeError } from "./describe-error";
 import { useCooldown } from "./use-cooldown";
 
 /** Lo que trae la pantalla de la que se viene (registro o login): el correo al que se envió el código y un aviso. */
@@ -22,8 +21,6 @@ interface VerifyState {
 
 /** El servidor deja un código nuevo por correo cada 60 s. */
 const RESEND_SECONDS = 60;
-
-const describe = (error: unknown): string => (error instanceof ApiError ? error.message : errorMessage(undefined));
 
 /** Verificar el correo con el código de seis dígitos y abrir la sesión. */
 export function VerifyEmailPage() {
@@ -57,7 +54,7 @@ export function VerifyEmailPage() {
       await session.getState().verifyEmail({ email: clean, code });
       navigate(state?.returnTo ?? "/", { replace: true });
     } catch (error) {
-      setFormError(describe(error));
+      setFormError(describeError(error));
       setSubmitting(false);
     }
   }
@@ -77,7 +74,7 @@ export function VerifyEmailPage() {
       setInfo(`Te enviamos un código nuevo a ${clean}.`);
       cooldown.start(RESEND_SECONDS);
     } catch (error) {
-      setFormError(describe(error));
+      setFormError(describeError(error));
     } finally {
       setResending(false);
     }

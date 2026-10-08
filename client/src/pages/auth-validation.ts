@@ -14,6 +14,15 @@ function emailError(email: string): string | undefined {
   return EMAIL.test(email.trim()) ? undefined : "Escribe un email válido.";
 }
 
+/** La regla de la contraseña: de 8 caracteres a 72 bytes (bcrypt solo mira los 72 primeros). */
+function passwordError(password: string): string | undefined {
+  if (password.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+  if (new TextEncoder().encode(password).length > MAX_PASSWORD_BYTES) {
+    return `La contraseña no puede superar ${MAX_PASSWORD_BYTES} bytes (las tildes y los emoji ocupan más de uno).`;
+  }
+  return undefined;
+}
+
 /** Las mismas reglas que aplica el servidor, para avisar antes de enviar. */
 export function validateLogin(input: { email: string; password: string }): FieldErrors {
   const errors: FieldErrors = {};
@@ -41,11 +50,16 @@ export function validateRegistration(input: { email: string; username: string; p
   const email = emailError(input.email);
   if (email) errors.email = email;
   if (!USERNAME.test(input.username.trim())) errors.username = "Usa de 3 a 30 letras, números o guion bajo.";
-  if (input.password.length < 8) {
-    errors.password = "La contraseña debe tener al menos 8 caracteres.";
-  } else if (new TextEncoder().encode(input.password).length > MAX_PASSWORD_BYTES) {
-    errors.password = `La contraseña no puede superar ${MAX_PASSWORD_BYTES} bytes (las tildes y los emoji ocupan más de uno).`;
-  }
+  const password = passwordError(input.password);
+  if (password) errors.password = password;
+  return errors;
+}
+
+/** El correo, el código de seis dígitos y la contraseña nueva. */
+export function validateReset(input: { email: string; code: string; password: string }): { email?: string; code?: string; password?: string } {
+  const errors: { email?: string; code?: string; password?: string } = { ...validateVerification(input) };
+  const password = passwordError(input.password);
+  if (password) errors.password = password;
   return errors;
 }
 

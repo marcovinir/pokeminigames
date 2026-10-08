@@ -48,6 +48,25 @@ describe("rutas de las cuentas con código por correo", () => {
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
     expect(screen.queryByRole("heading", { name: "Verifica tu correo" })).not.toBeInTheDocument();
   });
+
+  it("/olvide y /restablecer son públicas: quien no ha entrado ve sus pantallas", async () => {
+    for (const [route, title] of [
+      ["/olvide", "Recupera tu contraseña"],
+      ["/restablecer", "Nueva contraseña"],
+    ] as const) {
+      const { unmount } = renderApp(route, (s) => s.session.setState({ status: "anonymous", user: null }));
+      expect(await screen.findByRole("heading", { name: title })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("con sesión, /olvide y /restablecer llevan al lobby", async () => {
+    for (const route of ["/olvide", "/restablecer"]) {
+      const { unmount } = renderApp(route, (s) => signIn(s));
+      await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
+      unmount();
+    }
+  });
 });
 
 describe("guardas de ruta", () => {
