@@ -75,6 +75,14 @@ enum ThemeMode {
   @@map("theme_mode")
 }
 
+// Para qué sirve un código que llega por correo.
+enum EmailCodePurpose {
+  verify_email
+  reset_password
+
+  @@map("email_code_purpose")
+}
+
 model Type {
   id   Int    @id
   name String @unique
@@ -131,15 +139,18 @@ model PokemonName {
 }
 
 model User {
-  id           String     @id @default(uuid()) @db.Uuid
-  email        String     @unique
-  username     String
-  passwordHash String     @map("password_hash")
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  id              String     @id @default(uuid()) @db.Uuid
+  email           String     @unique
+  username        String
+  passwordHash    String     @map("password_hash")
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   // Preferencia de tema: los dos nulos o los dos con valor (lo exige una restricción).
-  theme        ThemeName?
-  themeMode    ThemeMode? @map("theme_mode")
+  theme           ThemeName?
+  themeMode       ThemeMode? @map("theme_mode")
+  // Cuándo se demostró que la persona controla el correo; nulo mientras no (las cuentas anteriores a la etapa 7 se dieron por verificadas).
+  emailVerifiedAt DateTime?  @map("email_verified_at") @db.Timestamptz(3)
 
+  emailCodes    EmailCode[]
   refreshTokens RefreshToken[]
   gamePlayers   GamePlayer[]
   wonGames      Game[]
@@ -160,6 +171,23 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// Un código de seis dígitos enviado por correo: una fila por cuenta y propósito (pedir otro reemplaza la fila).
+// Del código solo se guarda un hash con clave. `attempts` va de 0 a 5 (lo exige una restricción de la migración).
+model EmailCode {
+  userId    String           @map("user_id") @db.Uuid
+  purpose   EmailCodePurpose
+  codeHash  String           @map("code_hash")
+  expiresAt DateTime         @map("expires_at") @db.Timestamptz(3)
+  attempts  Int              @default(0) @db.SmallInt
+  // Cuándo se envió.
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, purpose])
+  @@map("email_codes")
 }
 
 model Game {
