@@ -99,6 +99,8 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
     await ash.page.getByText("Pokédex", { exact: true }).click();
     await ash.page.getByText("Claro", { exact: true }).click();
     await ash.page.keyboard.press("Escape");
+    // Escape devuelve el foco al botón de apariencia y su aro (ahora visible en Pokédex) saldría en la captura.
+    await ash.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await expect(ash.page.locator("html")).toHaveAttribute("data-theme", "pokedex");
     await shoot(ash.page, "pokedex");
   } finally {
