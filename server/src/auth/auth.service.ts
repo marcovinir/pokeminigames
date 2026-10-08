@@ -3,7 +3,7 @@ import type { ThemeMode, ThemeName, ThemePreferences } from "@pokemon-minigames/
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { AppError } from "../http/errors.js";
 import { type Mailer, MailerError } from "../mail/mailer.js";
-import { verificationMail } from "../mail/templates.js";
+import { passwordResetMail, verificationMail } from "../mail/templates.js";
 import { PENDING_ACCOUNT_TTL_MS } from "./code-policy.js";
 import type { EmailCodeStore } from "./email-codes.js";
 import type { PasswordHasher } from "./password.js";
@@ -244,6 +244,59 @@ export class AuthService {
       return row.emailVerifiedAt === null ? tx.user.update({ where: { id: userId }, data: { emailVerifiedAt: now } }) : row;
     });
     return this.issueSession(this.prisma, user);
+  }
+
+  /**
+   * Reenvía el código de verificación a una cuenta que existe y no está verificada; con cualquier otro correo no hace nada.
+   * Nadie espera su respuesta (la ruta contesta antes de llamarlo), así que un fallo del proveedor solo se anota.
+   */
+  async resendVerification(email: string): Promise<void> {
+    const { codes, mailer } = this.requireEmail();
+    const user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, emailVerifiedAt: true } });
+    if (!user || user.emailVerifiedAt !== null) return;
+    const code = await codes.issue(this.prisma, user.id, "verify_email");
+    await this.sendQuietly(mailer, verificationMail(email, code));
+  }
+
+  /** Envía el código para cambiar la contraseña a una cuenta que existe (también a una sin verificar); con otro correo no hace nada. */
+  async requestPasswordReset(email: string): Promise<void> {
+    const { codes, mailer } = this.requireEmail();
+    const user = await this.prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (!user) return;
+    const code = await codes.issue(this.prisma, user.id, "reset_password");
+    await this.sendQuietly(mailer, passwordResetMail(email, code));
+  }
+
+  /**
+   * Cambia la contraseña con el código que llegó. Revoca todas las sesiones abiertas de la cuenta y no abre ninguna. Recibir
+   * el código ya demuestra el correo, así que también lo da por verificado. Cualquier fallo del código es INVALID_CODE.
+   */
+  async resetPassword(input: { email: string; code: string; password: string }): Promise<void> {
+    const { codes } = this.requireEmail();
+    const { userId, claim } = await codes.claimByEmail(input.email, "reset_password", input.code);
+    // El hash (que tarda) va después de comprobar el código: con uno inválido no se gasta ese trabajo.
+    const passwordHash = await this.hasher.hash(input.password);
+    const now = this.now();
+    await this.prisma.$transaction(async (tx) => {
+      await claim.consume(tx);
+      const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { emailVerifiedAt: true } });
+      await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash, ...(user.emailVerifiedAt === null ? { emailVerifiedAt: now } : {}) },
+      });
+      await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: now } });
+      // Un código de verificar que siguiera pendiente ya no hace falta.
+      await tx.emailCode.deleteMany({ where: { userId, purpose: "verify_email" } });
+    });
+  }
+
+  /** Envía un correo del que nadie espera respuesta: si falla, solo se anota. */
+  private async sendQuietly(mailer: Mailer, mail: Parameters<Mailer["send"]>[0]): Promise<void> {
+    try {
+      await mailer.send(mail);
+    } catch (error) {
+      this.logMailFailure(error);
+    }
   }
 
   private requireEmail(): { codes: EmailCodeStore; mailer: Mailer } {
