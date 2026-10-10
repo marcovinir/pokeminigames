@@ -53,7 +53,7 @@ Los límites de intentos dependen de que el servidor lea bien la IP de cada visi
 **Prueba 1: ¿el valor es demasiado alto?** (el servidor se fiaría de una IP inventada por el visitante y se podrían esquivar todos los límites). Seis intentos de login fallidos, cada uno con una IP falsa distinta en `X-Forwarded-For`:
 
 ```bash
-for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -H "X-Forwarded-For: 10.0.0.$i" -d email:prueba1@example.com; done; echo
+for i in 1 2 3 4 5 6; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -H "X-Forwarded-For: 10.0.0.$i" -d '{"email":"prueba1@example.com","password":"x"}'; done; echo
 ```
 
 Debe imprimir `401 401 401 401 401 429`: el servidor ignora la IP inventada y cuenta todos los intentos contra tu IP real. Si imprime seis `401`, el valor es demasiado alto (se fía de una IP inventada) o demasiado bajo (cada petición llega con la IP de un proxy de Render distinto, que cambia de una a otra): no se sabe cuál de los dos hasta probar el siguiente valor, como explica "Cómo cambiarlo".
@@ -61,7 +61,7 @@ Debe imprimir `401 401 401 401 401 429`: el servidor ignora la IP inventada y cu
 **Prueba 2: ¿el valor es demasiado bajo?** (todo el mundo compartiría la IP de un proxy de Render y, por ejemplo, solo se podrían hacer 5 registros por hora entre todos). Desde tu computadora haz cinco intentos fallidos con otro correo:
 
 ```bash
-for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -d email:prueba2@example.com; done; echo
+for i in 1 2 3 4 5; do curl -s -o /dev/null -w "%{http_code} " -X POST https://TU-SERVICIO.onrender.com/auth/login -H "Content-Type: application/json" -d '{"email":"prueba2@example.com","password":"x"}'; done; echo
 ```
 
 Imprime `401 401 401 401 401`. Ahora, desde otra red (el celular con datos móviles, sin wifi), abre `https://TU-SERVICIO.onrender.com/login` e intenta entrar con `prueba2@example.com` y cualquier contraseña: debe decir "Email o contraseña incorrectos." Si dice "Demasiados intentos", las dos redes comparten IP para el servidor: el valor es demasiado bajo, súbelo.

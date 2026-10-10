@@ -188,6 +188,15 @@ describe("documentación de despliegue", () => {
     expect(read("render.yaml")).not.toMatch(/en Render, 1/);
   });
 
+  it("las dos pruebas de TRUST_PROXY envían un cuerpo JSON válido (con otro formato el servidor da 400 y la prueba no mide nada)", () => {
+    const bodies = [...guide.matchAll(/-d '([^']*)'/g)].map((match) => match[1]!);
+    expect(bodies.length).toBeGreaterThanOrEqual(2);
+    for (const body of bodies) {
+      expect(JSON.parse(body)).toMatchObject({ email: expect.any(String), password: expect.any(String) });
+    }
+    expect(guide).not.toMatch(/-d email:/);
+  });
+
   it("la guía explica las variables del correo y enlaza la guía para activarlo y desactivarlo", () => {
     for (const variable of ["EMAIL_VERIFICATION", "MAIL_PROVIDER", "RESEND_API_KEY", "MAIL_FROM"]) expect(guide).toContain(`\`${variable}\``);
     expect(guide).toContain("(correo.md)");
@@ -243,6 +252,11 @@ describe("guía del correo (docs/correo.md)", () => {
     });
     expect(env).toMatchObject({ EMAIL_VERIFICATION: true, MAIL_PROVIDER: "resend" });
     expect(env.MAIL_FROM).toMatch(/<[^<>@]+@[^<>@]+>$/);
+  });
+
+  it("pide tener pasadas las dos pruebas de TRUST_PROXY antes de activar el correo (los límites por IP dependen de ello)", () => {
+    expect(guide()).toMatch(/TRUST_PROXY/);
+    expect(guide()).toContain("(despliegue.md");
   });
 
   it("explica la marcha atrás: EMAIL_VERIFICATION a off", () => {

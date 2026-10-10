@@ -19,6 +19,7 @@ Necesitas:
 1. **Un dominio propio.** Es lo único que puede costar dinero. El juego sigue en su dirección de `onrender.com`; el dominio solo sirve para que los correos salgan con un remitente tuyo (por ejemplo `no-responder@tu-dominio.me`).
 2. **Una cuenta gratuita en Resend** ([resend.com](https://resend.com)).
 3. **Acceso al panel de Render**, donde ya está el servicio `pokemon-minigames`.
+4. **Las dos pruebas de `TRUST_PROXY` pasadas** (sección 5 de la [guía de despliegue](despliegue.md#5-verificar-trust_proxy-una-sola-vez-tras-el-primer-despliegue)): los límites por IP que frenan el correo masivo y los intentos con códigos dependen de que el servidor lea bien la IP de cada visitante.
 
 Calcula media hora de trabajo más la espera de los registros DNS (de unos minutos a unas horas).
 
