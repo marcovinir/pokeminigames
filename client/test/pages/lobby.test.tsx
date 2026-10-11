@@ -242,3 +242,77 @@ describe("lobby: volver a tu partida", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
+
+describe("formulario con pistas de tipos (etapa 8)", () => {
+  const config = (overrides: Partial<RoomConfig> = {}): RoomConfig => ({
+    typeMode: "random",
+    lengthMode: "fixed_rounds",
+    roundsLimit: 3,
+    statsGoal: null,
+    ...overrides,
+  });
+
+  it("las pistas parten apagadas", () => {
+    expect(DEFAULT_FORM.typeHints).toBe(false);
+  });
+
+  it("buildRequest manda typeHints solo cuando están encendidas", () => {
+    expect(buildRequest({ ...DEFAULT_FORM, typeHints: true })).toEqual({
+      ok: true,
+      request: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, typeHints: true },
+    });
+    const off = buildRequest({ ...DEFAULT_FORM, typeHints: false });
+    expect(off).toEqual({ ok: true, request: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3 } });
+  });
+
+  it("las pistas viajan en cada largo de partida", () => {
+    for (const lengthKind of ["fixed-3", "fixed-5", "custom-rounds", "custom-stats"] as const) {
+      const built = buildRequest({ ...DEFAULT_FORM, lengthKind, typeHints: true });
+      expect(built.ok && built.request.typeHints).toBe(true);
+    }
+  });
+
+  it("formFromConfig recupera las pistas; sin el campo (servidor anterior) quedan apagadas", () => {
+    expect(formFromConfig(config({ typeHints: true })).typeHints).toBe(true);
+    expect(formFromConfig(config({ typeHints: false })).typeHints).toBe(false);
+    expect(formFromConfig(config()).typeHints).toBe(false);
+  });
+
+  it("convertir y volver a convertir conserva las pistas", () => {
+    const built = buildRequest(formFromConfig(config({ typeHints: true })));
+    expect(built).toEqual({ ok: true, request: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, typeHints: true } });
+  });
+});
+
+describe("lobby: pistas de tipos (etapa 8)", () => {
+  it("hay un interruptor «Pistas de tipos», apagado, con su aclaración", () => {
+    renderLobby();
+    const toggle = screen.getByRole("switch", { name: "Pistas de tipos" });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText("Muestra los tipos en las sugerencias; hace la ronda más fácil.")).toBeInTheDocument();
+  });
+
+  it("encendido, la sala se crea con las pistas", async () => {
+    const { services, user } = renderLobby();
+    await user.click(screen.getByRole("switch", { name: "Pistas de tipos" }));
+    expect(screen.getByRole("switch", { name: "Pistas de tipos" })).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Crear sala" }));
+    await waitFor(() => expect(services.endpoints.rooms.create).toHaveBeenCalled());
+    expect(services.endpoints.rooms.create).toHaveBeenCalledWith({ typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, typeHints: true });
+  });
+
+  it("el interruptor se maneja con el teclado (Espacio)", async () => {
+    const { user } = renderLobby();
+    const toggle = screen.getByRole("switch", { name: "Pistas de tipos" });
+    toggle.focus();
+    await user.keyboard(" ");
+    expect(toggle).toBeChecked();
+    await user.keyboard(" ");
+    expect(toggle).not.toBeChecked();
+  });
+
+  it("al volver a jugar, parte de las pistas de la partida anterior", () => {
+    renderLobby({ state: { config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, typeHints: true } } });
+    expect(screen.getByRole("switch", { name: "Pistas de tipos" })).toBeChecked();
+  });
+});

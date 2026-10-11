@@ -120,3 +120,31 @@ describe("elegir tipo (etapa 6)", () => {
     expect(screen.getByRole("button", { name: "agua" })).not.toHaveAttribute("data-chosen");
   });
 });
+
+describe("sala de espera: configuración y pistas de tipos (etapa 8)", () => {
+  const withConfig = (config: object) =>
+    event.roomState({
+      phase: "waiting",
+      players: [ash()],
+      config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, ...config },
+    });
+
+  it("muestra la configuración de la sala, para que quien se une sepa cómo se va a jugar", () => {
+    renderRoom([withConfig({})]);
+    expect(screen.getByLabelText("Configuración de la sala")).toHaveTextContent("Tipos aleatorios · 3 rondas");
+  });
+
+  it("con pistas muestra la insignia «Pistas de tipos»", () => {
+    renderRoom([withConfig({ typeHints: true })]);
+    const settings = screen.getByLabelText("Configuración de la sala");
+    expect(within(settings).getByText("Pistas de tipos")).toBeInTheDocument();
+  });
+
+  it("sin pistas (apagadas o sin el campo) no hay insignia", () => {
+    for (const config of [{ typeHints: false }, {}]) {
+      const { unmount } = renderRoom([withConfig(config)]);
+      expect(screen.queryByText("Pistas de tipos")).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+});
