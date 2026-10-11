@@ -92,6 +92,15 @@ describe("POST /rooms", () => {
     expect(response.status).toBe(400);
   });
 
+  it("las pistas de tipos son opcionales (apagadas por defecto) y solo admiten un booleano", async () => {
+    expect((await createRoom(ash, { ...validBody, typeHints: false })).status).toBe(201);
+    expect((await createRoom(misty, validBody)).status).toBe(201);
+    for (const typeHints of ["true", 1, null, "si"]) {
+      const response = await createRoom(brock, { ...validBody, typeHints });
+      expect(response.status, JSON.stringify(typeHints)).toBe(400);
+    }
+  });
+
   it("409 ALREADY_IN_GAME si el usuario ya está en una partida activa", async () => {
     await createRoom(ash);
     const response = await createRoom(ash);
@@ -138,10 +147,17 @@ describe("GET /rooms/:code", () => {
     expect(response.body).toEqual({
       code: body.code,
       phase: "waiting",
-      config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 2500 },
+      config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 2500, typeHints: false },
       creator: "ash",
       playerCount: 1,
     });
+  });
+
+  it("las pistas de tipos que pidió quien creó la sala salen en la información pública", async () => {
+    const { body } = await createRoom(ash, { ...validBody, typeHints: true });
+    const response = await request(ctx.app).get(`/rooms/${body.code}`).set(auth(misty));
+    expect(response.status).toBe(200);
+    expect(response.body.config).toEqual({ typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, typeHints: true });
   });
 
   it("404 ROOM_NOT_FOUND para un código inexistente", async () => {
