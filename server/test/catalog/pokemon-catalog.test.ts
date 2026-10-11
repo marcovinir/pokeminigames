@@ -54,6 +54,27 @@ describe("PokemonCatalog", () => {
     });
   });
 
+  describe("freeMembers", () => {
+    const pair = PokemonCatalog.orderPair("fire", "flying");
+
+    it("da los Pokémon de doble tipo de ese par que nadie tiene, en orden estable", () => {
+      expect(catalog.freeMembers(pair, new Set()).map((p) => p.id)).toEqual([1, 2, 3]);
+      expect(catalog.freeMembers(pair, new Set([2])).map((p) => p.id)).toEqual([1, 3]);
+      expect(catalog.freeMembers(pair, new Set([1, 2, 3]))).toEqual([]);
+    });
+
+    it("no incluye a los de un solo tipo ni a los de otro par, y un par sin Pokémon da una lista vacía", () => {
+      const ids = catalog.freeMembers(pair, new Set()).map((p) => p.id);
+      expect(ids).not.toContain(9); // Iota: solo fuego
+      expect(catalog.freeMembers(PokemonCatalog.orderPair("ice", "dark"), new Set())).toEqual([]);
+    });
+
+    it("coincide con poolSize", () => {
+      const claimed = new Set([1]);
+      expect(catalog.freeMembers(pair, claimed)).toHaveLength(catalog.poolSize(pair, claimed));
+    });
+  });
+
   describe("poolSize y playablePairs", () => {
     const none = new Set<number>();
 
