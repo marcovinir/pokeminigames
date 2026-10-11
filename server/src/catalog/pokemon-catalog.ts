@@ -81,6 +81,12 @@ export class PokemonCatalog {
     return pair.every((type) => pokemon.types.includes(type));
   }
 
+  /** Los Pokémon de doble tipo de ese par que nadie tiene, en el mismo orden estable que `poolSize` cuenta. */
+  freeMembers(pair: TypePair, claimed: ReadonlySet<number>): CatalogPokemon[] {
+    const entry = this.pairs.get(`${pair[0]}|${pair[1]}`);
+    return entry ? entry.members.filter((p) => !claimed.has(p.id)) : [];
+  }
+
   /** Cuántos Pokémon de doble tipo de ese par siguen sin reclamar. */
   poolSize(pair: TypePair, claimed: ReadonlySet<number>): number {
     const entry = this.pairs.get(`${pair[0]}|${pair[1]}`);

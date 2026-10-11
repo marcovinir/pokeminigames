@@ -1,6 +1,6 @@
 import type { PickResult, Seat } from "@pokemon-minigames/shared";
 import type { CatalogPokemon, PokemonCatalog, TypePair } from "../../catalog/pokemon-catalog.js";
-import type { Rng } from "../rng.js";
+import { type Rng, pickOne } from "../rng.js";
 import { type PickState, SEATS } from "./types.js";
 
 export interface ResolveInput {
@@ -17,6 +17,20 @@ export interface ResolveInput {
 export interface PickOutcome {
   result: PickResult;
   pokemonId: number | null;
+}
+
+/**
+ * Un Pokémon del par que nadie tiene, para enseñarlo tras una ronda en la que acertaron 0 o 1 jugadores; `null` si ya no
+ * queda ninguno (y entonces no gasta azar). Se pide después de repartir los de la ronda, así que nunca es uno ganado.
+ */
+export function pickExample(
+  catalog: PokemonCatalog,
+  pair: TypePair,
+  claimed: ReadonlySet<number>,
+  rng: Rng,
+): CatalogPokemon | null {
+  const free = catalog.freeMembers(pair, claimed);
+  return free.length === 0 ? null : pickOne(rng, free);
 }
 
 /**

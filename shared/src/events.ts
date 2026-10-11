@@ -61,6 +61,11 @@ export interface RoundResultPayload {
   type1: TypeName;
   type2: TypeName;
   results: Record<Seat, RoundPlayerResult>;
+  /**
+   * Un Pokémon de ese par que nadie tiene, para enseñar qué se podía contestar. Solo viene si acertaron 0 o 1 jugadores y
+   * queda alguno libre.
+   */
+  example?: PokemonView;
 }
 
 export interface GameEndedPayload {

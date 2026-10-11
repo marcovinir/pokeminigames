@@ -13,7 +13,7 @@ import {
   seconds,
 } from "../constants.js";
 import { pickOne } from "../rng.js";
-import { resolveRound } from "./resolve.js";
+import { pickExample, resolveRound } from "./resolve.js";
 import {
   type Effect,
   type EngineDeps,
@@ -395,6 +395,9 @@ function closeRound(c: Ctx): void {
 
   s.roundsPlayed = round.number;
   const over = gameIsOver(s);
+  // Si acertaron 0 o 1 jugadores se enseña un Pokémon libre que sí servía (ya repartidos los de esta ronda: nunca es uno ganado).
+  const hits = SEATS.filter((seat) => results[seat].result === "VALID").length;
+  const example = hits <= 1 ? pickExample(c.deps.catalog, pair, claimedIds(s), c.deps.rng) : null;
   emit(c, "all", {
     name: "round-result",
     payload: {
@@ -403,6 +406,7 @@ function closeRound(c: Ctx): void {
       type1: pair[0],
       type2: pair[1],
       results,
+      ...(example ? { example: toPokemonView(example) } : {}),
     },
   });
   c.fx.push({ kind: "persist_round", record: { number: round.number, pair, picks: records } });
