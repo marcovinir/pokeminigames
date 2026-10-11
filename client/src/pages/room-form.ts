@@ -13,6 +13,8 @@ export interface CreateRoomForm {
   lengthKind: LengthKind;
   customRounds: string;
   statsGoal: string;
+  /** «Pistas de tipos»: las sugerencias del campo de respuesta muestran los tipos (apagado por defecto). */
+  typeHints: boolean;
 }
 
 export const DEFAULT_FORM: CreateRoomForm = {
@@ -20,6 +22,7 @@ export const DEFAULT_FORM: CreateRoomForm = {
   lengthKind: "fixed-3",
   customRounds: "10",
   statsGoal: "2500",
+  typeHints: false,
 };
 
 export const LENGTH_LABELS: Record<LengthKind, string> = {
@@ -31,7 +34,12 @@ export const LENGTH_LABELS: Record<LengthKind, string> = {
 
 /** El formulario de una sala que ya se jugó, para "Jugar de nuevo" con la misma configuración. */
 export function formFromConfig(config: RoomConfig): CreateRoomForm {
-  const base = { typeMode: config.typeMode, customRounds: DEFAULT_FORM.customRounds, statsGoal: DEFAULT_FORM.statsGoal };
+  const base = {
+    typeMode: config.typeMode,
+    customRounds: DEFAULT_FORM.customRounds,
+    statsGoal: DEFAULT_FORM.statsGoal,
+    typeHints: config.typeHints === true,
+  };
   if (config.lengthMode === "fixed_rounds") {
     return { ...base, lengthKind: config.roundsLimit === 5 ? "fixed-5" : "fixed-3" };
   }
@@ -52,24 +60,26 @@ export type BuiltRequest =
 /** Convierte el formulario en la petición al servidor, con los mismos límites que él valida. */
 export function buildRequest(form: CreateRoomForm): BuiltRequest {
   const { typeMode } = form;
+  // Solo se manda cuando están encendidas: apagadas es lo que el servidor entiende por omisión.
+  const hints = form.typeHints ? { typeHints: true } : {};
   switch (form.lengthKind) {
     case "fixed-3":
-      return { ok: true, request: { typeMode, lengthMode: "fixed_rounds", roundsLimit: 3 } };
+      return { ok: true, request: { typeMode, lengthMode: "fixed_rounds", roundsLimit: 3, ...hints } };
     case "fixed-5":
-      return { ok: true, request: { typeMode, lengthMode: "fixed_rounds", roundsLimit: 5 } };
+      return { ok: true, request: { typeMode, lengthMode: "fixed_rounds", roundsLimit: 5, ...hints } };
     case "custom-rounds": {
       const rounds = wholeNumber(form.customRounds);
       if (rounds === null || rounds < CUSTOM_ROUNDS_MIN || rounds > CUSTOM_ROUNDS_MAX) {
         return { ok: false, field: "customRounds", error: `El máximo de rondas va de ${CUSTOM_ROUNDS_MIN} a ${CUSTOM_ROUNDS_MAX}.` };
       }
-      return { ok: true, request: { typeMode, lengthMode: "custom", roundsLimit: rounds } };
+      return { ok: true, request: { typeMode, lengthMode: "custom", roundsLimit: rounds, ...hints } };
     }
     case "custom-stats": {
       const goal = wholeNumber(form.statsGoal);
       if (goal === null || goal < CUSTOM_STATS_GOAL_MIN || goal > CUSTOM_STATS_GOAL_MAX) {
         return { ok: false, field: "statsGoal", error: `La meta de stats va de ${CUSTOM_STATS_GOAL_MIN} a ${CUSTOM_STATS_GOAL_MAX}.` };
       }
-      return { ok: true, request: { typeMode, lengthMode: "custom", statsGoal: goal } };
+      return { ok: true, request: { typeMode, lengthMode: "custom", statsGoal: goal, ...hints } };
     }
   }
 }

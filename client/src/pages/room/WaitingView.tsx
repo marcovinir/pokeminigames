@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
+import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { rise } from "../../components/rise";
+import { describeConfig } from "../../i18n/es";
 import { useRoom } from "./use-room";
 
 /** Copia el código de la sala al portapapeles; si el navegador no lo permite, lo dice. */
@@ -53,6 +55,13 @@ export function WaitingView() {
         ))}
       </p>
       <CopyCodeButton code={code} />
+
+      {view.config ? (
+        <p aria-label="Configuración de la sala" className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
+          <span>{describeConfig(view.config)}</span>
+          {view.config.typeHints ? <Badge tone="info">Pistas de tipos</Badge> : null}
+        </p>
+      ) : null}
 
       <ul className="mt-7 flex justify-center gap-4 sm:gap-8" aria-label="Jugadores">
         {view.players.map((player) => (
