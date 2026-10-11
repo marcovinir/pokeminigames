@@ -42,7 +42,8 @@ describe("resumen final (etapa 6)", () => {
   it("de cada equipo, el Pokémon de más puntos va primero con el arte oficial grande y los demás compactos", () => {
     renderRoom(finished(1, 1));
     const mine = screen.getByRole("region", { name: "Equipo de Tú" });
-    const images = [...mine.querySelectorAll("img")];
+    // Los iconos de tipo también son imágenes (decorativas, aria-hidden): aquí solo cuentan las de los Pokémon.
+    const images = [...mine.querySelectorAll("img:not([aria-hidden='true'])")];
     expect(images).toHaveLength(2);
     expect(images[0]).toHaveAttribute("src", expect.stringContaining("/official-artwork/1.png")); // 500 puntos
     expect(images[1]).toHaveAttribute("src", "https://example.com/2.png"); // 300 puntos: sprite pequeño
@@ -156,7 +157,7 @@ describe("perfil (etapa 6)", () => {
     services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", stats: STATS }));
     renderProfile("/perfil", services);
     const top = await screen.findByRole("region", { name: "Pokémon más ganados" });
-    const images = [...top.querySelectorAll("img")];
+    const images = [...top.querySelectorAll("img:not([aria-hidden='true'])")];
     expect(images[0]).toHaveAttribute("src", expect.stringContaining("/official-artwork/6.png"));
     expect(images[1]).toHaveAttribute("src", expect.stringContaining("/official-artwork/25.png"));
     const medals = [...top.querySelectorAll("[data-medal]")];

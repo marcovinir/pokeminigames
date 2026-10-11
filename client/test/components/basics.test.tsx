@@ -1,5 +1,5 @@
 import { TYPE_NAMES } from "@pokemon-minigames/shared";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../../src/components/Button";
@@ -8,6 +8,7 @@ import { OpponentPanel, TeamPanel } from "../../src/components/Panels";
 import { PokemonCard } from "../../src/components/PokemonCard";
 import { TextField } from "../../src/components/TextField";
 import { Timer } from "../../src/components/Timer";
+import { typeIconUrl } from "../../src/catalog/artwork";
 import { TypeChip } from "../../src/components/TypeChip";
 import { TYPE_LABELS } from "../../src/i18n/es";
 import { pokemon } from "../helpers/events";
@@ -85,6 +86,36 @@ describe("TypeChip", () => {
     const chip = screen.getByText("fuego");
     expect(chip).toHaveAttribute("data-type", "fire");
     expect(chip.style.background).not.toBe("");
+  });
+
+  it("lleva el icono oficial del tipo: decorativo y sin cambiar el nombre", () => {
+    const { container } = render(<TypeChip type="fire" />);
+    const icon = container.querySelector("img")!;
+    expect(icon).toHaveAttribute("src", typeIconUrl("fire"));
+    expect(icon).toHaveAttribute("alt", "");
+    expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText("fuego")).toHaveAttribute("data-type", "fire");
+  });
+
+  it("el icono tiene tamaño fijo (14 px, 18 px en el chip grande) para que no salte el diseño", () => {
+    const { container, rerender } = render(<TypeChip type="water" />);
+    expect(container.querySelector("img")).toHaveAttribute("width", "14");
+    rerender(<TypeChip type="water" size="lg" />);
+    expect(container.querySelector("img")).toHaveAttribute("width", "18");
+    expect(container.querySelector("img")).toHaveAttribute("height", "18");
+  });
+
+  it("con icon={false} queda como antes, sin imagen", () => {
+    const { container } = render(<TypeChip type="ice" icon={false} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("hielo")).toBeInTheDocument();
+  });
+
+  it("si la imagen no carga, el icono desaparece y queda el chip de siempre", () => {
+    const { container } = render(<TypeChip type="ghost" />);
+    fireEvent.error(container.querySelector("img")!);
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("fantasma")).toHaveAttribute("data-type", "ghost");
   });
 
   it("los 18 tipos tienen su nombre en español", () => {

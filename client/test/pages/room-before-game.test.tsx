@@ -1,5 +1,8 @@
-import { screen, within } from "@testing-library/react";
+import { TYPE_NAMES } from "@pokemon-minigames/shared";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { typeIconUrl } from "../../src/catalog/artwork";
+import { TYPE_LABELS } from "../../src/i18n/es";
 import { SERVER_NOW, event } from "../helpers/events";
 import { ash, misty, renderRoom, roundState } from "../helpers/room";
 
@@ -79,6 +82,28 @@ describe("elegir tipo (etapa 6)", () => {
       expect(tile.className).toContain("rounded-card");
       expect(tile).toHaveAttribute("data-type");
     }
+  });
+
+  it("cada tesela lleva el icono oficial de su tipo encima del nombre, decorativo", () => {
+    renderRoom([choosing()]);
+    const tiles = within(screen.getByRole("group", { name: "Tipos" })).getAllByRole("button");
+    tiles.forEach((tile, index) => {
+      const type = TYPE_NAMES[index]!;
+      const icon = tile.querySelector("img")!;
+      expect(icon).toHaveAttribute("src", typeIconUrl(type));
+      expect(icon).toHaveAttribute("alt", "");
+      expect(icon).toHaveAttribute("aria-hidden", "true");
+      expect(tile).toHaveAccessibleName(TYPE_LABELS[type]);
+    });
+  });
+
+  it("si un icono no carga, la tesela queda con su nombre como siempre", async () => {
+    const { user } = renderRoom([choosing()]);
+    const fire = screen.getByRole("button", { name: "fuego" });
+    fireEvent.error(fire.querySelector("img")!);
+    expect(fire.querySelector("img")).toBeNull();
+    await user.click(fire);
+    expect(screen.getByRole("button", { name: "fuego" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("el cronómetro es un anillo con su nombre de siempre", () => {
