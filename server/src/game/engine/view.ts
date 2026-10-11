@@ -28,8 +28,8 @@ export function teamViews(state: GameState, seat: Seat, catalog: PokemonCatalog)
 }
 
 /**
- * Estado de la partida para un jugador. Del rival solo revela los totales: los nombres
- * de sus Pokémon se conocen únicamente en `round-result` y `game-ended`.
+ * Estado de la partida para un jugador. Del rival revela su equipo tal como lo conoce quien juega: los Pokémon que ya
+ * se mostraron en `round-result`. Lo que escribió en la ronda abierta no está en el estado hasta que se cierra.
  */
 export function buildRoomState(
   state: GameState,
@@ -73,6 +73,7 @@ export function buildRoomState(
     mySeat: seat,
     players,
     myTeam: teamViews(state, seat, catalog),
+    opponentTeam: teamViews(state, otherSeat(seat), catalog),
     roundsPlayed: state.roundsPlayed,
     startsAt: state.phase === "starting" ? state.startsAt : null,
     opponentGraceEndsAt: state.graceEndsAt[otherSeat(seat)] ?? null,

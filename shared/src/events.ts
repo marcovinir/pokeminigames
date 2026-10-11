@@ -26,8 +26,10 @@ export interface RoomStateView {
   config: RoomConfig;
   mySeat: Seat;
   players: RoomPlayerView[];
-  /** Equipo propio completo. Del rival solo se conocen los totales (`players`). */
+  /** Equipo propio completo. */
   myTeam: PokemonView[];
+  /** El equipo del rival: solo lo que ya se reveló al cerrarse cada ronda (nunca lo que escribió en la ronda abierta). */
+  opponentTeam: PokemonView[];
   roundsPlayed: number;
   startsAt: number | null;
   /** Hasta cuándo puede volver el rival si está desconectado. */
