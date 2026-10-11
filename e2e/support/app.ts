@@ -13,10 +13,14 @@ const snapshot = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../server/data/catalog.snapshot.json", import.meta.url)), "utf8"),
 ) as { pokemon: SnapshotPokemon[] };
 
-/** Un Pokémon que tiene los dos tipos del par (el servidor garantiza que cada par tiene al menos dos). */
-export function validAnswerFor(types: string[]): string {
-  const found = snapshot.pokemon.find((p) => p.types.length === 2 && types.every((type) => p.types.includes(type)));
-  if (!found) throw new Error(`No hay ningún Pokémon con los tipos ${types.join(" y ")}`);
+/**
+ * Un Pokémon que tiene los dos tipos del par (el servidor garantiza que cada par tiene al menos dos). Con `skip` se salta
+ * esos primeros: así dos personas pueden nombrar Pokémon distintos del mismo par.
+ */
+export function validAnswerFor(types: string[], skip = 0): string {
+  const matches = snapshot.pokemon.filter((p) => p.types.length === 2 && types.every((type) => p.types.includes(type)));
+  const found = matches[skip];
+  if (!found) throw new Error(`No hay un Pokémon número ${skip + 1} con los tipos ${types.join(" y ")}`);
   return found.names.en;
 }
 
@@ -117,6 +121,29 @@ export async function logIn(page: Page, email: string, password: string): Promis
 export async function createRoomWithRounds(page: Page, rounds: number): Promise<string> {
   await page.getByLabel("Largo de la partida").selectOption("custom-rounds");
   await page.getByLabel("Máximo de rondas").fill(String(rounds));
+  await page.getByRole("button", { name: "Crear sala" }).click();
+  const code = page.getByLabel("Código de la sala");
+  await expect(code).toBeVisible();
+  return ((await code.textContent()) ?? "").trim();
+}
+
+/**
+ * Crea una sala con las opciones dadas y devuelve su código. Sin opciones es la de siempre: tipos aleatorios, 3 rondas y
+ * sin pistas. Las opciones son casillas ocultas visualmente: se activan pulsando su texto, como lo haría una persona.
+ */
+export async function createRoom(
+  page: Page,
+  options: { rounds?: number; chosenTypes?: boolean; typeHints?: boolean } = {},
+): Promise<string> {
+  if (options.chosenTypes) await page.getByText("Elegido", { exact: true }).click();
+  if (options.typeHints) {
+    await page.getByText("Pistas de tipos", { exact: true }).click();
+    await expect(page.getByRole("switch", { name: "Pistas de tipos" })).toBeChecked();
+  }
+  if (options.rounds !== undefined) {
+    await page.getByLabel("Largo de la partida").selectOption("custom-rounds");
+    await page.getByLabel("Máximo de rondas").fill(String(options.rounds));
+  }
   await page.getByRole("button", { name: "Crear sala" }).click();
   const code = page.getByLabel("Código de la sala");
   await expect(code).toBeVisible();
