@@ -87,7 +87,7 @@ describe("marcadores (etapa 6)", () => {
   });
 
   it("OpponentPanel lleva el avatar del rival, su total y nunca nombres de Pokémon", () => {
-    render(<OpponentPanel name="misty" total={400} teamSize={2} connected />);
+    render(<OpponentPanel name="misty" total={400} teamSize={2} team={[]} connected />);
     const panel = screen.getByRole("region", { name: "Tu rival" });
     expect(panel).toHaveTextContent("misty");
     expect(panel).toHaveTextContent("400");
@@ -96,7 +96,7 @@ describe("marcadores (etapa 6)", () => {
   });
 
   it("el rival desconectado se marca con una etiqueta de peligro", () => {
-    render(<OpponentPanel name="misty" total={300} teamSize={1} connected={false} />);
+    render(<OpponentPanel name="misty" total={300} teamSize={1} team={[]} connected={false} />);
     expect(screen.getByText("Desconectado").className).toContain("bg-danger-bg");
   });
 });

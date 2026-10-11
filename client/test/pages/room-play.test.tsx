@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PokemonCard } from "../../src/components/PokemonCard";
 import { SERVER_NOW, event, pokemon } from "../helpers/events";
-import { ash, misty, renderRoom, roundState } from "../helpers/room";
+import { ash, misty, renderRoom, roundState, serverSends } from "../helpers/room";
 import { render } from "@testing-library/react";
 
 afterEach(() => vi.useRealTimers());
@@ -124,5 +124,89 @@ describe("PokemonCard con carga inmediata", () => {
   it("por defecto es perezosa", () => {
     const { container } = render(<PokemonCard pokemon={pokemon(6, 534)} size="lg" />);
     expect(container.querySelector("img")).toHaveAttribute("loading", "lazy");
+  });
+});
+
+describe("equipo del rival en la ronda (etapa 8)", () => {
+  const playing = (stateExtra: object = {}) =>
+    event.roomState({
+      phase: "round_active",
+      myTeam: [pokemon(1, 500)],
+      players: [ash({ totalStats: 500, teamSize: 1 }), misty({ totalStats: 400, teamSize: 1 })],
+      round: roundState({ number: 2 }),
+      ...stateExtra,
+    });
+
+  it("el panel del rival lista lo ya revelado, incluso tras recargar (viene en room-state)", () => {
+    renderRoom([playing({ opponentTeam: [pokemon(7, 400)] })]);
+    const rival = screen.getByRole("region", { name: "Tu rival" });
+    expect(within(rival).getByText("Poke7")).toBeInTheDocument();
+    expect(rival).toHaveTextContent("1 Pokémon");
+    expect(rival.querySelector("img")).toHaveAttribute("src", "https://example.com/7.png");
+  });
+
+  it("sin Pokémon revelados dice que se revelan al cerrar cada ronda y no lista ninguno", () => {
+    renderRoom([playing({ players: [ash(), misty()], myTeam: [] })]);
+    const rival = screen.getByRole("region", { name: "Tu rival" });
+    expect(rival).toHaveTextContent("Se revelan al cerrar cada ronda.");
+    expect(within(rival).queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("al cerrarse una ronda, el Pokémon que ganó el rival entra a su panel en la ronda siguiente", () => {
+    const { services } = renderRoom([playing({ players: [ash(), misty()], myTeam: [] })]);
+    serverSends(
+      services,
+      event.roundResult({
+        round: 2,
+        results: {
+          1: { seat: 1, result: "NOT_FOUND", text: "zzz", pokemon: null, totalStats: 0, teamSize: 0 },
+          2: { seat: 2, result: "VALID", text: "b", pokemon: pokemon(2, 300), totalStats: 300, teamSize: 1 },
+        },
+      }),
+    );
+    serverSends(services, event.roundStarted(3, SERVER_NOW + 15_000));
+    const rival = screen.getByRole("region", { name: "Tu rival" });
+    expect(within(rival).getByText("Poke2")).toBeInTheDocument();
+  });
+});
+
+describe("ejemplo tras la ronda (etapa 8)", () => {
+  const afterRound = (result = event.roundResult()) => [
+    event.roomState({ phase: "round_result", mySeat: 1, roundsPlayed: 1, players: [ash(), misty()] }),
+    result,
+  ];
+  const withExample = () => event.roundResult({ example: pokemon(25, 480, { types: ["fire", "flying"] }) });
+
+  it("con ejemplo aparece una tarjeta «Un Pokémon que servía» con su arte, sus tipos y su total", () => {
+    renderRoom(afterRound(withExample()));
+    const card = screen.getByRole("region", { name: "Un Pokémon que servía: Poke25" });
+    expect(within(card).getByRole("heading", { level: 2, name: "Un Pokémon que servía" })).toBeInTheDocument();
+    expect(within(card).getByText("Poke25")).toBeInTheDocument();
+    expect(card.querySelector("img")).toHaveAttribute("src", "https://example.com/25.png");
+    expect([...card.querySelectorAll("[data-type]")].map((chip) => chip.getAttribute("data-type"))).toEqual(["fire", "flying"]);
+    expect(within(card).getByLabelText("480 puntos en total")).toBeInTheDocument();
+  });
+
+  it("el resumen para lectores de pantalla también lo dice", () => {
+    renderRoom(afterRound(withExample()));
+    expect(screen.getByText(/Un Pokémon que servía: Poke25\./)).toBeInTheDocument();
+  });
+
+  it("sin ejemplo (acertaron los dos o no quedaba ninguno) no aparece nada", () => {
+    renderRoom(afterRound());
+    expect(screen.queryByRole("region", { name: /Un Pokémon que servía/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Un Pokémon que servía/)).not.toBeInTheDocument();
+  });
+
+  it("no cambia las dos tarjetas de resultado", () => {
+    renderRoom(afterRound(withExample()));
+    expect(screen.getAllByRole("region", { name: /^Resultado de/ })).toHaveLength(2);
+  });
+
+  it("desaparece al empezar la ronda siguiente", () => {
+    const { services } = renderRoom(afterRound(withExample()));
+    expect(screen.getByRole("region", { name: /Un Pokémon que servía/ })).toBeInTheDocument();
+    serverSends(services, event.roundStarted(2, SERVER_NOW + 15_000));
+    expect(screen.queryByRole("region", { name: /Un Pokémon que servía/ })).not.toBeInTheDocument();
   });
 });

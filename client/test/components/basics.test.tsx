@@ -166,18 +166,18 @@ describe("paneles de equipo", () => {
     expect(screen.getByText("Todavía no tienes Pokémon.")).toBeInTheDocument();
   });
 
-  it("OpponentPanel muestra solo el total y la cantidad, nunca nombres de Pokémon", () => {
-    render(<OpponentPanel name="misty" total={400} teamSize={2} connected />);
+  it("OpponentPanel sin Pokémon revelados muestra el total, la cantidad y el aviso", () => {
+    render(<OpponentPanel name="misty" total={400} teamSize={2} team={[]} connected />);
     const panel = screen.getByRole("region", { name: "Tu rival" });
     expect(panel).toHaveTextContent("misty");
     expect(panel).toHaveTextContent("400");
     expect(panel).toHaveTextContent("2 Pokémon");
-    expect(panel).toHaveTextContent("Sus nombres se revelan al cerrar la ronda.");
+    expect(panel).toHaveTextContent("Se revelan al cerrar cada ronda.");
     expect(panel).not.toHaveTextContent("Desconectado");
   });
 
   it("OpponentPanel usa el singular y avisa si el rival está desconectado", () => {
-    render(<OpponentPanel name="misty" total={300} teamSize={1} connected={false} />);
+    render(<OpponentPanel name="misty" total={300} teamSize={1} team={[]} connected={false} />);
     expect(screen.getByText("1 Pokémon")).toBeInTheDocument();
     expect(screen.getByText("Desconectado")).toBeInTheDocument();
   });
@@ -203,5 +203,26 @@ describe("Timer", () => {
     now = 60_000;
     act(() => void vi.advanceTimersByTime(250));
     expect(screen.getByRole("timer")).toHaveTextContent("0");
+  });
+});
+
+describe("OpponentPanel con el equipo revelado (etapa 8)", () => {
+  it("lista los Pokémon ya revelados, con sprite, nombre y total, como «Tu equipo»", () => {
+    render(<OpponentPanel name="misty" total={700} teamSize={2} team={[pokemon(7, 400), pokemon(8, 300)]} connected />);
+    const panel = screen.getByRole("region", { name: "Tu rival" });
+    const rows = [...panel.querySelectorAll("li")];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("Poke7");
+    expect(rows[0]).toHaveTextContent("400");
+    expect(rows[0]!.querySelector("img")).toHaveAttribute("src", "https://example.com/7.png");
+    expect(rows[1]).toHaveTextContent("Poke8");
+    expect(panel).toHaveTextContent("2 Pokémon");
+    expect(panel).not.toHaveTextContent("Se revelan al cerrar cada ronda.");
+  });
+
+  it("el nombre largo se recorta en una línea sin romper el panel", () => {
+    render(<OpponentPanel name="misty" total={400} teamSize={1} team={[pokemon(7, 400, { names: { es: "A".repeat(30), en: "B".repeat(30) } })]} connected />);
+    const row = screen.getByRole("region", { name: "Tu rival" }).querySelector("li")!;
+    expect(row.querySelector(".truncate")).toHaveTextContent("A".repeat(30));
   });
 });
