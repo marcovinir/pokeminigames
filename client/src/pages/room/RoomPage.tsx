@@ -79,13 +79,18 @@ export function RoomPage() {
   const phase = useGame((s) => s.view.phase);
   const ended = useGame((s) => s.view.ended);
   const view = useGame((s) => s.view);
+  const typeHints = useGame((s) => s.view.config?.typeHints === true);
 
   useEffect(() => {
     game.client.join(code);
-    void names.getState().load();
     // Al salir de la pantalla se cierra la conexión (y se limpia el estado).
     return () => game.client.dispose();
-  }, [game.client, names, code]);
+  }, [game.client, code]);
+
+  // Los tipos de cada Pokémon solo se piden en las salas con «Pistas de tipos»; sin ellas ni siquiera viajan.
+  useEffect(() => {
+    void names.getState().load({ withTypes: typeHints });
+  }, [names, typeHints]);
 
   // La sala ya no existe, terminó o no eres parte de ella: no hay nada más que hacer aquí.
   // Con la partida terminada el resumen se queda: el servidor ya cerró la sala y es lo esperable.

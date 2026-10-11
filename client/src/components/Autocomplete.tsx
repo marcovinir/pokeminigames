@@ -1,7 +1,11 @@
 import { normalizeName } from "@pokemon-minigames/shared";
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { PokemonName } from "../api/types";
+import { spriteUrl } from "../catalog/artwork";
+import { pokedexNumber } from "../catalog/pokedex";
+import { ArtImage } from "./ArtImage";
 import { Button } from "./Button";
+import { TypeChip } from "./TypeChip";
 
 const MAX_SUGGESTIONS = 6;
 const MAX_LENGTH = 100;
@@ -19,7 +23,7 @@ export function buildIndex(names: PokemonName[]): IndexedName[] {
 
 /**
  * Sugerencias para lo que se ha escrito: nombres en español o inglés que empiezan por ello, sin
- * tildes ni mayúsculas. No filtra por tipo: así nunca revela una respuesta.
+ * tildes ni mayúsculas. No filtra por tipo: los tipos, si la sala los permite, solo se muestran.
  */
 export function suggest(index: IndexedName[], query: string, limit = MAX_SUGGESTIONS): PokemonName[] {
   const q = normalizeName(query);
@@ -32,6 +36,8 @@ export function suggest(index: IndexedName[], query: string, limit = MAX_SUGGEST
 
 export interface AutocompleteProps {
   names: PokemonName[];
+  /** Muestra los tipos de cada sugerencia (la opción «Pistas de tipos» de la sala). Sin ella nunca salen, aunque la lista los traiga. */
+  showTypes?: boolean;
   onSubmit(text: string): void;
   /** Ya se envió la respuesta de esta ronda: el campo queda bloqueado. */
   submitted?: boolean;
@@ -44,7 +50,7 @@ export interface AutocompleteProps {
  * Campo de respuesta con lista de sugerencias (patrón combobox accesible). Enter envía lo
  * escrito, o la sugerencia resaltada con las flechas. Solo sugiere: no corrige nada por su cuenta.
  */
-export function Autocomplete({ names, onSubmit, submitted = false, disabled = false, autoFocus = false }: AutocompleteProps) {
+export function Autocomplete({ names, showTypes = false, onSubmit, submitted = false, disabled = false, autoFocus = false }: AutocompleteProps) {
   const [text, setText] = useState("");
   // Se bloquea en el acto al enviar: la confirmación del servidor tarda y un doble Enter enviaría dos veces.
   const [sent, setSent] = useState(false);
@@ -159,10 +165,23 @@ export function Autocomplete({ names, onSubmit, submitted = false, disabled = fa
                 setActive(-1);
                 inputRef.current?.focus();
               }}
-              className={`cursor-pointer px-4 py-2.5 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
+              className={`flex min-h-11 cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
             >
-              {name.es}
-              {name.en !== name.es ? <span className={i === active ? "ml-2" : "ml-2 text-muted"}>{name.en}</span> : null}
+              <ArtImage id={name.id} spriteUrl={spriteUrl(name.id)} size={40} variant="sprite" eager />
+              <span aria-hidden="true" className={`w-11 shrink-0 font-num text-xs tabular-nums ${i === active ? "" : "text-muted"}`}>
+                {pokedexNumber(name.id)}
+              </span>
+              <span className="min-w-0 flex-1">
+                {name.es}
+                {name.en !== name.es ? <span className={i === active ? "ml-2" : "ml-2 text-muted"}>{name.en}</span> : null}
+              </span>
+              {showTypes && name.types ? (
+                <span className="ml-auto flex shrink-0 gap-1">
+                  {name.types.map((type) => (
+                    <TypeChip key={type} type={type} />
+                  ))}
+                </span>
+              ) : null}
             </li>
           ))}
         </ul>

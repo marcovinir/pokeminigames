@@ -65,7 +65,8 @@ export interface Endpoints {
     current(): Promise<CurrentRoom | null>;
   };
   catalog: {
-    names(): Promise<PokemonName[]>;
+    /** La lista de nombres del autocompletado; con `withTypes` trae también los tipos (solo para salas con pistas). */
+    names(options?: { withTypes?: boolean }): Promise<PokemonName[]>;
   };
   stats: {
     /** Tus estadísticas. */
@@ -126,7 +127,8 @@ export function createEndpoints(api: ApiClient): Endpoints {
       },
     },
     catalog: {
-      names: () => api.request<PokemonName[]>("GET", "/pokemon/names", { auth: false }),
+      names: ({ withTypes = false } = {}) =>
+        api.request<PokemonName[]>("GET", withTypes ? "/pokemon/names?types=1" : "/pokemon/names", { auth: false }),
     },
     stats: {
       mine: () => api.request<StatsResponse>("GET", "/stats"),

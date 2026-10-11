@@ -77,7 +77,13 @@ export function RoundView() {
             <Notice>El par elegido no tenía suficientes Pokémon; el servidor sorteó otro.</Notice>
           ) : null}
 
-          <Autocomplete names={names} submitted={round.answered} autoFocus onSubmit={(text) => client.submit(text)} />
+          <Autocomplete
+            names={names}
+            showTypes={config?.typeHints === true}
+            submitted={round.answered}
+            autoFocus
+            onSubmit={(text) => client.submit(text)}
+          />
         </Card>
 
         <div style={rise(2)} className="animate-rise hidden md:block">
