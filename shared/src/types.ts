@@ -63,6 +63,11 @@ export interface RoomConfig {
   roundsLimit: number | null;
   /** Meta de stats del modo personalizado; nulo en cualquier otro caso. */
   statsGoal: number | null;
+  /**
+   * «Pistas de tipos»: las sugerencias del campo de respuesta muestran los tipos de cada Pokémon. Lo decide quien crea la
+   * sala. Ausente (un servidor anterior) cuenta como apagado.
+   */
+  typeHints?: boolean;
 }
 
 export interface PokemonView {

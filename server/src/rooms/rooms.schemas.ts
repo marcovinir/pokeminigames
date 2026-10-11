@@ -15,6 +15,7 @@ export const createRoomSchema = z
     lengthMode: z.enum(["fixed_rounds", "custom"]),
     roundsLimit: z.number().int().optional(),
     statsGoal: z.number().int().optional(),
+    typeHints: z.boolean().optional(),
   })
   .superRefine((value, ctx) => {
     const { lengthMode, roundsLimit, statsGoal } = value;
@@ -46,5 +47,6 @@ export const createRoomSchema = z
       lengthMode: value.lengthMode,
       roundsLimit: value.roundsLimit ?? null,
       statsGoal: value.statsGoal ?? null,
+      typeHints: value.typeHints ?? false,
     }),
   );
