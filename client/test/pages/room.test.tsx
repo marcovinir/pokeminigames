@@ -471,3 +471,42 @@ describe("avisos de conexión y errores", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/");
   });
 });
+
+describe("pistas de tipos en la sala (etapa 8)", () => {
+  const withConfig = (typeHints?: boolean) =>
+    event.roomState({
+      phase: "round_active",
+      config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, ...(typeHints === undefined ? {} : { typeHints }) },
+      myTeam: [pokemon(1, 500)],
+      players: [ash({ totalStats: 500, teamSize: 1 }), misty({ totalStats: 400, teamSize: 1 })],
+      round: roundState({ number: 2 }),
+    });
+
+  it("en una sala con pistas pide la lista con tipos", async () => {
+    const { services } = renderRoom([withConfig(true)]);
+    await waitFor(() => expect(services.endpoints.catalog.names).toHaveBeenCalledWith({ withTypes: true }));
+  });
+
+  it("en una sala sin pistas (o de un servidor anterior, sin el campo) nunca pide los tipos", async () => {
+    for (const hints of [false, undefined]) {
+      const { services, unmount } = renderRoom([withConfig(hints)]);
+      await waitFor(() => expect(services.names.getState().status).toBe("ready"));
+      expect(services.endpoints.catalog.names).not.toHaveBeenCalledWith({ withTypes: true });
+      unmount();
+    }
+  });
+
+  it("con pistas, las sugerencias muestran los tipos de cada Pokémon", async () => {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.names).mockImplementation(async (options) =>
+      options?.withTypes
+        ? [{ id: 3, es: "Beto", en: "Beta", types: ["grass", "poison"] as ("grass" | "poison")[] }]
+        : [{ id: 3, es: "Beto", en: "Beta" }],
+    );
+    const { user } = renderRoom([withConfig(true)], services);
+    await waitFor(() => expect(services.names.getState().withTypes).toBe(true));
+    await user.type(screen.getByRole("combobox"), "bet");
+    const [option] = await screen.findAllByRole("option");
+    expect([...option!.querySelectorAll("[data-type]")].map((chip) => chip.getAttribute("data-type"))).toEqual(["grass", "poison"]);
+  });
+});

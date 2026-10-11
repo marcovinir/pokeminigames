@@ -1,6 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { PokemonName } from "../../src/api/types";
+import { spriteUrl } from "../../src/catalog/artwork";
 import { Autocomplete, buildIndex, suggest } from "../../src/components/Autocomplete";
 import { NAMES } from "../helpers/services";
 
@@ -52,7 +54,7 @@ describe("Autocomplete", () => {
     const { user, input } = setup();
     await user.type(input, "alf");
     const list = screen.getByRole("listbox", { name: "Sugerencias" });
-    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["AlfaAlpha", "AlfilBishop"]);
+    expect(within(list).getAllByRole("option").map((o) => o.textContent)).toEqual(["#001AlfaAlpha", "#002AlfilBishop"]);
     expect(input).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("status")).toHaveTextContent("2 sugerencias disponibles");
   });
@@ -159,13 +161,19 @@ describe("Autocomplete", () => {
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith("Beto");
   });
 
-  it("las sugerencias no usan opacidad (el texto bajaría de 4,5:1 sin que la auditoría lo viera)", async () => {
+  it("el texto de las sugerencias no usa opacidad (bajaría de 4,5:1 sin que la auditoría lo viera)", async () => {
     const { user, input } = setup();
     await user.type(input, "alf");
     const list = screen.getByRole("listbox");
-    expect(list.innerHTML).not.toMatch(/opacity/);
+    // La imagen del Pokémon (decorativa) aparece con una transición de opacidad al cargar; el texto, nunca.
+    const withoutArt = (): string => {
+      const copy = list.cloneNode(true) as HTMLElement;
+      for (const art of copy.querySelectorAll("[data-state]")) art.remove();
+      return copy.innerHTML;
+    };
+    expect(withoutArt()).not.toMatch(/opacity/);
     await user.keyboard("{ArrowDown}");
-    expect(list.innerHTML).not.toMatch(/opacity/);
+    expect(withoutArt()).not.toMatch(/opacity/);
   });
 
   it("con autoFocus el campo recibe el foco al montarse; por defecto no", () => {
@@ -186,5 +194,71 @@ describe("Autocomplete", () => {
     await user.type(input, "alf{Enter}");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith("alf");
+  });
+});
+
+describe("filas de sugerencia (etapa 8)", () => {
+  const TYPED: PokemonName[] = [
+    { id: 6, es: "Charizard", en: "Charizard", types: ["fire", "flying"] },
+    { id: 1025, es: "Charla", en: "Chatter", types: ["normal", "psychic"] },
+  ];
+
+  const optionsFor = async (props: Partial<React.ComponentProps<typeof Autocomplete>>, text = "cha") => {
+    const { user, input } = setup(props);
+    await user.type(input, text);
+    return screen.getAllByRole("option");
+  };
+
+  it("cada fila lleva el sprite pequeño, el número de Pokédex y los dos nombres", async () => {
+    const [first, second] = await optionsFor({ names: TYPED });
+    expect(first!.querySelector("img")).toHaveAttribute("src", spriteUrl(6));
+    expect(within(first!).getByText("#006")).toBeInTheDocument();
+    expect(first!).toHaveTextContent("Charizard");
+    expect(within(second!).getByText("#1025")).toBeInTheDocument();
+    expect(second!.querySelector("img")).toHaveAttribute("src", spriteUrl(1025));
+  });
+
+  it("el nombre en inglés solo aparece si es distinto del español", async () => {
+    const [first, second] = await optionsFor({ names: TYPED });
+    expect(second!).toHaveTextContent("Charla");
+    expect(second!).toHaveTextContent("Chatter");
+    expect(first!.textContent!.split("Charizard")).toHaveLength(2); // aparece una sola vez
+  });
+
+  it("cada fila mide al menos 44 px de alto (tamaño táctil)", async () => {
+    const rows = await optionsFor({ names: TYPED });
+    for (const row of rows) expect(row.className.split(" ")).toContain("min-h-11");
+  });
+
+  it("el número es decorativo: el nombre de la opción sigue siendo el del Pokémon", async () => {
+    const [first] = await optionsFor({ names: TYPED });
+    expect(within(first!).getByText("#006")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("option", { name: /Charizard/ })).toBeInTheDocument();
+  });
+
+  it("sin la opción de pistas no muestra tipos, aunque la lista los traiga", async () => {
+    const rows = await optionsFor({ names: TYPED });
+    for (const row of rows) expect(row.querySelector("[data-type]")).toBeNull();
+    expect(screen.queryByText("fuego")).not.toBeInTheDocument();
+  });
+
+  it("con las pistas de tipos muestra los chips de cada fila, en su orden", async () => {
+    const [first, second] = await optionsFor({ names: TYPED, showTypes: true });
+    expect([...first!.querySelectorAll("[data-type]")].map((chip) => chip.getAttribute("data-type"))).toEqual(["fire", "flying"]);
+    expect([...second!.querySelectorAll("[data-type]")].map((chip) => chip.getAttribute("data-type"))).toEqual(["normal", "psychic"]);
+    expect(first!).toHaveTextContent("fuego");
+  });
+
+  it("con pistas pero la lista sin tipos (falló la carga) muestra las filas sin chips", async () => {
+    const rows = await optionsFor({ names: NAMES, showTypes: true }, "alf");
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row.querySelector("[data-type]")).toBeNull();
+  });
+
+  it("si el sprite no carga, la fila sigue legible con una imagen de respaldo", async () => {
+    const [first] = await optionsFor({ names: TYPED });
+    fireEvent.error(first!.querySelector("img")!);
+    expect(first!.querySelector("[data-state='fallback']")).not.toBeNull();
+    expect(first!).toHaveTextContent("Charizard");
   });
 });

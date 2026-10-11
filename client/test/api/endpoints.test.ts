@@ -225,4 +225,14 @@ describe("endpoint del catálogo", () => {
     const init = fetchMock.mock.calls[0]![1];
     expect((init?.headers as Record<string, string>).Authorization).toBeUndefined();
   });
+
+  it("names sin tipos pide /pokemon/names y con tipos añade ?types=1", async () => {
+    const { endpoints, fetchMock } = setup(() => json(200, []));
+    await endpoints.catalog.names();
+    expect(lastCall(fetchMock).url).toBe("/pokemon/names");
+    await endpoints.catalog.names({ withTypes: false });
+    expect(lastCall(fetchMock).url).toBe("/pokemon/names");
+    await endpoints.catalog.names({ withTypes: true });
+    expect(lastCall(fetchMock).url).toBe("/pokemon/names?types=1");
+  });
 });
