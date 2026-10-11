@@ -67,12 +67,25 @@ export function RoundResultView() {
         Ronda {result.round}. Tú: {PICK_RESULT_LABELS[mine.result]}
         {mine.pokemon ? `, ${mine.pokemon.names.es}` : ""}. {opponent?.username ?? "Rival"}: {PICK_RESULT_LABELS[theirs.result]}
         {theirs.pokemon ? `, ${theirs.pokemon.names.es}` : ""}.
+        {result.example ? ` Un Pokémon que servía: ${result.example.names.es}.` : ""}
       </p>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <ResultCard title="Tú" result={mine} index={0} />
         <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} index={1} />
       </div>
+
+      {/* Si nadie o solo una persona acertó, el servidor muestra uno de los que servían para este par. */}
+      {result.example ? (
+        <section
+          aria-label={`Un Pokémon que servía: ${result.example.names.es}`}
+          style={rise(2)}
+          className="animate-rise mx-auto w-full max-w-md"
+        >
+          <h2 className="mb-2 text-center font-display text-lg font-semibold">Un Pokémon que servía</h2>
+          <PokemonCard pokemon={result.example} eager />
+        </section>
+      ) : null}
 
       <div className="mx-auto w-64 text-center">
         <p className="text-sm text-muted">

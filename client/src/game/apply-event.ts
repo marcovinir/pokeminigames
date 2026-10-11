@@ -33,6 +33,8 @@ export interface GameView {
   mySeat: Seat | null;
   players: RoomPlayerView[];
   myTeam: PokemonView[];
+  /** Los Pokémon que el rival ya ganó (solo lo revelado, en el orden en que los fue ganando). */
+  opponentTeam: PokemonView[];
   roundsPlayed: number;
   startsAt: number | null;
   round: RoundView | null;
@@ -51,6 +53,7 @@ export const initialGameView: GameView = {
   mySeat: null,
   players: [],
   myTeam: [],
+  opponentTeam: [],
   roundsPlayed: 0,
   startsAt: null,
   round: null,
@@ -82,6 +85,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         mySeat: state.mySeat,
         players: state.players,
         myTeam: state.myTeam,
+        opponentTeam: state.opponentTeam,
         roundsPlayed: state.roundsPlayed,
         startsAt: state.startsAt,
         round: state.round && {
@@ -160,6 +164,8 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     case "round-result": {
       const result = event.payload;
       const mine = view.mySeat ? result.results[view.mySeat].pokemon : null;
+      const rivalSeat: Seat | null = view.mySeat === null ? null : view.mySeat === 1 ? 2 : 1;
+      const theirs = rivalSeat ? result.results[rivalSeat].pokemon : null;
       return {
         ...view,
         phase: "round_result",
@@ -172,6 +178,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
           teamSize: result.results[p.seat].teamSize,
         })),
         myTeam: mine && !view.myTeam.some((p) => p.id === mine.id) ? [...view.myTeam, mine] : view.myTeam,
+        opponentTeam: theirs && !view.opponentTeam.some((p) => p.id === theirs.id) ? [...view.opponentTeam, theirs] : view.opponentTeam,
       };
     }
 

@@ -91,6 +91,7 @@ export function RoundView() {
             name={opponent?.username ?? "Tu rival"}
             total={opponent?.totalStats ?? 0}
             teamSize={opponent?.teamSize ?? 0}
+            team={view.opponentTeam}
             connected={opponent?.connected ?? true}
           />
         </div>

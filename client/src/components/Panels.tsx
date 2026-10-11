@@ -5,6 +5,21 @@ import { Avatar } from "./Avatar";
 import { Badge } from "./Badge";
 import { Card } from "./Card";
 
+/** La lista de Pokémon de un equipo: miniatura, nombre (en una línea) y total. */
+function TeamList({ team }: { team: PokemonView[] }) {
+  return (
+    <ul className="mt-3 flex flex-col gap-1.5 text-sm">
+      {team.map((pokemon) => (
+        <li key={pokemon.id} className="flex items-center gap-2">
+          <ArtImage id={pokemon.id} spriteUrl={pokemon.spriteUrl} size={32} variant="sprite" />
+          <span className="min-w-0 flex-1 truncate font-semibold">{pokemon.names.es}</span>
+          <span className="font-num tabular-nums text-muted">{pokemon.totalStats}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Tu equipo: lo que has ganado hasta ahora y su total. */
 export function TeamPanel({ team, total }: { team: PokemonView[]; total: number }) {
   return (
@@ -16,30 +31,24 @@ export function TeamPanel({ team, total }: { team: PokemonView[]; total: number 
       {team.length === 0 ? (
         <p className="mt-2 text-sm text-muted">Todavía no tienes Pokémon.</p>
       ) : (
-        <ul className="mt-3 flex flex-col gap-1.5 text-sm">
-          {team.map((pokemon) => (
-            <li key={pokemon.id} className="flex items-center gap-2">
-              <ArtImage id={pokemon.id} spriteUrl={pokemon.spriteUrl} size={32} variant="sprite" />
-              <span className="min-w-0 flex-1 truncate font-semibold">{pokemon.names.es}</span>
-              <span className="font-num tabular-nums text-muted">{pokemon.totalStats}</span>
-            </li>
-          ))}
-        </ul>
+        <TeamList team={team} />
       )}
     </Card>
   );
 }
 
-/** El rival: solo su total y cuántos Pokémon lleva; sus nombres se revelan al cerrar cada ronda. */
+/** El rival: su total, cuántos Pokémon lleva y, de ellos, solo los ya revelados (cada uno se muestra al cerrar su ronda). */
 export function OpponentPanel({
   name,
   total,
   teamSize,
+  team,
   connected,
 }: {
   name: string;
   total: number;
   teamSize: number;
+  team: PokemonView[];
   connected: boolean;
 }) {
   return (
@@ -52,7 +61,7 @@ export function OpponentPanel({
         <AnimatedNumber value={total} />
       </p>
       <p className="mt-2 text-sm font-semibold">{teamSize === 1 ? "1 Pokémon" : `${teamSize} Pokémon`}</p>
-      <p className="mt-1 text-xs text-muted">Sus nombres se revelan al cerrar la ronda.</p>
+      {team.length === 0 ? <p className="mt-1 text-xs text-muted">Se revelan al cerrar cada ronda.</p> : <TeamList team={team} />}
       {connected ? null : (
         <Badge tone="danger" className="mt-2">
           Desconectado
