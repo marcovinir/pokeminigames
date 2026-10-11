@@ -21,9 +21,10 @@ describe("vistas de la partida", () => {
       { seat: 2, username: "misty", connected: false, totalStats: 0, teamSize: 0 },
     ]);
     expect(view.myTeam).toEqual([]);
+    expect(view.opponentTeam).toEqual([]);
   });
 
-  it("muestra el equipo propio completo pero del rival solo totales y tamaño", () => {
+  it("muestra el equipo propio y el que el rival ya reveló al cerrarse las rondas", () => {
     const h = new Harness({ config: RANDOM_3, rng: [0] });
     h.startGame();
     h.submit(1, "Alfa");
@@ -31,14 +32,36 @@ describe("vistas de la partida", () => {
 
     const mine = buildRoomState(h.state, 1, "ABC234", h.catalog, h.now);
     expect(mine.myTeam.map((p) => p.id)).toEqual([1]);
+    expect(mine.opponentTeam.map((p) => p.id)).toEqual([2]);
+    expect(mine.opponentTeam[0]).toMatchObject({ names: { es: "Beto" }, totalStats: 400 });
     expect(mine.players.find((p) => p.seat === 2)).toMatchObject({ totalStats: 400, teamSize: 1 });
-    const json = JSON.stringify(mine);
-    expect(json).not.toContain("Beto");
-    expect(json).not.toContain("Beta");
 
     const theirs = buildRoomState(h.state, 2, "ABC234", h.catalog, h.now);
     expect(theirs.myTeam.map((p) => p.id)).toEqual([2]);
-    expect(JSON.stringify(theirs)).not.toContain("Alfa");
+    expect(theirs.opponentTeam.map((p) => p.id)).toEqual([1]);
+  });
+
+  it("no adelanta nada: con la ronda abierta, lo que el rival ya escribió no aparece en su equipo ni en ninguna parte", () => {
+    const h = new Harness({ config: RANDOM_3, rng: [0] });
+    h.startGame();
+    h.submit(2, "Beto");
+
+    const mine = buildRoomState(h.state, 1, "ABC234", h.catalog, h.now);
+    expect(mine.phase).toBe("round_active");
+    expect(mine.opponentTeam).toEqual([]);
+    expect(JSON.stringify(mine)).not.toContain("Beto");
+  });
+
+  it("el equipo del rival llega en el orden en que lo ganó", () => {
+    const h = new Harness({ config: RANDOM_3, rng: [0, 0, 0, 0] });
+    h.startGame();
+    h.submit(1, "Alfa");
+    h.submit(2, "Beto");
+    h.advance(6000); // termina la pausa y empieza la ronda 2 (par jugable restante)
+    const second = h.state.round?.pair;
+    expect(second).not.toBeNull();
+    const theirs = buildRoomState(h.state, 1, "X", h.catalog, h.now).opponentTeam.map((p) => p.id);
+    expect(theirs).toEqual([2]);
   });
 
   it("en una ronda activa incluye el par, el plazo y si ya respondí", () => {
