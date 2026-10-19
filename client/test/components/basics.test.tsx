@@ -97,23 +97,28 @@ describe("TypeChip", () => {
     expect(screen.getByText("fuego")).toHaveAttribute("data-type", "fire");
   });
 
-  it("el icono tiene tamaño fijo (14 px, 18 px en el chip grande) para que no salte el diseño", () => {
+  it("el icono tiene una caja cuadrada de tamaño fijo (14 px, 18 px en el chip grande) para que no salte el diseño", () => {
     const { container, rerender } = render(<TypeChip type="water" />);
-    expect(container.querySelector("img")).toHaveAttribute("width", "14");
+    const box = () => container.querySelector("img")!.parentElement as HTMLElement;
+    expect(box().style.width).toBe("14px");
+    expect(box().style.height).toBe("14px");
     rerender(<TypeChip type="water" size="lg" />);
-    expect(container.querySelector("img")).toHaveAttribute("width", "18");
-    expect(container.querySelector("img")).toHaveAttribute("height", "18");
+    expect(box().style.width).toBe("18px");
+    expect(box().style.height).toBe("18px");
   });
 
-  it("recorta la imagen (una píldora ancha de PokeAPI, 200 × 40) a su símbolo: caja cuadrada fija, cover y pegada a la izquierda", () => {
-    const { container } = render(<TypeChip type="fire" />);
+  it("recorta la píldora de PokeAPI (200 × 40) al círculo de su símbolo: la imagen va a escala y desplazada dentro de una caja redonda", () => {
+    const { container } = render(<TypeChip type="fire" size="lg" />); // caja de 18 px
     const icon = container.querySelector("img") as HTMLImageElement;
-    // Con estilo en línea: el preflight de Tailwind pone `height: auto` y `max-width: 100%` a toda `img` y anularía los atributos.
-    expect(icon.style.width).toBe("14px");
-    expect(icon.style.height).toBe("14px");
+    const box = icon.parentElement as HTMLElement;
+    expect(box.className.split(" ")).toEqual(expect.arrayContaining(["overflow-hidden", "rounded-full"]));
+    // Los símbolos ocupan de x = 15 a 44 e y = 5 a 34 de la imagen: la ventana de 40 × 40 empieza en x = 9 (centrada en el
+    // símbolo, sin cortarlo por la derecha). La píldora mide 5 veces su alto, y con estilo en línea porque el preflight de
+    // Tailwind pone `height: auto` y `max-width: 100%` a toda `img` y anularía los atributos.
+    expect(icon.style.height).toBe("18px");
+    expect(icon.style.width).toBe("90px");
+    expect(icon.style.marginLeft).toBe("-4.05px");
     expect(icon.style.maxWidth).toBe("none");
-    expect(icon.className.split(" ")).toEqual(expect.arrayContaining(["object-cover", "object-left"]));
-    expect(icon.className.split(" ")).not.toContain("object-contain");
   });
 
   it("con icon={false} queda como antes, sin imagen", () => {
