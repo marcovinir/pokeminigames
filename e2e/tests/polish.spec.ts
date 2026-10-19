@@ -36,13 +36,15 @@ test("el selector de tipo muestra los 18 iconos oficiales, cada uno con su nombr
       );
       // Un icono por botón, del 1 al 18 y en el orden de los tipos de PokeAPI.
       expect(numbers.map((src) => Number(TYPE_ICON.exec(src)?.[1]))).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
-      // Y las 18 direcciones existen de verdad: cada imagen termina de cargar con tamaño.
-      await expect
-        .poll(
-          () => buttons.evaluateAll((all) => all.filter((button) => { const image = button.querySelector("img"); return image?.complete && image.naturalWidth > 0; }).length),
-          { message: "no cargaron los 18 iconos de tipo", timeout: 30_000 },
-        )
-        .toBe(18);
+      // La imagen de PokeAPI es una píldora ancha (200 × 40): se recorta a una caja cuadrada de 28 px con su símbolo.
+      const boxes = await buttons.evaluateAll((all) =>
+        all.map((button) => {
+          const image = button.querySelector("img")!;
+          const box = image.getBoundingClientRect();
+          return { w: Math.round(box.width), h: Math.round(box.height), fit: getComputedStyle(image).objectFit };
+        }),
+      );
+      for (const box of boxes) expect(box).toEqual({ w: 28, h: 28, fit: "cover" });
       // El icono es decorativo: el botón se sigue llamando como el tipo.
       await expect(page.getByRole("group", { name: "Tipos" }).getByRole("button", { name: "fuego" })).toBeVisible();
     }
@@ -50,6 +52,24 @@ test("el selector de tipo muestra los 18 iconos oficiales, cada uno con su nombr
     await ash.context.close();
     await misty.context.close();
   }
+});
+
+// Opt-in (necesita red): vigila la suposición que justifica el recorte, que PokeAPI siga sirviendo las 18 píldoras de 200 × 40.
+test("los 18 iconos reales de PokeAPI existen y son píldoras de 200 × 40", async ({ page }) => {
+  test.skip(!process.env.E2E_REAL_IMAGES, "solo con E2E_REAL_IMAGES=1 (usa la red)");
+  await page.goto("/login");
+  const sizes = await page.evaluate(async () => {
+    const base = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet";
+    const load = (n: number) =>
+      new Promise<string>((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve(`${image.naturalWidth}x${image.naturalHeight}`);
+        image.onerror = () => resolve("error");
+        image.src = `${base}/${n}.png`;
+      });
+    return Promise.all(Array.from({ length: 18 }, (_, i) => load(i + 1)));
+  });
+  expect(sizes).toEqual(Array(18).fill("200x40"));
 });
 
 test("una ronda que nadie acierta, o solo una persona, muestra un Pokémon que servía; y el rival ve el equipo", async ({
@@ -211,6 +231,18 @@ test("a 375 px las sugerencias con tipos caben a lo ancho, con el nombre y los c
     expect(listBox.x).toBeGreaterThanOrEqual(-0.5);
     expect(listBox.x + listBox.width).toBeLessThanOrEqual(375.5);
     expect(await options.count()).toBeLessThanOrEqual(6);
+
+    // Ninguna fila de la lista queda tapada por otro elemento (por ejemplo el panel del rival, que debajo de la arena
+    // se pintaba encima): en el centro de cada fila lo que hay encima es la propia fila.
+    for (const row of await options.all()) {
+      await row.scrollIntoViewIfNeeded();
+      const onTop = await row.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return top !== null && element.contains(top);
+      });
+      expect(onTop, "una fila de las sugerencias queda tapada por otro elemento").toBe(true);
+    }
 
     // Nada se sale de su fila por la derecha y la página no se desplaza en horizontal.
     for (const row of await options.all()) {

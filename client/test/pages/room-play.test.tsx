@@ -151,6 +151,12 @@ describe("equipo del rival en la ronda (etapa 8)", () => {
     expect(wrapper.className.split(" ")).not.toContain("hidden");
   });
 
+  it("la arena se apila por encima del panel del rival: la lista de sugerencias se despliega sobre él en un teléfono", () => {
+    const { container } = renderRoom([playing()]);
+    const arena = container.querySelector("[data-arena]")!;
+    expect(arena.className.split(" ")).toEqual(expect.arrayContaining(["relative", "z-5"]));
+  });
+
   it("sin Pokémon revelados dice que se revelan al cerrar cada ronda y no lista ninguno", () => {
     renderRoom([playing({ players: [ash(), misty()], myTeam: [] })]);
     const rival = screen.getByRole("region", { name: "Tu rival" });

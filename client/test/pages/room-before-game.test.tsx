@@ -103,6 +103,12 @@ describe("elegir tipo (etapa 6)", () => {
     expect(tile.className.split(" ")).toContain("justify-center");
   });
 
+  it("en un teléfono la tesela es una fila baja (icono a la izquierda) y desde sm una columna: así caben más tipos a la vista", () => {
+    renderRoom([choosing()]);
+    const tile = within(screen.getByRole("group", { name: "Tipos" })).getByRole("button", { name: "fuego" });
+    expect(tile.className.split(" ")).toEqual(expect.arrayContaining(["flex-row", "sm:flex-col", "py-2.5", "sm:py-3"]));
+  });
+
   it("si un icono no carga, la tesela queda con su nombre como siempre", async () => {
     const { user } = renderRoom([choosing()]);
     const fire = screen.getByRole("button", { name: "fuego" });

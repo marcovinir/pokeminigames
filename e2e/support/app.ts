@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { crc32, deflateSync } from "node:zlib";
 import { type Browser, type BrowserContext, type Page, expect } from "@playwright/test";
 
 export const PASSWORD = "pikachu-123";
@@ -24,6 +25,46 @@ export function validAnswerFor(types: string[], skip = 0): string {
   return found.names.en;
 }
 
+/** Un chunk de un PNG: longitud, tipo, datos y CRC. */
+function pngChunk(type: string, data: Buffer): Buffer {
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+/** Un PNG liso (gris) del tamaño pedido, sin dependencias: sirve de imagen falsa. */
+function solidPng(width: number, height: number): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // 8 bits por canal
+  header[9] = 6; // RGBA
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 4, 0x99)]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  return Buffer.concat([signature, pngChunk("IHDR", header), pngChunk("IDAT", deflateSync(raw)), pngChunk("IEND", Buffer.alloc(0))]);
+}
+
+const POKEAPI_IMAGES = /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\//;
+// Los iconos de tipo de PokeAPI son píldoras de 200 × 40; el resto de las imágenes (sprites y arte) las tratamos cuadradas.
+const FAKE_TYPE_ICON = solidPng(200, 40);
+const FAKE_SQUARE = solidPng(96, 96);
+
+/**
+ * Las imágenes de Pokémon vienen de GitHub (PokeAPI): la E2E no debe depender de la red ni de su velocidad (una carga lenta
+ * alargaba el `load` de cada pantalla y agotaba plazos como los 15 s de «Elegir tipo»). Se sirven imágenes falsas del mismo
+ * tamaño que las reales. Con `E2E_REAL_IMAGES=1` (o al generar capturas) se usan las de verdad.
+ */
+async function fakePokeApiImages(context: BrowserContext): Promise<void> {
+  if (process.env.E2E_REAL_IMAGES || process.env.E2E_SCREENSHOTS) return;
+  await context.route(POKEAPI_IMAGES, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: route.request().url().includes("/sprites/types/") ? FAKE_TYPE_ICON : FAKE_SQUARE }),
+  );
+}
+
 export interface Player {
   name: string;
   email: string;
@@ -41,6 +82,7 @@ export async function newPlayer(browser: Browser, label: string): Promise<Player
   const name = `${label}_${randomInt(10_000, 99_999)}`;
   const ip = `10.${randomInt(1, 255)}.${randomInt(1, 255)}.${randomInt(1, 255)}`;
   const context = await browser.newContext({ extraHTTPHeaders: { "X-Forwarded-For": ip } });
+  await fakePokeApiImages(context);
   const page = await context.newPage();
   return { name, email: `${name}@example.com`, ip, context, page };
 }
