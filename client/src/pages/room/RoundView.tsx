@@ -86,7 +86,8 @@ export function RoundView() {
           />
         </Card>
 
-        <div style={rise(2)} className="animate-rise hidden md:block">
+        {/* Siempre visible: en pantallas estrechas queda debajo de la arena (la barra «Marcador» solo da los totales). */}
+        <div style={rise(2)} className="animate-rise">
           <OpponentPanel
             name={opponent?.username ?? "Tu rival"}
             total={opponent?.totalStats ?? 0}
