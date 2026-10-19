@@ -57,7 +57,9 @@ export function RoundView() {
           <TeamPanel team={view.myTeam} total={me?.totalStats ?? 0} />
         </div>
 
-        <Card data-arena tone="raised" style={rise(1)} className="animate-rise flex min-w-0 flex-col gap-5 p-6">
+        {/* `relative z-5`: la lista de sugerencias se despliega por debajo de la arena y, en pantallas estrechas, el panel del
+            rival (que viene después y también anima su entrada) se pintaba encima y la tapaba. Queda bajo la barra «Marcador» (z-10). */}
+        <Card data-arena tone="raised" style={rise(1)} className="animate-rise relative z-5 flex min-w-0 flex-col gap-5 p-6">
           <div className="text-center">
             <h1 className="font-display text-sm font-semibold text-muted">{goal}</h1>
             {config?.roundsLimit != null ? <RoundDots total={config.roundsLimit} current={round.number} /> : null}

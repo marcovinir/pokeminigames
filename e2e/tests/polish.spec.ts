@@ -36,7 +36,7 @@ test("el selector de tipo muestra los 18 iconos oficiales, cada uno con su nombr
       );
       // Un icono por botón, del 1 al 18 y en el orden de los tipos de PokeAPI.
       expect(numbers.map((src) => Number(TYPE_ICON.exec(src)?.[1]))).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
-      // La imagen de PokeAPI es una píldora ancha (200 × 40): se recorta a una caja cuadrada de 28 px con su símbolo.
+      // La imagen de PokeAPI es una píldora ancha (200 × 40): se recorta a una caja cuadrada de 24 px con su símbolo.
       const boxes = await buttons.evaluateAll((all) =>
         all.map((button) => {
           const image = button.querySelector("img")!;
@@ -44,7 +44,7 @@ test("el selector de tipo muestra los 18 iconos oficiales, cada uno con su nombr
           return { w: Math.round(box.width), h: Math.round(box.height), fit: getComputedStyle(image).objectFit };
         }),
       );
-      for (const box of boxes) expect(box).toEqual({ w: 28, h: 28, fit: "cover" });
+      for (const box of boxes) expect(box).toEqual({ w: 24, h: 24, fit: "cover" });
       // El icono es decorativo: el botón se sigue llamando como el tipo.
       await expect(page.getByRole("group", { name: "Tipos" }).getByRole("button", { name: "fuego" })).toBeVisible();
     }

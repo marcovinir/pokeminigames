@@ -41,11 +41,11 @@ export function TypePickerView() {
               client.chooseType(type);
             }}
             style={{ ...typeChipStyle(type), "--i": index } as React.CSSProperties}
-            className={`animate-rise flex flex-col items-center justify-center gap-1.5 rounded-card px-2 py-3 font-display text-base font-semibold shadow-[inset_0_-3px_0_rgb(0_0_0/0.18)] transition-transform duration-(--dur-fast) hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
+            className={`animate-rise flex flex-row items-center justify-center gap-1.5 rounded-card px-1.5 py-2.5 font-display text-sm font-semibold sm:flex-col sm:px-2 sm:py-3 sm:text-base shadow-[inset_0_-3px_0_rgb(0_0_0/0.18)] transition-transform duration-(--dur-fast) hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
               locked && chosen !== type ? "opacity-40" : ""
             } ${chosen === type ? "outline-4 outline-offset-2 outline-fg" : ""}`}
           >
-            <TypeIcon type={type} size={28} />
+            <TypeIcon type={type} size={24} />
             {TYPE_LABELS[type]}
           </button>
         ))}
