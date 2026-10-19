@@ -77,3 +77,15 @@ Que la partida se lea mejor y enseñe más mientras se juega: ver el icono ofici
 ## 10. Entrega
 
 Rama `etapa-8-pulido`, una tarea por área (contrato y servidor, nombres con tipos, iconos, sugerencias, formulario e insignia, resultado y equipo del rival, E2E, documentación), revisión final independiente, fusión en `main` y subida con permiso de Marco; Render redespliega solo.
+
+## 11. Ajustes tras la revisión final y el recorrido real (2026-10-18)
+
+Lo que la revisión independiente y las capturas en un navegador real cambiaron respecto de lo escrito arriba (el resto sigue igual):
+
+- **Los iconos de PokeAPI no son iconos cuadrados.** Los 18 de `scarlet-violet` son píldoras de **200 × 40** con el símbolo a la izquierda y el nombre en inglés (no hay ninguna generación con símbolos sueltos). Se muestran **recortados a su símbolo** (`object-fit: cover`, alineados a la izquierda) en una caja cuadrada fija: 14 px en el chip normal, 18 px en el grande y **24 px (no 28)** en «Elegir tipo». El tamaño va en estilo en línea porque el preflight de Tailwind pone `height: auto` y `max-width: 100%` a toda `img`. Una prueba opcional de la E2E (`E2E_REAL_IMAGES=1`) vigila que PokeAPI siga sirviendo las 18 píldoras de 200 × 40.
+- **«Un Pokémon que servía» va arriba**, compacto, entre el par de tipos y las dos tarjetas de resultado (la sección 3 decía «debajo»): la pausa dura 6 s y debajo de las tarjetas, en un teléfono, no se llegaba a ver.
+- **El panel «Tu rival» se ve también por debajo de 768 px** (debajo de la arena), con lo ya revelado: antes solo existía desde `md`. La arena se apila por encima (`z-5`) para que la lista de sugerencias se despliegue sobre el panel.
+- **«Elegir tipo» a 375 px:** cada tesela es una fila baja (icono a la izquierda) hasta `sm` y una columna desde `sm`; así caben los 18 tipos a la vista.
+- **El par de tipos del resultado envuelve** (`flex-wrap`) para no desplazar la página en horizontal con los iconos.
+- **La E2E no depende de la red:** las imágenes de PokeAPI se sirven falsas (mismo tamaño que las reales) salvo con `E2E_REAL_IMAGES=1` o al generar capturas. Con la red real, una carga lenta de imágenes agotaba plazos de la propia prueba (los 15 s de «Elegir tipo»).
+- Menores diferidos (issue de deuda técnica): el ejemplo de la última ronda no se llega a ver (el resumen lo sustituye); en una sala con pistas se descargan dos listas de nombres; la E2E de 375 px mide el ancho de la lista y no si cabe en 667 px de alto; `aria-label` sobre un `<p>` en la configuración de la sala; `typeIconUrl` lanza ante un tipo desconocido (solo se alcanzaría con datos corruptos); el historial no rellena `typeHints`.
