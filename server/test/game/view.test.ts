@@ -52,16 +52,19 @@ describe("vistas de la partida", () => {
     expect(JSON.stringify(mine)).not.toContain("Beto");
   });
 
-  it("el equipo del rival llega en el orden en que lo ganó", () => {
-    const h = new Harness({ config: RANDOM_3, rng: [0, 0, 0, 0] });
+  it("el equipo del rival llega en el orden en que lo ganó (con dos Pokémon, para que el orden importe)", () => {
+    const h = new Harness({ config: RANDOM_3, rng: [0, 1] });
     h.startGame();
-    h.submit(1, "Alfa");
+    h.submit(1, "Alfa"); // ronda 1: fuego + volador
     h.submit(2, "Beto");
-    h.advance(6000); // termina la pausa y empieza la ronda 2 (par jugable restante)
-    const second = h.state.round?.pair;
-    expect(second).not.toBeNull();
+    h.advance(6000); // termina la pausa y empieza la ronda 2 (agua + tierra)
+    expect(h.state.round?.number).toBe(2);
+    h.submit(1, "Épsilon");
+    h.submit(2, "Delta");
     const theirs = buildRoomState(h.state, 1, "X", h.catalog, h.now).opponentTeam.map((p) => p.id);
-    expect(theirs).toEqual([2]);
+    expect(theirs).toEqual([2, 4]); // Beto (ronda 1) y después Delta (ronda 2), no al revés
+    const mine = buildRoomState(h.state, 2, "X", h.catalog, h.now).opponentTeam.map((p) => p.id);
+    expect(mine).toEqual([1, 5]);
   });
 
   it("en una ronda activa incluye el par, el plazo y si ya respondí", () => {

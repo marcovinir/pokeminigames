@@ -145,6 +145,12 @@ describe("equipo del rival en la ronda (etapa 8)", () => {
     expect(rival.querySelector("img")).toHaveAttribute("src", "https://example.com/7.png");
   });
 
+  it("el panel del rival se ve también en pantallas estrechas (no se oculta por debajo de md)", () => {
+    renderRoom([playing({ opponentTeam: [pokemon(7, 400)] })]);
+    const wrapper = screen.getByRole("region", { name: "Tu rival" }).parentElement!;
+    expect(wrapper.className.split(" ")).not.toContain("hidden");
+  });
+
   it("sin Pokémon revelados dice que se revelan al cerrar cada ronda y no lista ninguno", () => {
     renderRoom([playing({ players: [ash(), misty()], myTeam: [] })]);
     const rival = screen.getByRole("region", { name: "Tu rival" });
@@ -196,6 +202,18 @@ describe("ejemplo tras la ronda (etapa 8)", () => {
     renderRoom(afterRound());
     expect(screen.queryByRole("region", { name: /Un Pokémon que servía/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/Un Pokémon que servía/)).not.toBeInTheDocument();
+  });
+
+  it("va antes que las tarjetas de resultado: la pausa dura 6 s y en un teléfono lo de abajo no se llegaría a ver", () => {
+    renderRoom(afterRound(withExample()));
+    const example = screen.getByRole("region", { name: /Un Pokémon que servía/ });
+    const mine = screen.getByRole("region", { name: "Resultado de Tú" });
+    expect(example.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("el par de tipos del resultado envuelve en pantallas estrechas (con los iconos son más anchos)", () => {
+    renderRoom(afterRound(withExample()));
+    expect(screen.getByLabelText("Par de tipos").className.split(" ")).toContain("flex-wrap");
   });
 
   it("no cambia las dos tarjetas de resultado", () => {

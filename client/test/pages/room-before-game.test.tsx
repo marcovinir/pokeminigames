@@ -97,6 +97,12 @@ describe("elegir tipo (etapa 6)", () => {
     });
   });
 
+  it("el contenido de cada tesela va centrado (si falla un icono el nombre no se queda arriba)", () => {
+    renderRoom([choosing()]);
+    const tile = within(screen.getByRole("group", { name: "Tipos" })).getByRole("button", { name: "fuego" });
+    expect(tile.className.split(" ")).toContain("justify-center");
+  });
+
   it("si un icono no carga, la tesela queda con su nombre como siempre", async () => {
     const { user } = renderRoom([choosing()]);
     const fire = screen.getByRole("button", { name: "fuego" });

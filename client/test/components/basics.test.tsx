@@ -105,6 +105,17 @@ describe("TypeChip", () => {
     expect(container.querySelector("img")).toHaveAttribute("height", "18");
   });
 
+  it("recorta la imagen (una píldora ancha de PokeAPI, 200 × 40) a su símbolo: caja cuadrada fija, cover y pegada a la izquierda", () => {
+    const { container } = render(<TypeChip type="fire" />);
+    const icon = container.querySelector("img") as HTMLImageElement;
+    // Con estilo en línea: el preflight de Tailwind pone `height: auto` y `max-width: 100%` a toda `img` y anularía los atributos.
+    expect(icon.style.width).toBe("14px");
+    expect(icon.style.height).toBe("14px");
+    expect(icon.style.maxWidth).toBe("none");
+    expect(icon.className.split(" ")).toEqual(expect.arrayContaining(["object-cover", "object-left"]));
+    expect(icon.className.split(" ")).not.toContain("object-contain");
+  });
+
   it("con icon={false} queda como antes, sin imagen", () => {
     const { container } = render(<TypeChip type="ice" icon={false} />);
     expect(container.querySelector("img")).toBeNull();
