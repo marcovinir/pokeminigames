@@ -1,4 +1,4 @@
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 import { answer, createRoom, joinRoom, newPlayer, register, roundTypes, validAnswerFor } from "../support/app";
 
 /**
@@ -9,13 +9,53 @@ import { answer, createRoom, joinRoom, newPlayer, register, roundTypes, validAns
 
 const TYPE_ICON = /\/sprites\/types\/generation-ix\/scarlet-violet\/(\d+)\.png$/;
 
-/** Escribe en el campo de respuesta (sin enviar) y devuelve la lista de sugerencias. */
-async function suggestionsFor(page: Page, text: string): Promise<Locator> {
-  const field = page.getByRole("combobox", { name: "Nombre del Pokémon" });
-  await field.fill(text);
-  const options = page.getByRole("listbox", { name: "Sugerencias" }).getByRole("option");
-  await expect(options.first()).toBeVisible();
-  return options;
+interface SuggestionRow {
+  text: string;
+  /** Cuántas imágenes del Pokémon (o su respaldo) lleva la fila. */
+  arts: number;
+  types: string[];
+  height: number;
+  /** Los chips caben dentro de la fila (nada se sale por la derecha). */
+  chipsInside: boolean;
+  /** En el centro de la fila lo que se ve encima es la propia fila (nada la tapa). */
+  onTop: boolean;
+}
+
+interface SuggestionsReading {
+  rows: SuggestionRow[];
+  list: { left: number; right: number };
+  page: { scrollWidth: number; clientWidth: number };
+}
+
+/**
+ * Escribe en el campo de respuesta (sin enviar) y lee la lista de sugerencias DE UNA SOLA VEZ. La ronda dura 15 s: ir
+ * fila por fila, con una espera por cada dato, la agotaba en un equipo lento (o con la batería) y la lista desaparecía a
+ * mitad de la comprobación.
+ */
+async function readSuggestions(page: Page, text: string): Promise<SuggestionsReading> {
+  await page.getByRole("combobox", { name: "Nombre del Pokémon" }).fill(text);
+  return page.getByRole("listbox", { name: "Sugerencias" }).evaluate((list) => {
+    const rows = [...list.querySelectorAll("[role=option]")].map((row) => {
+      row.scrollIntoView({ block: "nearest" });
+      const box = row.getBoundingClientRect();
+      const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      const chips = [...row.querySelectorAll("[data-type]")];
+      return {
+        text: row.textContent ?? "",
+        arts: row.querySelectorAll("[data-state]").length,
+        types: chips.map((chip) => (chip as HTMLElement).dataset.type ?? ""),
+        height: box.height,
+        chipsInside: chips.every((chip) => chip.getBoundingClientRect().right <= box.right + 0.5),
+        onTop: top !== null && row.contains(top),
+      };
+    });
+    const box = list.getBoundingClientRect();
+    return {
+      rows,
+      list: { left: box.left, right: box.right },
+      page: { scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth },
+    };
+  });
 }
 
 test("el selector de tipo muestra los 18 iconos oficiales, cada uno con su nombre", async ({ browser }) => {
@@ -27,28 +67,36 @@ test("el selector de tipo muestra los 18 iconos oficiales, cada uno con su nombr
     const code = await createRoom(ash.page, { chosenTypes: true });
     await joinRoom(misty.page, code);
 
-    for (const { page } of [ash, misty]) {
-      await expect(page.getByRole("heading", { name: "Elige un tipo" })).toBeVisible({ timeout: 30_000 });
-      const buttons = page.getByRole("group", { name: "Tipos" }).getByRole("button");
-      await expect(buttons).toHaveCount(18);
-      const numbers = await buttons.evaluateAll((all) =>
-        all.map((button) => button.querySelector("img")?.getAttribute("src") ?? ""),
-      );
-      // Un icono por botón, del 1 al 18 y en el orden de los tipos de PokeAPI.
-      expect(numbers.map((src) => Number(TYPE_ICON.exec(src)?.[1]))).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
-      // La imagen de PokeAPI es una píldora ancha (200 × 40): se recorta a un círculo de 24 px con su símbolo.
-      const boxes = await buttons.evaluateAll((all) =>
-        all.map((button) => {
-          const box = button.querySelector("img")!.parentElement!;
-          const { width, height } = box.getBoundingClientRect();
-          const style = getComputedStyle(box);
-          return { w: Math.round(width), h: Math.round(height), clip: style.overflow, round: parseFloat(style.borderTopLeftRadius) >= 12 };
-        }),
-      );
-      for (const box of boxes) expect(box).toEqual({ w: 24, h: 24, clip: "hidden", round: true });
-      // El icono es decorativo: el botón se sigue llamando como el tipo.
-      await expect(page.getByRole("group", { name: "Tipos" }).getByRole("button", { name: "fuego" })).toBeVisible();
-    }
+    // Las dos pantallas a la vez y con una sola lectura cada una: «Elegir tipo» dura 15 s y, en un equipo lento (o en CI),
+    // comprobar una pantalla tras otra dejaba que se acabara el plazo de la segunda.
+    await Promise.all(
+      [ash, misty].map(async ({ page }) => {
+        await expect(page.getByRole("heading", { name: "Elige un tipo" })).toBeVisible({ timeout: 30_000 });
+        const tiles = await page.getByRole("group", { name: "Tipos" }).evaluate((group) =>
+          [...group.querySelectorAll("button")].map((button) => {
+            const image = button.querySelector("img");
+            const box = image?.parentElement;
+            const rect = box?.getBoundingClientRect();
+            const style = box ? getComputedStyle(box) : null;
+            return {
+              name: button.textContent?.trim() ?? "",
+              src: image?.getAttribute("src") ?? "",
+              w: Math.round(rect?.width ?? 0),
+              h: Math.round(rect?.height ?? 0),
+              clip: style?.overflow,
+              round: parseFloat(style?.borderTopLeftRadius ?? "0") >= 12,
+            };
+          }),
+        );
+        expect(tiles).toHaveLength(18);
+        // Un icono por botón, del 1 al 18 y en el orden de los tipos de PokeAPI.
+        expect(tiles.map((tile) => Number(TYPE_ICON.exec(tile.src)?.[1]))).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
+        // La imagen de PokeAPI es una píldora ancha (200 × 40): se recorta a un círculo de 24 px con su símbolo.
+        for (const tile of tiles) expect({ w: tile.w, h: tile.h, clip: tile.clip, round: tile.round }).toEqual({ w: 24, h: 24, clip: "hidden", round: true });
+        // El icono es decorativo: el botón se sigue llamando como el tipo.
+        expect(tiles.map((tile) => tile.name)).toContain("fuego");
+      }),
+    );
   } finally {
     await ash.context.close();
     await misty.context.close();
@@ -90,13 +138,17 @@ test("una ronda que nadie acierta, o solo una persona, muestra un Pokémon que s
     await answer(ash.page, validAnswerFor(types));
     await answer(misty.page, "zzzzzz");
 
-    for (const { page } of [ash, misty]) {
-      const example = page.getByRole("region", { name: /^Un Pokémon que servía: / });
-      await expect(example).toBeVisible({ timeout: 30_000 });
-      const typesShown = await example.locator("[data-type]").evaluateAll((chips) => chips.map((chip) => (chip as HTMLElement).dataset.type));
-      // Tiene los dos tipos del par (en cualquier orden).
-      expect([...typesShown].sort()).toEqual([...types].sort());
-    }
+    // El resultado solo dura 6 s: las dos pantallas a la vez y la lectura de una sola vez (esperar a que sea visible y
+    // leerlo después dejaba, en un equipo lento, que la pantalla ya hubiera pasado a la ronda siguiente).
+    const shown = await Promise.all(
+      [ash, misty].map(({ page }) =>
+        page
+          .getByRole("region", { name: /^Un Pokémon que servía: / })
+          .evaluate((region) => [...region.querySelectorAll("[data-type]")].map((chip) => (chip as HTMLElement).dataset.type), undefined, { timeout: 30_000 }),
+      ),
+    );
+    // Tiene los dos tipos del par (en cualquier orden).
+    for (const typesShown of shown) expect([...typesShown].sort()).toEqual([...types].sort());
 
     // En la ronda siguiente el panel de Misty ya lista el Pokémon que ganó Ash: equipo del rival visible.
     await expect(misty.page.getByRole("heading", { name: "Ronda 2 de 2" })).toBeVisible({ timeout: 30_000 });
@@ -134,10 +186,18 @@ test("una ronda en la que aciertan los dos no muestra ejemplo", async ({ browser
     await answer(ash.page, validAnswerFor(types));
     await answer(misty.page, validAnswerFor(types, 1));
 
-    await expect(ash.page.getByRole("heading", { name: /Resultado de la ronda 1/ })).toBeVisible({ timeout: 30_000 });
-    await expect(ash.page.getByRole("region", { name: "Resultado de Tú" })).toHaveAttribute("data-result", "VALID");
-    await expect(ash.page.getByRole("region", { name: /^Resultado de misty/ })).toHaveAttribute("data-result", "VALID");
-    await expect(ash.page.getByRole("region", { name: /^Un Pokémon que servía/ })).toHaveCount(0);
+    // Una sola lectura de la pantalla de resultado (dura 6 s): quién acertó y si hay tarjeta de ejemplo.
+    const result = await ash.page
+      .getByRole("heading", { name: /Resultado de la ronda 1/ })
+      .evaluate(
+        () => ({
+          verdicts: [...document.querySelectorAll("section[data-result]")].map((card) => card.getAttribute("data-result")),
+          examples: document.querySelectorAll("section[aria-label^='Un Pokémon que servía']").length,
+        }),
+        undefined,
+        { timeout: 30_000 },
+      );
+    expect(result).toEqual({ verdicts: ["VALID", "VALID"], examples: 0 });
   } finally {
     await ash.context.close();
     await misty.context.close();
@@ -165,14 +225,14 @@ test("con «Pistas de tipos» las sugerencias muestran tipos y la lista con tipo
 
     await roundTypes(ash.page);
     await roundTypes(misty.page);
-    for (const { page } of [ash, misty]) {
-      const options = await suggestionsFor(page, "pi");
-      await expect(options.first().locator("[data-type]").first()).toBeVisible();
-      // Cada fila lleva su imagen (o la de respaldo), el número de Pokédex y mide al menos 44 px.
-      await expect(options.first().locator("[data-state]")).toHaveCount(1);
-      await expect(options.first()).toContainText("#");
-      const box = await options.first().boundingBox();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+    const readings = await Promise.all([ash, misty].map(({ page }) => readSuggestions(page, "pi")));
+    for (const { rows } of readings) {
+      expect(rows.length).toBeGreaterThan(0);
+      // Cada fila lleva sus tipos, su imagen (o la de respaldo), el número de Pokédex y mide al menos 44 px.
+      expect(rows[0]!.types.length).toBeGreaterThan(0);
+      expect(rows[0]!.arts).toBe(1);
+      expect(rows[0]!.text).toContain("#");
+      expect(rows[0]!.height).toBeGreaterThanOrEqual(44);
     }
     expect(typedRequests.length).toBeGreaterThan(0);
   } finally {
@@ -201,11 +261,14 @@ test("sin «Pistas de tipos» las sugerencias llevan imagen y número, pero ning
 
     await roundTypes(ash.page);
     await roundTypes(misty.page);
-    for (const { page } of [ash, misty]) {
-      const options = await suggestionsFor(page, "pi");
-      await expect(options.first().locator("[data-state]")).toHaveCount(1);
-      await expect(options.first()).toContainText("#");
-      expect(await options.locator("[data-type]").count()).toBe(0);
+    const readings = await Promise.all([ash, misty].map(({ page }) => readSuggestions(page, "pi")));
+    for (const { rows } of readings) {
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.arts).toBe(1);
+        expect(row.text).toContain("#");
+        expect(row.types).toEqual([]);
+      }
     }
     expect(typedRequests).toEqual([]);
   } finally {
@@ -214,7 +277,7 @@ test("sin «Pistas de tipos» las sugerencias llevan imagen y número, pero ning
   }
 });
 
-test("a 375 px las sugerencias con tipos caben a lo ancho, con el nombre y los chips legibles", async ({ browser }) => {
+test("a 375 px las sugerencias con tipos caben a lo ancho, sin que nada las tape ni se salga", async ({ browser }) => {
   const ash = await newPlayer(browser, "ash");
   const misty = await newPlayer(browser, "misty");
   try {
@@ -225,39 +288,18 @@ test("a 375 px las sugerencias con tipos caben a lo ancho, con el nombre y los c
     await ash.page.setViewportSize({ width: 375, height: 667 });
 
     await roundTypes(ash.page);
-    const options = await suggestionsFor(ash.page, "a");
-    const list = ash.page.getByRole("listbox", { name: "Sugerencias" });
-    await list.scrollIntoViewIfNeeded();
-    const listBox = (await list.boundingBox())!;
-    expect(listBox.x).toBeGreaterThanOrEqual(-0.5);
-    expect(listBox.x + listBox.width).toBeLessThanOrEqual(375.5);
-    expect(await options.count()).toBeLessThanOrEqual(6);
-
-    // Ninguna fila de la lista queda tapada por otro elemento (por ejemplo el panel del rival, que debajo de la arena
-    // se pintaba encima): en el centro de cada fila lo que hay encima es la propia fila.
-    for (const row of await options.all()) {
-      await row.scrollIntoViewIfNeeded();
-      const onTop = await row.evaluate((element) => {
-        const box = element.getBoundingClientRect();
-        const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
-        return top !== null && element.contains(top);
-      });
-      expect(onTop, "una fila de las sugerencias queda tapada por otro elemento").toBe(true);
+    const { rows, list, page } = await readSuggestions(ash.page, "a");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThanOrEqual(6);
+    expect(list.left).toBeGreaterThanOrEqual(-0.5);
+    expect(list.right).toBeLessThanOrEqual(375.5);
+    // Ninguna fila queda tapada por otro elemento (por ejemplo el panel del rival, que debajo de la arena se pintaba
+    // encima), ningún chip se sale de su fila y la página no se desplaza en horizontal.
+    for (const row of rows) {
+      expect(row.onTop, "una fila de las sugerencias queda tapada por otro elemento").toBe(true);
+      expect(row.chipsInside, "un chip se sale de su fila").toBe(true);
     }
-
-    // Nada se sale de su fila por la derecha y la página no se desplaza en horizontal.
-    for (const row of await options.all()) {
-      const rowBox = (await row.boundingBox())!;
-      for (const chip of await row.locator("[data-type]").all()) {
-        const chipBox = (await chip.boundingBox())!;
-        expect(chipBox.x + chipBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 0.5);
-      }
-    }
-    const { scroll, client } = await ash.page.evaluate(() => ({
-      scroll: document.documentElement.scrollWidth,
-      client: document.documentElement.clientWidth,
-    }));
-    expect(scroll).toBeLessThanOrEqual(client);
+    expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth);
   } finally {
     await ash.context.close();
     await misty.context.close();
