@@ -73,28 +73,6 @@ test("sin sesión el encabezado y el menú de apariencia caben en todos los anch
   }
 });
 
-test("sin sesión las pantallas del código por correo caben en todos los anchos, con el campo del código entero a la vista", async ({ browser }) => {
-  const visitor = await newPlayer(browser, "codigo");
-  try {
-    for (const width of WIDTHS) {
-      await visitor.page.setViewportSize({ width, height: 740 });
-      for (const [path, heading, withCode] of [
-        ["/verificar", "Verifica tu correo", true],
-        ["/olvide", "Recupera tu contraseña", false],
-        ["/restablecer", "Nueva contraseña", true],
-      ] as const) {
-        const where = `${width} px, ${path}`;
-        await visitor.page.goto(path);
-        await expect(visitor.page.getByRole("heading", { name: heading })).toBeVisible();
-        await expectNoSideScroll(visitor.page, where);
-        if (withCode) await expectInsideViewport(visitor.page, visitor.page.getByLabel("Código", { exact: true }), `${where}: el campo del código`);
-      }
-    }
-  } finally {
-    await visitor.context.close();
-  }
-});
-
 for (const [kind, label] of [
   ["corto", "ash"],
   ["de 30 letras", longName("a")],

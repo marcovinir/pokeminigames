@@ -2,13 +2,9 @@ import { type CookieOptions, type Request, type Response, Router } from "express
 import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
 import { type KeyedLimiter, tooManyRequests } from "../http/rate-limit.js";
-import type { Mailer } from "../mail/mailer.js";
-import { MemoryMailer } from "../mail/memory-mailer.js";
 import { createRequireAuth, getAuth } from "./auth.middleware.js";
 import { loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
-import { type CodeLimits, createCodeLimits } from "./code-limits.js";
-import { SEND_LIMIT_MESSAGE, createRecoveryRouter, logBackgroundFailure, rejectWhenBlocked } from "./recovery.routes.js";
 import type { TokenService } from "./tokens.js";
 
 export const REFRESH_COOKIE = "refresh_token";
@@ -19,10 +15,6 @@ export interface AuthRouterDeps {
   tokens: TokenService;
   /** Límites de intentos; sin ellos no se limita nada (las pruebas que no los necesitan). */
   limiters?: { loginFailures?: KeyedLimiter; loginFailuresByIp?: KeyedLimiter; register?: KeyedLimiter; registerFailures?: KeyedLimiter };
-  /** Límites de los códigos por correo; sin ellos no se limita nada. */
-  codeLimits?: CodeLimits;
-  /** Para saber si hay un buzón en memoria (la E2E lee de él los códigos). */
-  mailer?: Mailer;
 }
 
 const clientIp = (req: Request): string => req.ip ?? "desconocida";
@@ -37,7 +29,7 @@ function toUserDto(user: AuthUser) {
   };
 }
 
-export function createAuthRouter({ env, authService, tokens, limiters = {}, codeLimits = createCodeLimits(), mailer }: AuthRouterDeps): Router {
+export function createAuthRouter({ env, authService, tokens, limiters = {} }: AuthRouterDeps): Router {
   const router = Router();
   const requireAuth = createRequireAuth(tokens);
 
@@ -70,34 +62,14 @@ export function createAuthRouter({ env, authService, tokens, limiters = {}, code
       throw tooManyRequests(retryAfterSeconds);
     }
     created?.record(ip);
-    let result: AuthResult | null = null;
-    let pendingEmail: string | null = null;
+    let result: AuthResult;
     try {
       const input = registerSchema.parse(req.body);
-      if (env.EMAIL_VERIFICATION) {
-        // Con la verificación activa se crea la cuenta pendiente y se envía un código, sin abrir sesión. Enviar comparte los
-        // límites de los envíos; el hueco se devuelve más abajo si el envío no llega a hacerse.
-        rejectWhenBlocked(res, codeLimits.reserveSend(ip, input.email), SEND_LIMIT_MESSAGE);
-        pendingEmail = input.email;
-        await authService.registerPending(input);
-      } else {
-        result = await authService.register(input);
-      }
+      result = await authService.register(input);
     } catch (error) {
-      const providerDown = error instanceof AppError && error.code === "EMAIL_SEND_FAILED";
-      // Con el proveedor caído la cuenta pendiente SÍ se creó (y costó un bcrypt, una transacción y una llamada al proveedor):
-      // ese hueco no se devuelve, o se podrían crear cuentas pendientes y repetir ese trabajo sin tope mientras el correo falla.
-      if (!providerDown) created?.release(ip);
-      // Lo que no es culpa de quien se registra (nuestro límite de envíos o un proveedor caído) no cuenta como intento fallido.
-      const ours = error instanceof AppError && (error.code === "RATE_LIMITED" || providerDown);
-      if (!ours) failed?.record(ip);
-      // Los huecos de los envíos sí se devuelven: no salió ningún correo, y así se puede reintentar enseguida.
-      if (pendingEmail !== null) codeLimits.releaseSend(ip, pendingEmail);
+      created?.release(ip);
+      failed?.record(ip);
       throw error;
-    }
-    if (result === null) {
-      res.status(202).json({ verification: "required", email: pendingEmail });
-      return;
     }
     startSession(res, result);
     res.status(201).json({ user: toUserDto(result.user), accessToken: result.accessToken });
@@ -131,10 +103,6 @@ export function createAuthRouter({ env, authService, tokens, limiters = {}, code
         // Un fallo nuestro (la base de datos, p. ej.) no es un intento fallido de la persona.
         loginFailures?.release(attemptKey);
         loginFailuresByIp?.release(ip);
-      }
-      if (error instanceof AppError && error.code === "EMAIL_NOT_VERIFIED" && codeLimits.reserveSend(ip, input.email) === null) {
-        // La contraseña era correcta pero falta verificar el correo: se envía un código nuevo, sin esperar al proveedor.
-        void authService.resendVerification(input.email).catch(logBackgroundFailure);
       }
       throw error;
     }
@@ -175,34 +143,6 @@ export function createAuthRouter({ env, authService, tokens, limiters = {}, code
     const preferences = preferencesSchema.parse(req.body);
     res.json({ preferences: await authService.savePreferences(getAuth(res).userId, preferences) });
   });
-
-  router.get("/options", (_req, res) => {
-    res.json({ emailVerification: env.EMAIL_VERIFICATION });
-  });
-
-  // Verificar, reenviar y recuperar solo existen con la verificación activa; apagada, la aplicación es la de antes.
-  if (env.EMAIL_VERIFICATION) {
-    router.use(
-      createRecoveryRouter({
-        authService,
-        codeLimits,
-        openSession(res, result) {
-          startSession(res, result);
-          res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
-        },
-      }),
-    );
-  }
-
-  // Solo para la E2E y las pruebas: lee lo que hay en el buzón en memoria. Con otro proveedor, o en producción sin
-  // ALLOW_MEMORY_MAIL, la ruta no existe.
-  if (mailer instanceof MemoryMailer && env.MAIL_PROVIDER === "memory" && (env.NODE_ENV !== "production" || env.ALLOW_MEMORY_MAIL)) {
-    router.get("/test-outbox", (req, res) => {
-      const to = typeof req.query.to === "string" ? req.query.to : "";
-      if (to === "") throw new AppError(400, "VALIDATION_ERROR", "Falta el correo (to)");
-      res.json({ messages: mailer.to(to).map(({ subject, text, to: address }) => ({ to: address, subject, text })) });
-    });
-  }
 
   return router;
 }

@@ -58,35 +58,11 @@ describe("sesión", () => {
       expect(store.getState().user).toBeNull();
     });
 
-    it("register deja al usuario autenticado y no pide verificar nada", async () => {
+    it("register deja al usuario autenticado", async () => {
       const { store, endpoints } = setup();
-      await expect(store.getState().register({ email: "ash@example.com", username: "ash", password: "pikachu-123" })).resolves.toBeNull();
+      await store.getState().register({ email: "ash@example.com", username: "ash", password: "pikachu-123" });
       expect(endpoints.auth.register).toHaveBeenCalledTimes(1);
       expect(store.getState().user).toEqual(ASH);
-    });
-
-    it("con la verificación activa register deja la cuenta pendiente: devuelve el correo y no abre la sesión", async () => {
-      const { store, endpoints } = setup();
-      vi.mocked(endpoints.auth.register).mockResolvedValueOnce({ verification: "required", email: "ash@example.com" });
-      await expect(store.getState().register({ email: "ash@example.com", username: "ash", password: "pikachu-123" })).resolves.toEqual({
-        verification: "required",
-        email: "ash@example.com",
-      });
-      expect(store.getState()).toMatchObject({ status: "loading", user: null });
-    });
-
-    it("verifyEmail abre la sesión con el código", async () => {
-      const { store, endpoints } = setup();
-      await store.getState().verifyEmail({ email: "ash@example.com", code: "123456" });
-      expect(endpoints.auth.verifyEmail).toHaveBeenCalledWith({ email: "ash@example.com", code: "123456" });
-      expect(store.getState()).toMatchObject({ status: "authenticated", user: ASH });
-    });
-
-    it("un código incorrecto lanza el error y no cambia el estado", async () => {
-      const { store, endpoints } = setup();
-      vi.mocked(endpoints.auth.verifyEmail).mockRejectedValueOnce(new ApiError(400, "INVALID_CODE"));
-      await expect(store.getState().verifyEmail({ email: "ash@example.com", code: "000000" })).rejects.toMatchObject({ code: "INVALID_CODE" });
-      expect(store.getState()).toMatchObject({ status: "loading", user: null });
     });
   });
 

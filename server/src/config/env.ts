@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-/** «Nombre <dirección>» o solo la dirección. */
-const MAIL_FROM_PATTERN = /^(?:[^<>@\r\n]+<[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>|[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+)$/;
-
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -21,56 +18,20 @@ const envSchema = z
       .default("false")
       .transform((value) => value === "true"),
     COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
-    // Cuentas con código por correo (etapa 7). Apagado, la aplicación se comporta como antes y no pide nada de correo.
-    EMAIL_VERIFICATION: z
-      .enum(["on", "off"], { error: "debe ser on u off" })
-      .default("off")
-      .transform((value) => value === "on"),
-    // Por defecto: consola en desarrollo y memoria en las pruebas; en producción hay que decirlo (con la verificación activa).
-    MAIL_PROVIDER: z.enum(["resend", "console", "memory"], { error: "debe ser resend, console o memory" }).optional(),
-    RESEND_API_KEY: z.string().min(1, "no puede estar vacía").optional(),
-    MAIL_FROM: z.string().regex(MAIL_FROM_PATTERN, "debe ser «Nombre <dirección>» o solo la dirección").optional(),
-    // Solo lo pone el servidor de la prueba E2E: deja usar el buzón en memoria (y su ruta de lectura) en producción.
-    ALLOW_MEMORY_MAIL: z
-      .enum(["true", "false"], { error: "debe ser true o false" })
-      .default("false")
-      .transform((value) => value === "true"),
   })
   .refine((env) => env.COOKIE_SAME_SITE !== "none" || env.COOKIE_SECURE, {
     message: "COOKIE_SAME_SITE=none exige COOKIE_SECURE=true",
     path: ["COOKIE_SAME_SITE"],
   })
-  .refine((env) => env.MAIL_PROVIDER !== "resend" || env.RESEND_API_KEY !== undefined, {
-    message: "es obligatoria con MAIL_PROVIDER=resend",
-    path: ["RESEND_API_KEY"],
-  })
-  .refine((env) => env.MAIL_PROVIDER !== "resend" || env.MAIL_FROM !== undefined, {
-    message: "es obligatorio con MAIL_PROVIDER=resend",
-    path: ["MAIL_FROM"],
-  })
   .transform((env) => ({
     ...env,
     CORS_ORIGIN: env.CORS_ORIGIN ?? (env.NODE_ENV === "production" ? undefined : "http://localhost:5173"),
     TRUST_PROXY: env.TRUST_PROXY ?? 0,
-    MAIL_PROVIDER: env.MAIL_PROVIDER ?? (env.NODE_ENV === "development" ? ("console" as const) : env.NODE_ENV === "test" ? ("memory" as const) : undefined),
   }));
 
 export type Env = z.infer<typeof envSchema>;
 
 type Source = Record<string, string | undefined>;
-
-/**
- * Una variable del correo que queda en blanco en el panel de Render (la clave que aún no se pegó, por ejemplo) cuenta como no
- * definida: de otro modo el servicio no arrancaría por algo que, con el correo apagado, nadie usa. Solo se perdonan las del
- * correo; cualquier otra variable en blanco sigue siendo un error.
- */
-const MAIL_VARIABLES = ["EMAIL_VERIFICATION", "MAIL_PROVIDER", "RESEND_API_KEY", "MAIL_FROM", "ALLOW_MEMORY_MAIL"] as const;
-
-function withoutBlankMailSettings(source: Source): Source {
-  const kept = { ...source };
-  for (const name of MAIL_VARIABLES) if (kept[name]?.trim() === "") delete kept[name];
-  return kept;
-}
 
 /**
  * Las reglas de producción se miran sobre los valores crudos, no sobre el resultado de zod: zod no ejecuta las reglas
@@ -84,20 +45,10 @@ function productionProblems(source: Source): string[] {
   if (source.TRUST_PROXY === undefined || source.TRUST_PROXY === "") {
     problems.push("TRUST_PROXY: en producción es obligatoria (cuántos proxies hay delante; en Render, se verifica según docs/despliegue.md)");
   }
-  if (source.EMAIL_VERIFICATION === "on") {
-    const provider = source.MAIL_PROVIDER;
-    // La consola escribiría los códigos en el registro; la memoria solo la usa el servidor de la prueba E2E. (Un valor desconocido ya lo señala el esquema.)
-    if (provider === undefined || provider === "" || provider === "console") {
-      problems.push("MAIL_PROVIDER: con EMAIL_VERIFICATION=on en producción debe ser resend");
-    } else if (provider === "memory" && source.ALLOW_MEMORY_MAIL !== "true") {
-      problems.push("MAIL_PROVIDER: memory solo se admite en producción con ALLOW_MEMORY_MAIL=true (la prueba E2E); en el servicio real debe ser resend");
-    }
-  }
   return problems;
 }
 
-export function loadEnv(rawSource: Source = process.env): Env {
-  const source = withoutBlankMailSettings(rawSource);
+export function loadEnv(source: Source = process.env): Env {
   const result = envSchema.safeParse(source);
   const problems = [
     ...(result.success ? [] : result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)),

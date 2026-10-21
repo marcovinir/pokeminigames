@@ -57,11 +57,6 @@ export function fakeServices(): FakeServices {
       refresh: vi.fn(async () => null),
       logout: vi.fn(async () => {}),
       savePreferences: vi.fn(async () => {}),
-      options: vi.fn(async () => ({ emailVerification: false })),
-      verifyEmail: vi.fn(async () => ({ user: ASH, accessToken: "tok" })),
-      resendCode: vi.fn(async () => {}),
-      forgotPassword: vi.fn(async () => {}),
-      resetPassword: vi.fn(async () => {}),
     },
     rooms: {
       create: vi.fn(async () => ({ code: "ABC234" })),

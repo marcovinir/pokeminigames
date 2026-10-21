@@ -10,10 +10,6 @@ export const ERROR_CODES = [
   "NOT_FOUND",
   "USER_NOT_FOUND",
   "INTERNAL_ERROR",
-  // Cuentas con código por correo (etapa 7)
-  "EMAIL_NOT_VERIFIED",
-  "INVALID_CODE",
-  "EMAIL_SEND_FAILED",
   // Salas (REST)
   "ALREADY_IN_GAME",
   "ROOM_NOT_FOUND",

@@ -22,7 +22,7 @@ describe("endpoints de autenticación", () => {
   it("register y login envían los datos, guardan el token y devuelven la sesión", async () => {
     const { api, endpoints, fetchMock } = setup(() => json(200, session));
     const registered = await endpoints.auth.register({ email: "ash@example.com", username: "ash", password: "pikachu-123" });
-    expect("user" in registered && registered.user.username).toBe("ash");
+    expect(registered.user.username).toBe("ash");
     expect(lastCall(fetchMock)).toEqual({
       url: "/auth/register",
       method: "POST",
@@ -53,73 +53,6 @@ describe("endpoints de autenticación", () => {
     const { api, endpoints } = setup(() => json(200, session));
     await expect(endpoints.auth.refresh()).resolves.toMatchObject({ accessToken: "tok" });
     expect(api.getToken()).toBe("tok");
-  });
-});
-
-describe("endpoints de las cuentas con código por correo", () => {
-  const headersOf = (fetchMock: ReturnType<typeof setup>["fetchMock"]) => (fetchMock.mock.calls.at(-1)![1]?.headers ?? {}) as Record<string, string>;
-
-  it("register con la verificación activa devuelve «hay que verificar» y no guarda ningún token", async () => {
-    const { api, endpoints } = setup(() => json(202, { verification: "required", email: "ash@example.com" }));
-    await expect(endpoints.auth.register({ email: "ash@example.com", username: "ash", password: "pikachu-123" })).resolves.toEqual({
-      verification: "required",
-      email: "ash@example.com",
-    });
-    expect(api.getToken()).toBeNull();
-  });
-
-  it("options pregunta si la verificación está activa, sin token", async () => {
-    const { api, endpoints, fetchMock } = setup(() => json(200, { emailVerification: true }));
-    api.setToken("tok");
-    await expect(endpoints.auth.options()).resolves.toEqual({ emailVerification: true });
-    expect(lastCall(fetchMock)).toMatchObject({ url: "/auth/options", method: "GET" });
-    expect(headersOf(fetchMock).Authorization).toBeUndefined();
-  });
-
-  it("verifyEmail envía el correo y el código, abre la sesión y guarda el token", async () => {
-    const { api, endpoints, fetchMock } = setup(() => json(200, session));
-    await expect(endpoints.auth.verifyEmail({ email: "ash@example.com", code: "123456" })).resolves.toMatchObject({ accessToken: "tok" });
-    expect(lastCall(fetchMock)).toEqual({ url: "/auth/verify-email", method: "POST", body: { email: "ash@example.com", code: "123456" } });
-    expect(api.getToken()).toBe("tok");
-  });
-
-  it("un código incorrecto lanza el error en español y no deja token", async () => {
-    const { api, endpoints } = setup(() => json(400, { error: { code: "INVALID_CODE", message: "x" } }));
-    await expect(endpoints.auth.verifyEmail({ email: "a@b.co", code: "000000" })).rejects.toMatchObject({
-      code: "INVALID_CODE",
-      message: "Código incorrecto o vencido. Revisa tu correo o pide uno nuevo.",
-    });
-    expect(api.getToken()).toBeNull();
-  });
-
-  it("resendCode, forgotPassword y resetPassword envían lo suyo, sin token, y no devuelven nada", async () => {
-    const { api, endpoints, fetchMock } = setup(() => json(202, { ok: true }));
-    api.setToken("tok");
-    await expect(endpoints.auth.resendCode("ash@example.com")).resolves.toBeUndefined();
-    expect(lastCall(fetchMock)).toEqual({ url: "/auth/verification/resend", method: "POST", body: { email: "ash@example.com" } });
-    expect(headersOf(fetchMock).Authorization).toBeUndefined();
-
-    await expect(endpoints.auth.forgotPassword("ash@example.com")).resolves.toBeUndefined();
-    expect(lastCall(fetchMock)).toEqual({ url: "/auth/password/forgot", method: "POST", body: { email: "ash@example.com" } });
-    expect(headersOf(fetchMock).Authorization).toBeUndefined();
-  });
-
-  it("resetPassword acepta el 204 sin cuerpo", async () => {
-    const { endpoints, fetchMock } = setup(() => json(204));
-    await expect(endpoints.auth.resetPassword({ email: "ash@example.com", code: "123456", password: "nueva-clave-1" })).resolves.toBeUndefined();
-    expect(lastCall(fetchMock)).toEqual({
-      url: "/auth/password/reset",
-      method: "POST",
-      body: { email: "ash@example.com", code: "123456", password: "nueva-clave-1" },
-    });
-  });
-
-  it("un 429 del reenvío dice cuánto esperar", async () => {
-    const { endpoints } = setup(() => json(429, { error: { code: "RATE_LIMITED", message: "x", details: { retryAfterSeconds: 42 } } }));
-    await expect(endpoints.auth.resendCode("ash@example.com")).rejects.toMatchObject({
-      code: "RATE_LIMITED",
-      message: "Demasiados intentos. Inténtalo de nuevo en 42 s.",
-    });
   });
 });
 
