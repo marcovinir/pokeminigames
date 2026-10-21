@@ -98,7 +98,10 @@ describe("cabecera del documento", () => {
   it("declara el icono, el color del navegador y las etiquetas para compartir el enlace", () => {
     expect(html).toMatch(/<link rel="icon" type="image\/svg\+xml" href="\/favicon\.svg"/);
     expect(html).toMatch(/<meta name="theme-color"/);
-    expect(html).toMatch(/<meta property="og:title" content="Pokémon Minigames"/);
+    expect(html).toMatch(/<meta property="og:title" content="PokeMiniGames"/);
+    expect(html).toContain("<title>PokeMiniGames</title>");
+    // El nombre viejo no queda en ninguna parte visible de la página (ni título ni metadatos).
+    expect(html).not.toMatch(/Pokémon Minigames/i);
     expect(html).toMatch(/<meta property="og:description" content="[^"]{20,}"/);
   });
 
