@@ -88,6 +88,8 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
     binding = null;
     if (broadcaster.unbind(room.code, seat, socket)) {
       room.dispatch({ type: "PLAYER_DISCONNECTED", seat });
+      // Con una oferta de revancha en marcha, soltarse empieza la cuenta de «se fue» (una recarga vuelve a tiempo).
+      deps.manager.rematch.disconnected(room.code, seat);
     }
   }
 
@@ -102,7 +104,13 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
       // Otra pestaña del mismo jugador queda reemplazada. Se desconecta sin avisar a la sala:
       // el asiento no se cae, solo cambia de socket.
       if (previous && previous !== socket) previous.disconnect(true);
-      room.dispatch({ type: "PLAYER_CONNECTED", seat });
+      if (room.phase === "finished") {
+        // La partida terminó pero la sala sigue viva por una oferta de revancha: se le reenvía el resumen y el estado de la oferta.
+        room.replaySummary(seat);
+        deps.manager.rematch.reconnected(room.code, seat);
+      } else {
+        room.dispatch({ type: "PLAYER_CONNECTED", seat });
+      }
     }),
   );
 
@@ -123,10 +131,28 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
   );
 
   socket.on(
+    "rematch-request",
+    handle(null, () => {
+      const { room, seat } = requireBinding();
+      deps.manager.rematch.request(room.code, seat);
+    }),
+  );
+
+  socket.on(
+    "rematch-cancel",
+    handle(null, () => {
+      const { room, seat } = requireBinding();
+      deps.manager.rematch.cancel(room.code, seat);
+    }),
+  );
+
+  socket.on(
     "leave-room",
     handle(null, () => {
       const { room, seat } = requireBinding();
       room.dispatch({ type: "LEAVE", seat });
+      // Salir con una oferta de revancha en marcha: el otro ve «se fue».
+      deps.manager.rematch.leave(room.code, seat);
       // Después del LEAVE, para que quien se va también reciba el resumen final.
       binding = null;
       broadcaster.unbind(room.code, seat, socket);

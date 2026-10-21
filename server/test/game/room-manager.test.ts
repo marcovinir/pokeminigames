@@ -19,10 +19,11 @@ function setup(generateCode?: () => string) {
   const time = new FakeTime();
   const repository = new FakeRepository();
   const store = new InMemoryRoomStore();
+  const broadcaster = new RecordingBroadcaster();
   const manager = new RoomManager({
     clock: time,
     scheduler: time,
-    broadcaster: new RecordingBroadcaster(),
+    broadcaster,
     repository,
     catalog: fixtureCatalog(),
     rng: seededRng(7),
@@ -31,7 +32,7 @@ function setup(generateCode?: () => string) {
     logger,
     persistRetryDelayMs: 0,
   });
-  return { manager, time, repository, store, logger };
+  return { manager, time, repository, store, logger, broadcaster };
 }
 
 /** Conecta a los dos asientos, deja pasar la cuenta atrás y juega una ronda hasta el final de la partida. */
@@ -241,6 +242,136 @@ describe("RoomManager con invitados", () => {
     const { code } = await manager.createRoom(inv, oneRound);
     expect(code).toBe("BBBBBB");
     expect(repository.calls).toEqual(["createGame"]);
+  });
+});
+
+describe("RoomManager: la revancha", () => {
+  const oneRound: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
+  /** Más larga que la gracia de reconexión (30 s): la partida sigue en marcha cuando esta se agota. */
+  const threeRounds: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
+  const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
+  /** Una sala de ash y misty ya conectada y con la ronda en marcha. */
+  async function startedRoom(ctx: ReturnType<typeof setup>, creator = ash, joiner = misty, config: RoomConfig = oneRound) {
+    const { code } = await ctx.manager.createRoom(creator, config);
+    ctx.manager.joinRoom(joiner, code);
+    const room = ctx.store.get(code)!;
+    room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    room.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    ctx.time.advance(5000);
+    return room;
+  }
+  const finishNormally = (ctx: ReturnType<typeof setup>, room: NonNullable<ReturnType<InMemoryRoomStore["get"]>>) => {
+    room.dispatch({ type: "SUBMIT", seat: 1, text: "Alfa" });
+    ctx.time.advance(15_000);
+  };
+
+  it("al terminar con completed abre una oferta, la sala terminada sigue en el almacén y los dos reciben open", async () => {
+    const ctx = setup();
+    const room = await startedRoom(ctx);
+    finishNormally(ctx, room);
+    expect(room.outcome?.reason).toBe("completed");
+    expect(ctx.manager.rematch.has(room.code)).toBe(true);
+    expect(ctx.store.get(room.code)).toBe(room);
+    for (const seat of [1, 2] as const) expect(ctx.broadcaster.payloads("rematch-state", seat).at(-1)).toMatchObject({ status: "open" });
+  });
+
+  it.each([
+    ["forfeit", async (ctx: ReturnType<typeof setup>) => { const room = await startedRoom(ctx); room.dispatch({ type: "LEAVE", seat: 2 }); return room; }],
+    ["cancelled", async (ctx: ReturnType<typeof setup>) => { const { code } = await ctx.manager.createRoom(ash, oneRound); const room = ctx.store.get(code)!; room.dispatch({ type: "LEAVE", seat: 1 }); return room; }],
+    ["expired", async (ctx: ReturnType<typeof setup>) => { const { code } = await ctx.manager.createRoom(ash, oneRound); const room = ctx.store.get(code)!; ctx.time.advance(10 * 60 * 1000); return room; }],
+    ["disconnect", async (ctx: ReturnType<typeof setup>) => { const room = await startedRoom(ctx, ash, misty, threeRounds); room.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 }); ctx.time.advance(30_000); return room; }],
+    ["abandoned", async (ctx: ReturnType<typeof setup>) => { const room = await startedRoom(ctx, ash, misty, threeRounds); room.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 }); room.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 }); ctx.time.advance(30_000); return room; }],
+  ])("con el motivo %s no hay oferta y la sala terminada se quita del almacén al instante", async (reason, finish) => {
+    const ctx = setup();
+    const room = await finish(ctx);
+    expect(room.outcome?.reason).toBe(reason);
+    expect(ctx.manager.rematch.has(room.code)).toBe(false);
+    expect(ctx.store.get(room.code)).toBeUndefined();
+    expect(ctx.broadcaster.payloads("rematch-state")).toEqual([]);
+  });
+
+  it("findByUser ignora la sala terminada con oferta: las dos personas pueden crear otra sala", async () => {
+    const ctx = setup();
+    const room = await startedRoom(ctx);
+    finishNormally(ctx, room);
+    expect(ctx.manager.rematch.has(room.code)).toBe(true);
+    const created = await ctx.manager.createRoom(ash, oneRound);
+    expect(created.code).not.toBe(room.code);
+    expect(ctx.manager.currentFor("u2")).toBeNull();
+  });
+
+  describe("createRematchRoom", () => {
+    it("copia la configuración entera (incluido un campo que el motor no conoce) y deja a cada persona en su asiento", async () => {
+      const { manager, store } = setup();
+      const config = { ...oneRound, typeHints: true, monotype: "agua" } as RoomConfig;
+      const { code } = await manager.createRematchRoom({ players: { 1: ash, 2: misty }, config });
+      const room = store.get(code)!;
+      expect(room.config).toEqual(config);
+      expect(room.seatOf("u1")).toBe(1);
+      expect(room.seatOf("u2")).toBe(2);
+      expect(room.phase).toBe("waiting");
+      expect(room.view(1)).toMatchObject({ rematch: true, players: [{ username: "ash" }, { username: "misty" }] });
+    });
+
+    it("con dos cuentas llama a createGame y guarda el segundo asiento; con un invitado, de cualquiera de los dos lados, no escribe nada y la sala conserva guest", async () => {
+      const accounts = setup();
+      const { code } = await accounts.manager.createRematchRoom({ players: { 1: ash, 2: misty }, config: oneRound });
+      await accounts.store.get(code)!.idle();
+      expect(accounts.repository.calls).toEqual(["createGame", "addSecondPlayer:u2"]);
+
+      for (const [one, two] of [[inv, misty], [ash, inv]] as const) {
+        const guests = setup();
+        const created = await guests.manager.createRematchRoom({ players: { 1: one, 2: two }, config: oneRound });
+        const room = guests.store.get(created.code)!;
+        await room.idle();
+        expect(guests.repository.calls).toEqual([]);
+        expect(room.persisted).toBe(false);
+        expect(Object.values(room.players()).some((player) => player?.isGuest)).toBe(true);
+      }
+    });
+
+    it("ALREADY_IN_GAME con el asiento de quien ya está en otra sala", async () => {
+      const { manager } = setup();
+      await manager.createRoom(misty, oneRound);
+      const error = await manager.createRematchRoom({ players: { 1: ash, 2: misty }, config: oneRound }).catch((e: unknown) => e);
+      expect(error).toMatchObject({ status: 409, code: "ALREADY_IN_GAME", details: { seat: 2 } });
+    });
+
+    it("la sala de revancha caduca a los 30 s si el segundo no entra y sale del almacén", async () => {
+      const { manager, store, time } = setup();
+      const { code } = await manager.createRematchRoom({ players: { 1: ash, 2: misty }, config: oneRound });
+      const room = store.get(code)!;
+      time.advance(29_999);
+      expect(room.phase).toBe("waiting");
+      time.advance(1);
+      expect(room.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+      expect(store.get(code)).toBeUndefined();
+    });
+  });
+
+  it("con dos cuentas y partida guardada pide el récord después de guardar el final y lo manda a los dos (espejo); con un invitado no lo pide", async () => {
+    const accounts = setup();
+    accounts.repository.headToHeadResult = { winsA: 1, winsB: 0, draws: 0, recent: ["a"] };
+    accounts.repository.delays.finish = 30;
+    const room = await startedRoom(accounts);
+    finishNormally(accounts, room);
+    expect(accounts.repository.headToHeadCalls).toEqual([]); // el final aún no se guardó
+    await room.idle();
+    await flush();
+    expect(accounts.repository.calls).toContain("finish:completed");
+    expect(accounts.repository.headToHeadCalls).toEqual([{ userA: "u1", userB: "u2", recent: 5 }]);
+    expect(accounts.broadcaster.payloads("rematch-state", 1).at(-1)).toMatchObject({ record: { mine: 1, theirs: 0, draws: 0, played: 1, recent: ["won"] } });
+    expect(accounts.broadcaster.payloads("rematch-state", 2).at(-1)).toMatchObject({ record: { mine: 0, theirs: 1, played: 1, recent: ["lost"] } });
+
+    const guests = setup();
+    const guestRoom = await startedRoom(guests, inv, misty);
+    finishNormally(guests, guestRoom);
+    await guestRoom.idle();
+    await flush();
+    expect(guests.repository.headToHeadCalls).toEqual([]);
+    expect(guests.manager.rematch.has(guestRoom.code)).toBe(true);
+    expect("record" in guests.broadcaster.payloads("rematch-state", 2).at(-1)!).toBe(false);
   });
 });
 
