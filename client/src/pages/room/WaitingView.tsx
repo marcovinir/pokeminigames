@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
 import { Badge } from "../../components/Badge";
+import { GuestTag } from "../../components/GuestTag";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { rise } from "../../components/rise";
@@ -68,6 +69,7 @@ export function WaitingView() {
           <li key={player.seat} className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <Avatar name={player.username} size="lg" />
             <span className="max-w-full text-sm font-semibold [overflow-wrap:anywhere]">{player.username}</span>
+            {player.guest ? <GuestTag /> : null}
             {player.connected ? null : <span className="text-xs text-muted">(sin conectar)</span>}
           </li>
         ))}

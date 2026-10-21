@@ -1,7 +1,10 @@
 import type { GameEndedPayload, PokemonView, Seat } from "@pokemon-minigames/shared";
 import { useNavigate } from "react-router";
+import { isGuest } from "../../api/types";
+import { useSession } from "../../services";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
+import { GuestTag } from "../../components/GuestTag";
 import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
 import { END_REASON_LABELS } from "../../i18n/es";
@@ -14,11 +17,14 @@ function bestFirst(team: PokemonView[]): PokemonView[] {
   return [team[best]!, ...team.filter((_, index) => index !== best)];
 }
 
-function TeamColumn({ title, team, total, index }: { title: string; team: PokemonView[]; total: number; index: number }) {
+function TeamColumn({ title, team, total, index, guest = false }: { title: string; team: PokemonView[]; total: number; index: number; guest?: boolean }) {
   return (
     <section aria-label={`Equipo de ${title}`} style={rise(index)} className="animate-rise flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h2 className="min-w-0 truncate font-display text-lg font-semibold">{title}</h2>
+          {guest ? <GuestTag /> : null}
+        </div>
         <p className="font-num text-3xl font-semibold tabular-nums">{total}</p>
       </div>
       {team.length === 0 ? <p className="text-sm text-muted">No ganó ningún Pokémon.</p> : null}
@@ -58,6 +64,7 @@ function BalanceIcon() {
 export function SummaryView() {
   const { view, opponent } = useRoom();
   const navigate = useNavigate();
+  const sessionUser = useSession((s) => s.user);
   const ended = view.ended;
   if (!ended || view.mySeat === null) return null;
 
@@ -81,14 +88,15 @@ export function SummaryView() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
-        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} />
+        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} guest={opponent?.guest === true} />
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">
         <Button variant="primary" size="lg" onClick={() => navigate("/", { state: { config: view.config } })}>
           Jugar de nuevo
         </Button>
-        {opponent ? (
+        {/* Un invitado no tiene perfil: ni se ofrece el suyo ni el de quien juega contra él. */}
+        {opponent && !opponent.guest && !isGuest(sessionUser) ? (
           <Button size="lg" onClick={() => navigate(`/jugador/${encodeURIComponent(opponent.username)}`)}>
             Ver perfil de {opponent.username}
           </Button>

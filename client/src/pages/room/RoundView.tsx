@@ -1,5 +1,6 @@
 import { Autocomplete } from "../../components/Autocomplete";
 import { Card } from "../../components/Card";
+import { GuestTag } from "../../components/GuestTag";
 import { Notice } from "../../components/Notice";
 import { rise } from "../../components/rise";
 import { OpponentPanel, TeamPanel } from "../../components/Panels";
@@ -49,7 +50,9 @@ export function RoundView() {
       {/* En pantallas estrechas los paneles de equipo se resumen en una sola barra que se queda pegada bajo el encabezado al desplazarse. */}
       <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
         Tú <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
-        {opponent?.username ?? "Rival"} <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
+        {opponent?.username ?? "Rival"}
+        {opponent?.guest ? <GuestTag className="mx-1 align-middle" /> : " "}
+        <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
       </p>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -96,6 +99,7 @@ export function RoundView() {
             teamSize={opponent?.teamSize ?? 0}
             team={view.opponentTeam}
             connected={opponent?.connected ?? true}
+            guest={opponent?.guest === true}
           />
         </div>
       </div>

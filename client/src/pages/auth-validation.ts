@@ -9,6 +9,7 @@ export interface FieldErrors {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME = /^[A-Za-z0-9_]{3,30}$/;
 const MAX_PASSWORD_BYTES = 72;
+const USERNAME_ERROR = "Usa de 3 a 30 letras, números o guion bajo.";
 
 function emailError(email: string): string | undefined {
   return EMAIL.test(email.trim()) ? undefined : "Escribe un email válido.";
@@ -23,11 +24,17 @@ export function validateLogin(input: { email: string; password: string }): Field
   return errors;
 }
 
+/** El nombre de quien entra como invitado sigue la misma regla que el de usuario. */
+export function validateGuestName(name: string): string | undefined {
+  return USERNAME.test(name.trim()) ? undefined : USERNAME_ERROR;
+}
+
 export function validateRegistration(input: { email: string; username: string; password: string }): FieldErrors {
   const errors: FieldErrors = {};
   const email = emailError(input.email);
   if (email) errors.email = email;
-  if (!USERNAME.test(input.username.trim())) errors.username = "Usa de 3 a 30 letras, números o guion bajo.";
+  const username = validateGuestName(input.username);
+  if (username) errors.username = username;
   if (input.password.length < 8) {
     errors.password = "La contraseña debe tener al menos 8 caracteres.";
   } else if (new TextEncoder().encode(input.password).length > MAX_PASSWORD_BYTES) {

@@ -1,6 +1,7 @@
 import type { RoundPlayerResult, Seat } from "@pokemon-minigames/shared";
 import { Badge } from "../../components/Badge";
 import { Card } from "../../components/Card";
+import { GuestTag } from "../../components/GuestTag";
 import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
 import { TypeChip } from "../../components/TypeChip";
@@ -9,12 +10,15 @@ import { RESULT_PAUSE_MS } from "../../game/durations";
 import { PICK_RESULT_LABELS } from "../../i18n/es";
 import { useRoom } from "./use-room";
 
-function ResultCard({ title, result, index }: { title: string; result: RoundPlayerResult; index: number }) {
+function ResultCard({ title, result, index, guest = false }: { title: string; result: RoundPlayerResult; index: number; guest?: boolean }) {
   const won = result.result === "VALID";
   return (
     <Card as="section" aria-label={`Resultado de ${title}`} data-result={result.result} style={rise(index)} className={`animate-rise p-5 ${won ? "border-success" : ""}`}>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="truncate font-display text-lg font-semibold">{title}</h2>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h2 className="min-w-0 truncate font-display text-lg font-semibold">{title}</h2>
+          {guest ? <GuestTag /> : null}
+        </div>
         <Badge tone={won ? "success" : "danger"}>{PICK_RESULT_LABELS[result.result]}</Badge>
       </div>
       {result.text ? <p className="mt-2 text-sm text-muted [overflow-wrap:anywhere]">Escribió: «{result.text}»</p> : null}
@@ -85,7 +89,7 @@ export function RoundResultView() {
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <ResultCard title="Tú" result={mine} index={0} />
-        <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} index={1} />
+        <ResultCard title={opponent?.username ?? "Tu rival"} result={theirs} index={1} guest={opponent?.guest === true} />
       </div>
 
       <div className="mx-auto w-64 text-center">

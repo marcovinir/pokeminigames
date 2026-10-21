@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { useServices } from "../services";
 import { AuthForm } from "./AuthForm";
 import { AuthHero } from "./AuthHero";
+import { GuestEntry } from "./GuestEntry";
 import { validateLogin, validateRegistration } from "./auth-validation";
 
 /** A dónde volver tras iniciar sesión: la pantalla que se intentó abrir, o el lobby. */
@@ -28,23 +29,26 @@ export function LoginPage() {
 
   return (
     <AuthLayout>
-      <AuthForm
-        title="Iniciar sesión"
-        submitLabel="Entrar"
-        validate={validateLogin}
-        onSubmit={async ({ email, password }) => {
-          await session.getState().login({ email, password });
-          navigate(returnTo, { replace: true });
-        }}
-        footer={
-          <>
-            ¿No tienes cuenta?{" "}
-            <Link to="/registro" className="font-semibold text-accent underline">
-              Crea una
-            </Link>
-          </>
-        }
-      />
+      <div className="flex min-w-0 flex-col gap-5">
+        <AuthForm
+          title="Iniciar sesión"
+          submitLabel="Entrar"
+          validate={validateLogin}
+          onSubmit={async ({ email, password }) => {
+            await session.getState().login({ email, password });
+            navigate(returnTo, { replace: true });
+          }}
+          footer={
+            <>
+              ¿No tienes cuenta?{" "}
+              <Link to="/registro" className="font-semibold text-accent underline">
+                Crea una
+              </Link>
+            </>
+          }
+        />
+        <GuestEntry returnTo={returnTo} />
+      </div>
     </AuthLayout>
   );
 }

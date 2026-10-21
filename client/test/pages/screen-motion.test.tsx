@@ -19,11 +19,13 @@ function rise(element: Element | null | undefined): { animated: boolean; index: 
 }
 
 describe("entrada de cada pantalla", () => {
-  it("acceso: el lema y el formulario entran uno tras otro", () => {
+  it("acceso: el lema, el formulario y el bloque de invitado entran uno tras otro", () => {
     const { container } = renderWithServices(<LoginPage />);
-    const [hero, form] = Array.from(container.firstElementChild!.children);
+    const [hero, column] = Array.from(container.firstElementChild!.children);
+    const [form, guest] = Array.from(column!.children);
     expect(rise(hero)).toEqual({ animated: true, index: "0" });
     expect(rise(form)).toEqual({ animated: true, index: "1" });
+    expect(rise(guest)).toEqual({ animated: true, index: "2" });
   });
 
   it("lobby: el saludo y las dos tarjetas entran escalonados", () => {

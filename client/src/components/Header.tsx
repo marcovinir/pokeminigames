@@ -1,7 +1,9 @@
 import { Link } from "react-router";
+import { isGuest } from "../api/types";
 import { useServices, useSession } from "../services";
 import { Avatar } from "./Avatar";
 import { Button } from "./Button";
+import { GuestTag } from "./GuestTag";
 import { Logo } from "./Logo";
 import { ThemeMenu } from "./ThemeMenu";
 
@@ -10,6 +12,15 @@ function UserIcon() {
     <svg viewBox="0 0 24 24" className="size-5 lg:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
+function UserPlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5 sm:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6" />
     </svg>
   );
 }
@@ -26,6 +37,7 @@ function ExitIcon() {
 export function Header() {
   const user = useSession((s) => s.user);
   const { session } = useServices();
+  const guest = isGuest(user);
 
   return (
     <header className="sticky top-0 z-20 h-(--header-h) border-b-(length:--frame) border-line bg-header text-header-fg">
@@ -45,12 +57,21 @@ export function Header() {
           <ThemeMenu compact={Boolean(user)} />
           {user ? (
             <>
-              <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
-                <UserIcon />
-                <span className="sr-only lg:not-sr-only">Mi perfil</span>
-              </Link>
+              {guest ? (
+                // Un invitado no tiene perfil: en su lugar, el camino a tener cuenta.
+                <Link to="/registro" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
+                  <UserPlusIcon />
+                  <span className="sr-only sm:not-sr-only">Crear cuenta</span>
+                </Link>
+              ) : (
+                <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
+                  <UserIcon />
+                  <span className="sr-only lg:not-sr-only">Mi perfil</span>
+                </Link>
+              )}
               <span className="flex min-w-0 items-center gap-2">
                 <Avatar name={user.username} size="sm" />
+                {guest ? <GuestTag /> : null}
                 <span className="hidden max-w-40 truncate font-display text-sm font-semibold lg:inline">{user.username}</span>
               </span>
               <Button variant="header" className="shrink-0 max-lg:px-3" onClick={() => void session.getState().logout()}>

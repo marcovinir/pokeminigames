@@ -4,6 +4,7 @@ import { ArtImage } from "./ArtImage";
 import { Avatar } from "./Avatar";
 import { Badge } from "./Badge";
 import { Card } from "./Card";
+import { GuestTag } from "./GuestTag";
 
 /** La lista de Pokémon de un equipo: miniatura, nombre (en una línea) y total. */
 function TeamList({ team }: { team: PokemonView[] }) {
@@ -44,18 +45,21 @@ export function OpponentPanel({
   teamSize,
   team,
   connected,
+  guest = false,
 }: {
   name: string;
   total: number;
   teamSize: number;
   team: PokemonView[];
   connected: boolean;
+  guest?: boolean;
 }) {
   return (
     <Card as="section" aria-label="Tu rival" className="p-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Avatar name={name} size="sm" />
-        <h2 className="truncate text-sm font-semibold text-muted">{name}</h2>
+        <h2 className="min-w-0 truncate text-sm font-semibold text-muted">{name}</h2>
+        {guest ? <GuestTag /> : null}
       </div>
       <p className="mt-2 font-num text-4xl font-semibold tabular-nums">
         <AnimatedNumber value={total} />
