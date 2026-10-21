@@ -3,8 +3,9 @@ import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
 import { type KeyedLimiter, tooManyRequests } from "../http/rate-limit.js";
 import { createRequireAccount, getAuth } from "./auth.middleware.js";
-import { loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
+import { guestSchema, loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
+import { GUEST_COOKIE, type GuestSessions, type IssuedGuestSession } from "./guest-sessions.js";
 import type { TokenService } from "./tokens.js";
 
 export const REFRESH_COOKIE = "refresh_token";
@@ -13,8 +14,16 @@ export interface AuthRouterDeps {
   env: Env;
   authService: AuthService;
   tokens: TokenService;
+  /** Las sesiones de invitado (la cookie firmada): los invitados no tienen fila en la base de datos. */
+  guests: GuestSessions;
   /** Límites de intentos; sin ellos no se limita nada (las pruebas que no los necesitan). */
-  limiters?: { loginFailures?: KeyedLimiter; loginFailuresByIp?: KeyedLimiter; register?: KeyedLimiter; registerFailures?: KeyedLimiter };
+  limiters?: {
+    loginFailures?: KeyedLimiter;
+    loginFailuresByIp?: KeyedLimiter;
+    register?: KeyedLimiter;
+    registerFailures?: KeyedLimiter;
+    guestSessions?: KeyedLimiter;
+  };
 }
 
 const clientIp = (req: Request): string => req.ip ?? "desconocida";
@@ -29,7 +38,11 @@ function toUserDto(user: AuthUser) {
   };
 }
 
-export function createAuthRouter({ env, authService, tokens, limiters = {} }: AuthRouterDeps): Router {
+function toGuestDto(guest: { id: string; username: string }) {
+  return { id: guest.id, username: guest.username, guest: true as const };
+}
+
+export function createAuthRouter({ env, authService, tokens, guests, limiters = {} }: AuthRouterDeps): Router {
   const router = Router();
   const requireAccount = createRequireAccount(tokens);
 
@@ -41,12 +54,22 @@ export function createAuthRouter({ env, authService, tokens, limiters = {} }: Au
     path: "/auth",
   };
 
-  function startSession(res: Response, result: AuthResult): void {
+  const hasGuestCookie = (req: Request): boolean => req.cookies?.[GUEST_COOKIE] !== undefined;
+
+  /** Una cuenta que entra sustituye al invitado: si la petición traía su cookie, se borra. */
+  function startSession(req: Request, res: Response, result: AuthResult): void {
     res.cookie(REFRESH_COOKIE, result.refreshToken, { ...cookieOptions, expires: result.refreshExpiresAt });
+    if (hasGuestCookie(req)) res.clearCookie(GUEST_COOKIE, cookieOptions);
+  }
+
+  function startGuestSession(res: Response, guest: IssuedGuestSession): void {
+    res.cookie(GUEST_COOKIE, guest.cookie, { ...cookieOptions, expires: guest.expiresAt });
+    res.json({ user: toGuestDto(guest), accessToken: tokens.signAccessToken({ sub: guest.id, username: guest.username, guest: true }) });
   }
 
   function endSession(res: Response): void {
     res.clearCookie(REFRESH_COOKIE, cookieOptions);
+    res.clearCookie(GUEST_COOKIE, cookieOptions);
   }
 
   router.post("/register", async (req, res) => {
@@ -71,8 +94,22 @@ export function createAuthRouter({ env, authService, tokens, limiters = {} }: Au
       failed?.record(ip);
       throw error;
     }
-    startSession(res, result);
+    startSession(req, res, result);
     res.status(201).json({ user: toUserDto(result.user), accessToken: result.accessToken });
+  });
+
+  router.post("/guest", (req, res) => {
+    // Un invitado no cuesta una fila ni un hash, pero sí una sesión: se limitan por IP. Un nombre inválido no gasta hueco.
+    const { username } = guestSchema.parse(req.body);
+    const ip = clientIp(req);
+    const status = limiters.guestSessions?.check(ip);
+    if (status && !status.allowed) {
+      res.set("Retry-After", String(status.retryAfterSeconds));
+      throw tooManyRequests(status.retryAfterSeconds);
+    }
+    limiters.guestSessions?.record(ip);
+    res.status(201);
+    startGuestSession(res, guests.issue(username));
   });
 
   router.post("/login", async (req, res) => {
@@ -108,21 +145,30 @@ export function createAuthRouter({ env, authService, tokens, limiters = {} }: Au
     }
     loginFailures?.reset(attemptKey);
     loginFailuresByIp?.release(ip);
-    startSession(res, result);
+    startSession(req, res, result);
     res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
   });
 
   router.post("/refresh", async (req, res) => {
     const token: unknown = req.cookies?.[REFRESH_COOKIE];
-    if (typeof token !== "string" || token === "") {
-      throw new AppError(401, "INVALID_REFRESH_TOKEN", "No hay una sesión activa");
+    const guest = guests.read(req.cookies?.[GUEST_COOKIE]);
+    if (typeof token === "string" && token !== "") {
+      // Si falla no se borra la cookie: con dos pestañas refrescando a la vez, el 401 del
+      // perdedor podría llegar después del 200 del ganador y borrar la cookie ya rotada.
+      // Un token inválido es inofensivo; cerrar sesión de verdad es cosa de /auth/logout.
+      try {
+        const result = await authService.refresh(token);
+        startSession(req, res, result);
+        res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
+        return;
+      } catch (error) {
+        // Una cookie de cuenta que ya no vale no debe esconder una sesión de invitado que sí; cualquier otro fallo (la base de datos) se propaga.
+        if (!guest || !(error instanceof AppError && error.code === "INVALID_REFRESH_TOKEN")) throw error;
+      }
     }
-    // Si falla no se borra la cookie: con dos pestañas refrescando a la vez, el 401 del
-    // perdedor podría llegar después del 200 del ganador y borrar la cookie ya rotada.
-    // Un token inválido es inofensivo; cerrar sesión de verdad es cosa de /auth/logout.
-    const result = await authService.refresh(token);
-    startSession(res, result);
-    res.json({ user: toUserDto(result.user), accessToken: result.accessToken });
+    if (!guest) throw new AppError(401, "INVALID_REFRESH_TOKEN", "No hay una sesión activa");
+    // Se renueva la cookie con el mismo id: la partida en curso del invitado sigue siendo suya.
+    startGuestSession(res, guests.issue(guest.username, guest.id));
   });
 
   router.post("/logout", async (req, res) => {

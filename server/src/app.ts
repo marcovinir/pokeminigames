@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express } from "express";
 import { createAuthRouter } from "./auth/auth.routes.js";
+import { GUEST_SESSION_TTL_MS, createGuestSessions } from "./auth/guest-sessions.js";
 import { AuthService } from "./auth/auth.service.js";
 import { createPasswordHasher } from "./auth/password.js";
 import type { TokenService } from "./auth/tokens.js";
@@ -40,8 +41,11 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
     loginFailuresByIp: createKeyedLimiter({ ...limits.loginFailuresByIp, now: limits.now }),
     register: createKeyedLimiter({ ...limits.register, now: limits.now }),
     registerFailures: createKeyedLimiter({ ...limits.registerFailures, now: limits.now }),
+    guestSessions: createKeyedLimiter({ ...limits.guestSessions, now: limits.now }),
     api: createKeyedLimiter({ ...limits.api, now: limits.now }),
   };
+
+  const guests = createGuestSessions({ secret: env.JWT_ACCESS_SECRET, ttlMs: GUEST_SESSION_TTL_MS });
 
   const authService = new AuthService({
     prisma,
@@ -65,7 +69,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
-  app.use("/auth", createAuthRouter({ env, authService, tokens, limiters: limiters ?? undefined }));
+  app.use("/auth", createAuthRouter({ env, authService, tokens, guests, limiters: limiters ?? undefined }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));

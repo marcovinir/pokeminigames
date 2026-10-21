@@ -4,12 +4,15 @@ import { MAX_PASSWORD_BYTES } from "./password.js";
 
 const email = z.string().trim().toLowerCase().pipe(z.email("Email inválido").max(255, "Email demasiado largo"));
 
+/** El nombre de una persona, con cuenta o de invitado: de 3 a 30 letras, números o guion bajo. */
+const usernameSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9_]{3,30}$/, "Usa de 3 a 30 letras, números o guion bajo");
+
 export const registerSchema = z.object({
   email,
-  username: z
-    .string()
-    .trim()
-    .regex(/^[A-Za-z0-9_]{3,30}$/, "Usa de 3 a 30 letras, números o guion bajo"),
+  username: usernameSchema,
   password: z
     .string()
     .min(8, "La contraseña debe tener al menos 8 caracteres")
@@ -17,6 +20,9 @@ export const registerSchema = z.object({
       message: `La contraseña no puede superar ${MAX_PASSWORD_BYTES} bytes`,
     }),
 });
+
+/** Entrar como invitado: solo un nombre, sin correo ni contraseña. */
+export const guestSchema = z.object({ username: usernameSchema });
 
 export const loginSchema = z.object({
   email,

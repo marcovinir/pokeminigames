@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginSchema, registerSchema } from "../../src/auth/auth.schemas.js";
+import { guestSchema, loginSchema, registerSchema } from "../../src/auth/auth.schemas.js";
 
 const valid = { email: "ash@example.com", username: "ash_01", password: "pikachu-123" };
 
@@ -46,5 +46,20 @@ describe("loginSchema", () => {
 
   it("rechaza una contraseña vacía", () => {
     expect(loginSchema.safeParse({ email: "ash@example.com", password: "" }).success).toBe(false);
+  });
+});
+
+describe("guestSchema", () => {
+  it("acepta un nombre de 3 a 30 letras, números o guion bajo y lo recorta", () => {
+    expect(guestSchema.parse({ username: "  inv_01 " })).toEqual({ username: "inv_01" });
+    expect(guestSchema.safeParse({ username: "a".repeat(30) }).success).toBe(true);
+  });
+
+  it("usa la misma regla de nombre que el registro y no pide nada más", () => {
+    for (const username of ["ab", "a".repeat(31), "ash ketchum", "ash<script>", "ñandú", 123, undefined]) {
+      expect(guestSchema.safeParse({ username }).success, String(username)).toBe(false);
+      expect(registerSchema.safeParse({ ...valid, username }).success, String(username)).toBe(false);
+    }
+    expect(guestSchema.safeParse(undefined).success).toBe(false);
   });
 });

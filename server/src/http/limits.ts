@@ -15,6 +15,8 @@ export interface RateLimitConfig {
   register: WindowLimit;
   /** Intentos de registro que fallan (cuenta repetida, datos inválidos) por IP: no gastan las cuentas de arriba. */
   registerFailures: WindowLimit;
+  /** Sesiones de invitado creadas por IP (no hay cuenta ni contraseña que proteger, pero sí servidor y memoria). */
+  guestSessions: WindowLimit;
   /** Peticiones a toda la API por IP. */
   api: WindowLimit;
   /** Reloj inyectable para las pruebas. */
@@ -26,6 +28,7 @@ export const DEFAULT_RATE_LIMITS: RateLimitConfig = {
   loginFailuresByIp: { limit: 30, windowMs: 15 * MINUTE },
   register: { limit: 5, windowMs: HOUR },
   registerFailures: { limit: 20, windowMs: HOUR },
+  guestSessions: { limit: 20, windowMs: HOUR },
   api: { limit: 300, windowMs: MINUTE },
 };
 
