@@ -1,27 +1,14 @@
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { E2E_DATABASE, adminDatabaseUrl } from "./support/db";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const serverDir = join(root, "server");
-const DATABASE = "pokemon_minigames_e2e";
+const DATABASE = E2E_DATABASE;
 const PORT = Number(process.env.E2E_PORT ?? 4321);
-
-/** Conexión con permiso para crear bases de datos: la variable E2E_ADMIN_DATABASE_URL (CI) o la DATABASE_URL de server/.env. */
-function adminUrl(): string {
-  if (process.env.E2E_ADMIN_DATABASE_URL) return process.env.E2E_ADMIN_DATABASE_URL;
-  const file = join(serverDir, ".env");
-  if (!existsSync(file)) {
-    throw new Error("Falta server/.env (o la variable E2E_ADMIN_DATABASE_URL) para poder crear la base de datos de la prueba E2E.");
-  }
-  const line = readFileSync(file, "utf8")
-    .split(/\r?\n/)
-    .find((l) => l.startsWith("DATABASE_URL="));
-  if (!line) throw new Error("server/.env no define DATABASE_URL.");
-  return line.slice("DATABASE_URL=".length).replace(/^"|"$/g, "");
-}
 
 async function recreateDatabase(admin: string, drop: boolean): Promise<void> {
   const client = new pg.Client({ connectionString: admin });
@@ -57,7 +44,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     if (!existsSync(file)) throw new Error(`Falta ${file}. Ejecuta \`npm run build\` antes de la prueba E2E (\`npm run e2e\` ya lo hace).`);
   }
 
-  const admin = adminUrl();
+  const admin = adminDatabaseUrl();
   await recreateDatabase(admin, false);
   const databaseUrl = new URL(admin);
   databaseUrl.pathname = `/${DATABASE}`;

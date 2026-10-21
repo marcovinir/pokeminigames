@@ -100,7 +100,23 @@ export async function logIn(page: Page, email: string, password: string): Promis
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Contraseña").fill(password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  // Exacto: en /login también está «Entrar como invitado».
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+}
+
+/** Entra como invitado desde /login, solo con un nombre, y espera al lobby. */
+export async function guestLogin(page: Page, name: string): Promise<void> {
+  await page.goto("/login");
+  await page.getByLabel("Nombre", { exact: true }).fill(name);
+  await page.getByRole("button", { name: "Entrar como invitado" }).click();
+  await expect(page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+}
+
+/** Una persona nueva que ya entró como invitada (su nombre es el de `newPlayer`, que cumple la regla de 3 a 30 caracteres). */
+export async function playAsGuest(browser: Browser, label: string): Promise<Player> {
+  const player = await newPlayer(browser, label);
+  await guestLogin(player.page, player.name);
+  return player;
 }
 
 /** Crea una sala aleatoria con ese número de rondas y devuelve su código. */

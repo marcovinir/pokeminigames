@@ -70,7 +70,7 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 | `npm run dev:client` | Cliente web con recarga en caliente |
 | `npm run build` | Construye el cliente (`client/dist`) y empaqueta el servidor (`server/dist/index.js`) |
 | `npm start` | Arranca la construcción de producción (necesita las variables de `NODE_ENV=production`, ver la guía de despliegue) |
-| `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el límite de login, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
+| `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el modo invitado, el límite de login, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
 | `npm test` | Todas las pruebas: servidor (usan la base `pokemon_minigames_test`) y cliente |
 | `npm run typecheck` | Verifica los tipos con `tsc` en todos los paquetes |
 | `npm run db:migrate -w server` | Crea/aplica migraciones en desarrollo |
@@ -83,13 +83,22 @@ Variable opcional del cliente: `VITE_API_URL` (URL base del servidor; vacía = e
 
 ## Producción y pruebas E2E
 
-El servidor sirve el cliente construido, la API y Socket.io desde un solo origen, así que en producción no hay CORS y la cookie de sesión es `Secure` + `SameSite=Lax`. Las peticiones que cambian algo se rechazan si vienen de otro origen (403 `FORBIDDEN`) y hay límites por IP en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo (y 30 por IP sumando todos los correos), 5 registros por hora y 300 peticiones por minuto a la API (429 `RATE_LIMITED` con `Retry-After`). Cómo desplegarlo, qué esperar de la capa gratuita y cómo comprobarlo: [`docs/despliegue.md`](docs/despliegue.md).
+El servidor sirve el cliente construido, la API y Socket.io desde un solo origen, así que en producción no hay CORS y la cookie de sesión es `Secure` + `SameSite=Lax`. Las peticiones que cambian algo se rechazan si vienen de otro origen (403 `FORBIDDEN`) y hay límites por IP en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo (y 30 por IP sumando todos los correos), 5 registros por hora, 20 sesiones de invitado por hora y 300 peticiones por minuto a la API (429 `RATE_LIMITED` con `Retry-After`). Cómo desplegarlo, qué esperar de la capa gratuita y cómo comprobarlo: [`docs/despliegue.md`](docs/despliegue.md).
 
 `npm run e2e` necesita Chromium: `npx playwright install chromium` desde `e2e/`, o define `E2E_CHANNEL=msedge` (o `chrome`) para usar el navegador ya instalado. Las imágenes de PokeAPI (iconos, sprites y arte) se sirven falsas durante la E2E para no depender de la red; con `E2E_REAL_IMAGES=1` se usan las de verdad (y una prueba comprueba que los 18 iconos reales siguen siendo píldoras de 200 × 40). Con `E2E_ADMIN_DATABASE_URL` (o tu `server/.env`) crea la base `pokemon_minigames_e2e`. En GitHub, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre tipos, pruebas, construcción y E2E en cada push a `main` y en cada pull request.
 
 ## Cuentas
 
-Registrarse pide correo, nombre de usuario y contraseña y abre la sesión en el acto: **no hay verificación del correo ni códigos por correo** (se descartaron a propósito). Consecuencia: **no hay recuperación de contraseña**; quien la olvida no puede recuperar esa cuenta. Para jugar sin cuenta, el modo invitado está en la hoja de ruta (issue #3). Los intentos de acceso están limitados por IP (ver abajo).
+Registrarse pide correo, nombre de usuario y contraseña y abre la sesión en el acto: **no hay verificación del correo ni códigos por correo** (se descartaron a propósito). Consecuencia: **no hay recuperación de contraseña**; quien la olvida no puede recuperar esa cuenta. Para jugar sin cuenta está el [modo invitado](#modo-invitado). Los intentos de acceso están limitados por IP (ver abajo).
+
+## Modo invitado
+
+En `/login`, bajo el formulario, «¿Sin cuenta? Juega como invitado» pide solo un nombre (de 3 a 30 letras, números o guion bajo) y entra al lobby. Un invitado juega **igual que una cuenta**: crea salas, se une con un código y, si recarga la página en plena partida, vuelve a su asiento. Lo que **no** tiene: perfil, historial, estadísticas, preferencias guardadas ni avatar. Su tema se queda en el navegador.
+
+- **No guarda nada.** Un invitado no existe en la base de datos (su id es `guest_` + 16 bytes aleatorios) y **una partida en la que juega un invitado no deja ninguna fila** (ni `games`, ni `game_players`, ni rondas ni respuestas) y no cuenta para las estadísticas de la cuenta rival. Si una cuenta creó la sala y se une un invitado, la partida que ya estaba guardada en espera se descarta en ese momento; una vez descartada, la sala no vuelve a guardarse aunque el invitado se vaya antes de empezar.
+- **Sesión.** La cookie `guest_session` (HttpOnly, solo viaja a `/auth`) dura 24 horas y se renueva cada vez que se recupera la sesión; es un JWT firmado, sin nada en el servidor. Iniciar sesión o registrarse la borra: la cuenta sustituye al invitado. Salir borra todas las cookies de sesión. Quien se registra después empieza de cero.
+- **Se nota.** Donde aparece el nombre de un invitado (sala de espera, cuenta atrás, panel del rival y barra «Marcador», resultado de la ronda y resumen final) lleva la etiqueta «Invitado», y su encabezado muestra «Invitado» y «Crear cuenta» en lugar de «Mi perfil». En una sala no puede haber dos jugadores con el mismo nombre (sin distinguir mayúsculas): quien se une con uno repetido recibe `409 NAME_IN_USE`. El resumen no ofrece «Ver perfil de …» si alguno de los dos es invitado, y `/perfil` y `/jugador/:username` llevan a un invitado al lobby.
+- **Límite.** Hasta 20 sesiones de invitado por hora y por IP (429 `RATE_LIMITED`).
 
 ## Pulido de la partida
 
@@ -114,8 +123,9 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `GET /health` | Estado del servidor |
 | `POST /auth/register` | Crea la cuenta; devuelve `user` (con su `preferences` de tema, nulas al principio) y `accessToken` y fija la cookie de refresco |
 | `POST /auth/login` | Inicia sesión; devuelve lo mismo que el registro |
-| `POST /auth/refresh` | Renueva la sesión con la cookie (rota el refresh token) |
-| `POST /auth/logout` | Cierra la sesión y borra la cookie |
+| `POST /auth/guest` | Entra como invitado: `{ username }` (3 a 30 letras, números o guion bajo); devuelve `user` (`{ id, username, guest: true }`, sin correo) y `accessToken`, y fija la cookie `guest_session` de 24 h. No escribe nada en la base de datos. 20 por hora y por IP |
+| `POST /auth/refresh` | Renueva la sesión con la cookie de cuenta (rota el refresh token) o, si no hay, con la de invitado (misma identidad, cookie renovada). Con las dos manda la de cuenta; una cookie de cuenta caducada no esconde una de invitado válida |
+| `POST /auth/logout` | Cierra la sesión y borra las cookies (de cuenta y de invitado) |
 | `GET /auth/me` | Usuario actual |
 | `PUT /auth/me/preferences` | Guarda el tema: `{ theme: "clasico" \| "pokedex", themeMode: "auto" \| "claro" \| "oscuro" }` |
 | `POST /rooms` | Crea una sala: `{ typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`; devuelve `{ code }`. `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
@@ -127,7 +137,7 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `GET /stats/history?limit=&before=` | Tus partidas completadas, de la más reciente a la más antigua (`limit` de 1 a 50, por defecto 20); `before` es el `nextCursor` de la página anterior. Devuelve `{ games, nextCursor }` |
 | `GET /users/:username/stats` | Las estadísticas de otra persona (nunca su correo ni su historial); `404 USER_NOT_FOUND` si no existe |
 
-Las rutas de `/auth/me`, `/rooms`, `/stats` y `/users` exigen `Authorization: Bearer <accessToken>`. Los errores tienen la forma `{ "error": { "code", "message", "details"? } }`.
+Las rutas de `/auth/me`, `/rooms`, `/stats` y `/users` exigen `Authorization: Bearer <accessToken>`. `/rooms` y Socket.io aceptan el token de una cuenta **o de un invitado**; `/auth/me`, `/auth/me/preferences`, `/stats`, `/stats/history` y `/users/:username/stats` solo el de una cuenta (a un invitado le responden `403 ACCOUNT_REQUIRED`). Los errores tienen la forma `{ "error": { "code", "message", "details"? } }`.
 
 ## Tiempo real (Socket.io)
 

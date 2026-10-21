@@ -60,6 +60,17 @@ describe("etiqueta «Invitado» junto al jugador invitado", () => {
     expect(tags()).toHaveLength(2);
   });
 
+  it("cuenta atrás: junto a «Partida contra …» cuando el rival es invitado", () => {
+    const starting = (rival: object) => [event.roomState({ phase: "starting", mySeat: 1, players: [ash(), misty(rival)] })];
+    const guest = renderRoom(starting({ guest: true }));
+    expect(screen.getByRole("heading", { name: /Partida contra misty/ })).toBeInTheDocument();
+    expect(tags()).toHaveLength(1);
+    guest.unmount();
+
+    renderRoom(starting({}));
+    expect(tags()).toHaveLength(0);
+  });
+
   it("ronda: en la barra «Marcador» y en el panel del rival", () => {
     renderRoom([
       event.roomState({

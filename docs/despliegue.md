@@ -86,7 +86,7 @@ Si en el panel de Render llegaste a añadir `EMAIL_VERIFICATION`, `MAIL_PROVIDER
 ## Seguridad: qué hay y qué no
 
 - Cookie `Secure` + `SameSite=Lax` y comprobación de origen en todas las peticiones que cambian algo (`POST`, `PUT`, `PATCH` y `DELETE`): una petición que el navegador dice venir de otro sitio se rechaza con 403.
-- Límites de peticiones por IP, en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo y 30 por IP sumando todos los correos (un login correcto reinicia la cuenta), 5 registros por hora por IP y 300 peticiones por minuto a la API. Al pasarse responde 429 con `Retry-After`.
+- Límites de peticiones por IP, en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo y 30 por IP sumando todos los correos (un login correcto reinicia la cuenta), 5 registros por hora por IP, 20 sesiones de invitado (`POST /auth/guest`) por hora por IP y 300 peticiones por minuto a la API. Al pasarse responde 429 con `Retry-After`.
 - No hay Helmet ni política de contenido (CSP). El servicio es una sola instancia: los límites y las salas viven en su memoria.
 
 ## Actualizar y solucionar problemas
