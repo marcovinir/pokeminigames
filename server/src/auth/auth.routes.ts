@@ -2,7 +2,7 @@ import { type CookieOptions, type Request, type Response, Router } from "express
 import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
 import { type KeyedLimiter, tooManyRequests } from "../http/rate-limit.js";
-import { createRequireAuth, getAuth } from "./auth.middleware.js";
+import { createRequireAccount, getAuth } from "./auth.middleware.js";
 import { loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
 import type { TokenService } from "./tokens.js";
@@ -31,7 +31,7 @@ function toUserDto(user: AuthUser) {
 
 export function createAuthRouter({ env, authService, tokens, limiters = {} }: AuthRouterDeps): Router {
   const router = Router();
-  const requireAuth = createRequireAuth(tokens);
+  const requireAccount = createRequireAccount(tokens);
 
   // La cookie solo viaja a /auth: el resto de la API nunca la recibe.
   const cookieOptions: CookieOptions = {
@@ -134,12 +134,12 @@ export function createAuthRouter({ env, authService, tokens, limiters = {} }: Au
     res.status(204).end();
   });
 
-  router.get("/me", requireAuth, async (_req, res) => {
+  router.get("/me", requireAccount, async (_req, res) => {
     const user = await authService.me(getAuth(res).userId);
     res.json({ user: toUserDto(user) });
   });
 
-  router.put("/me/preferences", requireAuth, async (req, res) => {
+  router.put("/me/preferences", requireAccount, async (req, res) => {
     const preferences = preferencesSchema.parse(req.body);
     res.json({ preferences: await authService.savePreferences(getAuth(res).userId, preferences) });
   });

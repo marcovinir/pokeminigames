@@ -3,9 +3,11 @@ import jwt from "jsonwebtoken";
 import { AppError } from "../http/errors.js";
 
 export interface AccessTokenPayload {
-  /** Id del usuario. */
+  /** Id del usuario (o el `guest_…` de un invitado). */
   sub: string;
   username: string;
+  /** Solo está (y vale `true`) en los tokens de invitado: los de cuenta nunca lo llevan. */
+  guest?: true;
 }
 
 export interface TokenService {
@@ -27,8 +29,8 @@ const ALGORITHM = "HS256";
 
 export function createTokenService({ secret, accessTtlSeconds }: TokenServiceOptions): TokenService {
   return {
-    signAccessToken({ sub, username }) {
-      return jwt.sign({ username }, secret, {
+    signAccessToken({ sub, username, guest }) {
+      return jwt.sign({ username, ...(guest ? { guest: true } : {}) }, secret, {
         algorithm: ALGORITHM,
         subject: sub,
         expiresIn: accessTtlSeconds,
@@ -41,7 +43,9 @@ export function createTokenService({ secret, accessTtlSeconds }: TokenServiceOpt
         if (typeof decoded === "string" || typeof decoded.sub !== "string" || typeof decoded.username !== "string") {
           throw new Error("payload inesperado");
         }
-        return { sub: decoded.sub, username: decoded.username };
+        // Un `aud` es de la cookie de invitado (`guest-session`): ese token no es un token de acceso.
+        if (decoded.aud !== undefined) throw new Error("no es un token de acceso");
+        return { sub: decoded.sub, username: decoded.username, ...(decoded.guest === true ? { guest: true as const } : {}) };
       } catch {
         throw new AppError(401, "UNAUTHORIZED", "Token de acceso inválido o expirado");
       }

@@ -37,7 +37,7 @@ export function attachRealtime(httpServer: HttpServer, deps: RealtimeDeps): Game
     if (typeof token !== "string") return next(new Error("UNAUTHORIZED"));
     try {
       const payload = deps.tokens.verifyAccessToken(token);
-      socket.data.user = { userId: payload.sub, username: payload.username };
+      socket.data.user = { userId: payload.sub, username: payload.username, ...(payload.guest ? { isGuest: true } : {}) };
       next();
     } catch {
       next(new Error("UNAUTHORIZED"));

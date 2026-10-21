@@ -28,6 +28,8 @@ export interface GameRoomPorts {
 export interface RoomUser {
   userId: string;
   username: string;
+  /** Es un invitado (sin cuenta): sus partidas no se guardan. Ausente = cuenta. */
+  isGuest?: boolean;
 }
 
 /**

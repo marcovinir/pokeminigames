@@ -24,6 +24,23 @@ describe("access token", () => {
     expect(tokens.verifyAccessToken(token)).toEqual({ sub: "user-1", username: "ash" });
   });
 
+  it("el token de invitado lleva guest:true y vuelve a leerse igual; el de cuenta nunca lo lleva", () => {
+    const guest = tokens.verifyAccessToken(tokens.signAccessToken({ sub: "guest_abc", username: "inv_1", guest: true }));
+    expect(guest).toEqual({ sub: "guest_abc", username: "inv_1", guest: true });
+    const account = tokens.verifyAccessToken(tokens.signAccessToken({ sub: "u1", username: "ash" }));
+    expect("guest" in account).toBe(false);
+  });
+
+  it("solo guest === true es invitado: false, \"true\" o 1 se leen como cuenta; un aud (la cookie de invitado) se rechaza", () => {
+    const sign = (claims: object, options: jwt.SignOptions = {}) =>
+      jwt.sign({ username: "ash", ...claims }, secret, { algorithm: "HS256", subject: "u1", expiresIn: 3600, ...options });
+    for (const guest of [false, "true", 1]) {
+      const read = tokens.verifyAccessToken(sign({ guest }));
+      expect("guest" in read, `guest: ${JSON.stringify(guest)}`).toBe(false);
+    }
+    expectUnauthorized(() => tokens.verifyAccessToken(sign({ guest: true }, { audience: "guest-session" })));
+  });
+
   it("rechaza un token expirado", () => {
     const expired = createTokenService({ secret, accessTtlSeconds: -10 });
     const token = expired.signAccessToken({ sub: "user-1", username: "ash" });

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createRequireAuth, getAuth } from "../auth/auth.middleware.js";
+import { createRequireAccount, getAuth } from "../auth/auth.middleware.js";
 import type { TokenService } from "../auth/tokens.js";
 import { AppError } from "../http/errors.js";
 import { USERNAME_PATTERN, historyQuerySchema } from "./stats.schemas.js";
@@ -16,19 +16,19 @@ export interface StatsRouterDeps {
  */
 export function createStatsRouter({ service, tokens }: StatsRouterDeps): Router {
   const router = Router();
-  const requireAuth = createRequireAuth(tokens);
+  const requireAccount = createRequireAccount(tokens);
 
-  router.get("/stats", requireAuth, async (_req, res) => {
+  router.get("/stats", requireAccount, async (_req, res) => {
     res.json(await service.getStats(getAuth(res).userId));
   });
 
-  router.get("/stats/history", requireAuth, async (req, res) => {
+  router.get("/stats/history", requireAccount, async (req, res) => {
     const { limit, before } = historyQuerySchema.parse(req.query);
     res.json(await service.getHistory(getAuth(res).userId, { limit, before }));
   });
 
   // Bajo /users y no bajo /stats/:username: "history" es un nombre de usuario válido y chocaría.
-  router.get("/users/:username/stats", requireAuth, async (req, res) => {
+  router.get("/users/:username/stats", requireAccount, async (req, res) => {
     const username = String(req.params.username);
     const user = USERNAME_PATTERN.test(username) ? await service.findUserByUsername(username) : null;
     if (!user) throw new AppError(404, "USER_NOT_FOUND", "No existe ese jugador");
