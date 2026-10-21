@@ -6,7 +6,7 @@ import { sequenceRng } from "../helpers/rng.js";
 import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
 
 const ONE_ROUND: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
-const creator = { userId: "u1", username: "ash" };
+const creator = { userId: "u1", username: "ash", isGuest: false };
 
 function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0], opts: { gameId?: string | null; creator?: RoomUser } = {}) {
   const time = new FakeTime();

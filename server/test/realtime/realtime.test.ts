@@ -68,6 +68,17 @@ describe("autenticación del handshake", () => {
     clients.push(client);
     await expect(client.connected()).rejects.toThrow("UNAUTHORIZED");
   });
+
+  it("el handshake de una cuenta fija isGuest: false y el de un invitado isGuest: true", async () => {
+    await connect(ash);
+    const guest = new TestClient(server.url, server.tokens.signAccessToken({ sub: "guest_x", username: "inv_1", guest: true }));
+    clients.push(guest);
+    await guest.connected();
+
+    const users = [...server.io.sockets.sockets.values()].map((socket) => socket.data.user);
+    expect(users).toContainEqual({ userId: ash.userId, username: "ash", isGuest: false });
+    expect(users).toContainEqual({ userId: "guest_x", username: "inv_1", isGuest: true });
+  });
 });
 
 describe("entrar a una sala", () => {

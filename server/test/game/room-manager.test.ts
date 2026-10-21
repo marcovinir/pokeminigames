@@ -9,9 +9,9 @@ import { seededRng, sequenceRng } from "../helpers/rng.js";
 import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
 
 const config: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
-const ash = { userId: "u1", username: "ash" };
-const misty = { userId: "u2", username: "misty" };
-const brock = { userId: "u3", username: "brock" };
+const ash = { userId: "u1", username: "ash", isGuest: false };
+const misty = { userId: "u2", username: "misty", isGuest: false };
+const brock = { userId: "u3", username: "brock", isGuest: false };
 const inv = { userId: "guest_a", username: "inv", isGuest: true };
 
 function setup(generateCode?: () => string) {
@@ -205,7 +205,7 @@ describe("RoomManager con invitados", () => {
     const { manager, store, repository } = setup();
     const { code } = await manager.createRoom(ash, oneRound);
     for (const joiner of [
-      { userId: "u9", username: "ASH" },
+      { userId: "u9", username: "ASH", isGuest: false },
       { userId: "guest_b", username: "Ash", isGuest: true },
     ]) {
       expect(syncRejection(() => manager.joinRoom(joiner, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
@@ -224,7 +224,7 @@ describe("RoomManager con invitados", () => {
   it("NAME_IN_USE también cuando el creador es el invitado y quien llega es una cuenta", async () => {
     const { manager } = setup();
     const { code } = await manager.createRoom(inv, oneRound);
-    expect(syncRejection(() => manager.joinRoom({ userId: "u9", username: "INV" }, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
+    expect(syncRejection(() => manager.joinRoom({ userId: "u9", username: "INV", isGuest: false }, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
   });
 
   it("el creador invitado puede volver a pedir unirse a su sala (idempotente) y no puede crear otra", async () => {
