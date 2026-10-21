@@ -168,6 +168,17 @@ describe("endpoint de preferencias", () => {
   });
 });
 
+describe("endpoint de los datos curiosos", () => {
+  it("catalog.facts pide /pokemon/facts sin credenciales y devuelve la lista", async () => {
+    const facts = [{ kind: "pair_count", count: 130 }];
+    const { api, endpoints, fetchMock } = setup(() => json(200, { facts }));
+    api.setToken("tok");
+    await expect(endpoints.catalog.facts()).resolves.toEqual(facts);
+    expect(lastCall(fetchMock)).toMatchObject({ url: "/pokemon/facts", method: "GET" });
+    expect(new Headers(fetchMock.mock.calls[0]![1]?.headers).has("Authorization")).toBe(false);
+  });
+});
+
 describe("endpoint del catálogo", () => {
   it("names pide la lista sin enviar credenciales de sesión", async () => {
     const { api, endpoints, fetchMock } = setup(() => json(200, [{ id: 1, es: "Alfa", en: "Alpha" }]));

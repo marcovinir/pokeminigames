@@ -19,6 +19,10 @@ export interface GameClientApi {
   submit(text: string): void;
   /** Sale de la sala: cancela la espera o abandona la partida. */
   leave(): void;
+  /** Pide la revancha o acepta la que pidió el rival. */
+  requestRematch(): void;
+  /** Cancela la revancha que pedí o rechaza la que pidió el rival. */
+  cancelRematch(): void;
   /** Cierra la conexión y limpia el estado (al salir de la pantalla de la sala). */
   dispose(): void;
 }
@@ -51,6 +55,8 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   "rematch-state": true,
   "rematch-room": true,
 };
+/** Estados de la oferta en los que la sala vieja sigue viva en el servidor. */
+const REMATCH_LIVE: ReadonlySet<string> = new Set(["open", "mine", "theirs"]);
 const SERVER_EVENT_NAMES = Object.keys(SERVER_EVENTS) as ServerEventName[];
 
 /**
@@ -86,6 +92,14 @@ export class GameClient implements GameClientApi {
     this.socket?.emit("leave-room");
   }
 
+  requestRematch(): void {
+    this.socket?.emit("rematch-request");
+  }
+
+  cancelRematch(): void {
+    this.socket?.emit("rematch-cancel");
+  }
+
   dispose(): void {
     const socket = this.socket;
     this.socket = null;
@@ -108,8 +122,11 @@ export class GameClient implements GameClientApi {
       this.retriedAuth = false;
       store.getState().setConnection("connected");
       // También al reconectar: el servidor responde con `room-state` y el estado se reemplaza.
-      // Con la partida ya terminada no se vuelve a entrar: la sala ya no existe y se perdería el resumen.
-      if (this.code && store.getState().view.phase !== "finished") socket.emit("join-room", { code: this.code });
+      // Con la partida ya terminada no se vuelve a entrar (la sala ya no existe y se perdería el resumen), salvo que haya una
+      // oferta de revancha viva: el servidor mantiene la sala para eso y, si no se vuelve, el rival vería «se fue».
+      const view = store.getState().view;
+      const rematchAlive = view.rematchOffer !== null && REMATCH_LIVE.has(view.rematchOffer.status);
+      if (this.code && (view.phase !== "finished" || rematchAlive)) socket.emit("join-room", { code: this.code });
     });
     socket.on("disconnect", (reason: string) => {
       if (!current()) return;

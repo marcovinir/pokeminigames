@@ -3,6 +3,7 @@ import type {
   GameEndedPayload,
   GamePhase,
   PokemonView,
+  RematchState,
   RoomConfig,
   RoomPlayerView,
   RoundResultPayload,
@@ -41,6 +42,12 @@ export interface GameView {
   lastResult: RoundResultPayload | null;
   opponentGraceEndsAt: number | null;
   ended: GameEndedPayload | null;
+  /** La oferta de revancha tras terminar la partida; `null` mientras no hay ninguna. */
+  rematchOffer: RematchState | null;
+  /** Esta sala nació de una revancha (los dos asientos ya estaban ocupados). */
+  isRematchRoom: boolean;
+  /** El código de la sala nueva cuando los dos aceptaron: hay que entrar a ella. */
+  nextRoom: string | null;
   /** Hora del servidor menos hora del navegador. */
   clockOffset: number;
   lastError: { code: ErrorCode; message: string } | null;
@@ -60,6 +67,9 @@ export const initialGameView: GameView = {
   lastResult: null,
   opponentGraceEndsAt: null,
   ended: null,
+  rematchOffer: null,
+  isRematchRoom: false,
+  nextRoom: null,
   clockOffset: 0,
   lastError: null,
 };
@@ -88,6 +98,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         opponentTeam: state.opponentTeam,
         roundsPlayed: state.roundsPlayed,
         startsAt: state.startsAt,
+        isRematchRoom: state.rematch === true,
         round: state.round && {
           number: state.round.number,
           pair: state.round.pair,
@@ -206,9 +217,10 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     case "error":
       return { ...view, lastError: event.payload };
 
-    // La revancha (el estado de la oferta y la sala nueva) se aplica en la Task 8; hasta entonces no cambia la vista.
     case "rematch-state":
+      return { ...view, rematchOffer: event.payload, clockOffset: clockOffset(event.payload.serverNow, receivedAt) };
+
     case "rematch-room":
-      return view;
+      return { ...view, nextRoom: event.payload.code };
   }
 }

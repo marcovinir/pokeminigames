@@ -1,10 +1,11 @@
-import type { Stats } from "@pokemon-minigames/shared";
+import type { PokemonFact, Stats } from "@pokemon-minigames/shared";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { vi } from "vitest";
 import type { Endpoints } from "../../src/api/endpoints";
 import type { AuthUser, GuestUser, PokemonName, SessionUser } from "../../src/api/types";
+import { createFactsStore } from "../../src/catalog/facts-store";
 import { createNamesStore } from "../../src/catalog/names-store";
 import { createGameStore } from "../../src/game/store";
 import { ServicesProvider, type Services } from "../../src/services";
@@ -36,6 +37,13 @@ export const NO_STATS: Stats = {
   topPokemon: [],
 };
 
+/** Un par de datos curiosos de ejemplo (los de verdad salen del catálogo del servidor). */
+export const FACTS: PokemonFact[] = [
+  { kind: "top_stat", stat: "defense", pokemon: [{ id: 213, es: "Shuckle" }], value: 230 },
+  { kind: "type_count", type: "water", count: 134 },
+  { kind: "pair_count", count: 130 },
+];
+
 export const NAMES: PokemonName[] = [
   { id: 1, es: "Alfa", en: "Alpha" },
   { id: 2, es: "Alfil", en: "Bishop" },
@@ -47,7 +55,15 @@ export const NAMES: PokemonName[] = [
 export interface FakeServices extends Services {
   endpoints: Endpoints;
   /** Acciones del juego como espías. */
-  client: { join: ReturnType<typeof vi.fn>; chooseType: ReturnType<typeof vi.fn>; submit: ReturnType<typeof vi.fn>; leave: ReturnType<typeof vi.fn>; dispose: ReturnType<typeof vi.fn> };
+  client: {
+    join: ReturnType<typeof vi.fn>;
+    chooseType: ReturnType<typeof vi.fn>;
+    submit: ReturnType<typeof vi.fn>;
+    leave: ReturnType<typeof vi.fn>;
+    requestRematch: ReturnType<typeof vi.fn>;
+    cancelRematch: ReturnType<typeof vi.fn>;
+    dispose: ReturnType<typeof vi.fn>;
+  };
   themeRoot: HTMLElement;
 }
 
@@ -68,14 +84,22 @@ export function fakeServices(): FakeServices {
       get: vi.fn(),
       current: vi.fn(async () => null),
     },
-    catalog: { names: vi.fn(async () => NAMES) },
+    catalog: { names: vi.fn(async () => NAMES), facts: vi.fn(async () => FACTS) },
     stats: {
       mine: vi.fn(async () => ({ username: "ash", stats: NO_STATS })),
       forUser: vi.fn(async (username: string) => ({ username, stats: NO_STATS })),
       history: vi.fn(async () => ({ games: [], nextCursor: null })),
     },
   };
-  const client = { join: vi.fn(), chooseType: vi.fn(), submit: vi.fn(), leave: vi.fn(), dispose: vi.fn() };
+  const client = {
+    join: vi.fn(),
+    chooseType: vi.fn(),
+    submit: vi.fn(),
+    leave: vi.fn(),
+    requestRematch: vi.fn(),
+    cancelRematch: vi.fn(),
+    dispose: vi.fn(),
+  };
   const themeRoot = document.createElement("html");
   return {
     endpoints,
@@ -83,6 +107,7 @@ export function fakeServices(): FakeServices {
     themeRoot,
     session: createSessionStore(endpoints),
     names: createNamesStore(endpoints),
+    facts: createFactsStore(endpoints),
     game: { store: createGameStore(), client },
     theme: createThemeStore({
       storage: null,

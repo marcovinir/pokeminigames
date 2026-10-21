@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import { type StoreApi, useStore } from "zustand";
 import { ApiClient } from "./api/client";
 import { type Endpoints, createEndpoints } from "./api/endpoints";
+import { type FactsState, createFactsStore } from "./catalog/facts-store";
 import { type NamesState, createNamesStore } from "./catalog/names-store";
 import { GameClient, type GameClientApi, type SocketLike } from "./game/game-client";
 import { type GameStoreState, createGameStore } from "./game/store";
@@ -16,6 +17,7 @@ export interface Services {
   session: StoreApi<SessionState>;
   theme: StoreApi<ThemeState>;
   names: StoreApi<NamesState>;
+  facts: StoreApi<FactsState>;
   game: { store: StoreApi<GameStoreState>; client: GameClientApi };
 }
 
@@ -34,6 +36,7 @@ export function useServices(): Services {
 export const useSession = <T,>(selector: (state: SessionState) => T): T => useStore(useServices().session, selector);
 export const useTheme = <T,>(selector: (state: ThemeState) => T): T => useStore(useServices().theme, selector);
 export const useNames = <T,>(selector: (state: NamesState) => T): T => useStore(useServices().names, selector);
+export const useFacts = <T,>(selector: (state: FactsState) => T): T => useStore(useServices().facts, selector);
 export const useGame = <T,>(selector: (state: GameStoreState) => T): T => useStore(useServices().game.store, selector);
 
 function safeStorage(): Storage | null {
@@ -77,6 +80,7 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
     endpoints,
     session,
     names: createNamesStore(endpoints),
+    facts: createFactsStore(endpoints),
     game: { store: gameStore, client },
     theme,
   };

@@ -3,6 +3,7 @@ import type {
   CreateRoomResponse,
   GamePhase,
   HistoryPage,
+  PokemonFact,
   PublicRoomInfo,
   StatsResponse,
   ThemePreferences,
@@ -47,6 +48,8 @@ export interface Endpoints {
   catalog: {
     /** La lista de nombres del autocompletado; con `withTypes` trae también los tipos (solo para salas con pistas). */
     names(options?: { withTypes?: boolean }): Promise<PokemonName[]>;
+    /** Los datos curiosos que se ven mientras se espera la respuesta a una revancha. */
+    facts(): Promise<PokemonFact[]>;
   };
   stats: {
     /** Tus estadísticas. */
@@ -93,6 +96,10 @@ export function createEndpoints(api: ApiClient): Endpoints {
       },
     },
     catalog: {
+      async facts() {
+        const { facts } = await api.request<{ facts: PokemonFact[] }>("GET", "/pokemon/facts", { auth: false });
+        return facts;
+      },
       names: ({ withTypes = false } = {}) =>
         api.request<PokemonName[]>("GET", withTypes ? "/pokemon/names?types=1" : "/pokemon/names", { auth: false }),
     },

@@ -8,6 +8,31 @@ function play(events: [ServerEvent, number?][], start: GameView = initialGameVie
   return events.reduce((view, [e, at]) => applyServerEvent(view, e, at ?? SERVER_NOW), start);
 }
 
+describe("revancha", () => {
+  it("rematch-state guarda la oferta y el desfase del reloj; un room-state nuevo no la borra", () => {
+    const view = play([
+      [event.roomState({ phase: "finished" })],
+      [event.rematchState({ status: "mine", deadline: SERVER_NOW + 60_000 }), SERVER_NOW + 2000],
+    ]);
+    expect(view.rematchOffer).toMatchObject({ status: "mine", deadline: SERVER_NOW + 60_000 });
+    expect(view.clockOffset).toBe(-2000);
+    const again = applyServerEvent(view, event.roomState({ phase: "finished" }), SERVER_NOW);
+    expect(again.rematchOffer).toMatchObject({ status: "mine" });
+  });
+
+  it("room-state con rematch: true marca la sala como de revancha y sin él no", () => {
+    expect(play([[event.roomState({ rematch: true })]]).isRematchRoom).toBe(true);
+    expect(play([[event.roomState({ rematch: true })], [event.roomState()]]).isRematchRoom).toBe(false);
+    expect(initialGameView).toMatchObject({ rematchOffer: null, isRematchRoom: false, nextRoom: null });
+  });
+
+  it("rematch-room guarda el código de la sala nueva y un room-state posterior lo conserva", () => {
+    const view = play([[event.roomState({ phase: "finished" })], [event.rematchRoom("GAME02")]]);
+    expect(view.nextRoom).toBe("GAME02");
+    expect(applyServerEvent(view, event.roomState({ phase: "finished" }), SERVER_NOW).nextRoom).toBe("GAME02");
+  });
+});
+
 describe("room-state", () => {
   it("reemplaza el estado completo y calcula el desfase del reloj", () => {
     const view = play([

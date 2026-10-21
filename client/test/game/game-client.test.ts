@@ -113,12 +113,23 @@ describe("acciones del jugador", () => {
     expect(socket().emitted.some((e) => e.event === "leave-room")).toBe(true);
   });
 
+  it("requestRematch y cancelRematch emiten rematch-request y rematch-cancel", () => {
+    const { client, socket } = setup();
+    client.join("ABC234");
+    socket().serverConnects();
+    client.requestRematch();
+    client.cancelRematch();
+    expect(socket().emitted.map((e) => e.event).filter((name) => name.startsWith("rematch"))).toEqual(["rematch-request", "rematch-cancel"]);
+  });
+
   it("antes de entrar a una sala las acciones no hacen nada ni fallan", () => {
     const { client, sockets } = setup();
     expect(() => {
       client.chooseType("fire");
       client.submit("Alfa");
       client.leave();
+      client.requestRematch();
+      client.cancelRematch();
     }).not.toThrow();
     expect(sockets).toHaveLength(0);
   });
@@ -178,6 +189,32 @@ describe("conexión cerrada por el servidor y partida terminada", () => {
     socket().serverConnects();
     expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }]);
     expect(store.getState().view.phase).toBe("finished");
+  });
+});
+
+describe("reconexión con una oferta de revancha", () => {
+  function finishedWith(status: "open" | "mine" | "theirs" | "starting" | "closed") {
+    const ctx = setup();
+    ctx.client.join("ABC234");
+    ctx.socket().serverConnects();
+    ctx.socket().trigger("room-state", event.roomState({ phase: "round_result" }).payload);
+    ctx.socket().trigger("game-ended", event.gameEnded().payload);
+    ctx.socket().trigger("rematch-state", event.rematchState({ status }).payload);
+    return ctx;
+  }
+
+  it.each(["open", "mine", "theirs"] as const)("al reconectar con el resumen visible y la oferta %s vuelve a entrar a la sala", (status) => {
+    const { socket } = finishedWith(status);
+    socket().serverDrops();
+    socket().serverConnects();
+    expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }, { code: "ABC234" }]);
+  });
+
+  it.each(["starting", "closed"] as const)("con la oferta %s no vuelve a entrar (la sala vieja ya no importa)", (status) => {
+    const { socket } = finishedWith(status);
+    socket().serverDrops();
+    socket().serverConnects();
+    expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }]);
   });
 });
 
