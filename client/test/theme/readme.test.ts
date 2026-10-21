@@ -12,6 +12,11 @@ describe("README (etapa 6)", () => {
     expect(readme).not.toMatch(/etapa 5 de 5/);
   });
 
+  it("lleva el nombre del proyecto (PokeMiniGames) como título y no el anterior", () => {
+    expect(readme.split("\n")[0]).toBe("# PokeMiniGames");
+    expect(readme).not.toMatch(/Pokémon Minigames/);
+  });
+
   it("muestra las pantallas principales: acceso, lobby, ronda, resultado, resumen, perfil y el tema Pokédex", () => {
     expect(images.map((image) => image.path.split("/").pop())).toEqual([
       "login.jpg",

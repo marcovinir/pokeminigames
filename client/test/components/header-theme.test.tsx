@@ -165,7 +165,7 @@ describe("Header", () => {
 
   it("el logo lleva al lobby y su nombre accesible es el del juego (la bola es decorativa)", () => {
     renderWithServices(<Header />);
-    expect(screen.getByRole("link", { name: "Pokémon Minigames" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "PokeMiniGames" })).toHaveAttribute("href", "/");
   });
 
   it("es un encabezado de la página (banner)", () => {

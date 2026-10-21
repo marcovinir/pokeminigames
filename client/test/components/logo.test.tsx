@@ -13,7 +13,7 @@ describe("Logo", () => {
 
   it("el logo dice el nombre del juego como texto (es lo que da nombre accesible al enlace del encabezado)", () => {
     render(<Logo />);
-    expect(screen.getByText("Pokémon Minigames")).toBeInTheDocument();
+    expect(screen.getByText("PokeMiniGames")).toBeInTheDocument();
   });
 
   it("la bola tiene el tamaño pedido", () => {
