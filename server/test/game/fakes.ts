@@ -1,6 +1,6 @@
 import type { RoomConfig, Seat, ServerEvent, ServerEventName } from "@pokemon-minigames/shared";
 import type { RoundRecord } from "../../src/game/engine/types.js";
-import type { Broadcaster, Clock, FinishInput, GameRepository, Scheduler } from "../../src/game/ports.js";
+import type { Broadcaster, Clock, FinishInput, GameRepository, HeadToHead, Scheduler } from "../../src/game/ports.js";
 
 type Payload<N extends ServerEventName> = Extract<ServerEvent, { name: N }>["payload"];
 
@@ -87,6 +87,9 @@ export class FakeRepository implements GameRepository {
   /** Ids de las partidas descartadas (borradas porque entró un invitado). */
   discarded: string[] = [];
   abandonCalls = 0;
+  /** Lo que devuelve `headToHead` (una lectura: no se anota en `calls`, que solo cuenta escrituras). */
+  headToHeadResult: HeadToHead = { winsA: 0, winsB: 0, draws: 0, recent: [] };
+  headToHeadCalls: { userA: string; userB: string; recent: number }[] = [];
   private nextId = 1;
 
   private async run(name: string, label: string, action: () => void): Promise<void> {
@@ -135,6 +138,15 @@ export class FakeRepository implements GameRepository {
     return this.run("discardGame", `discardGame:${gameId}`, () => {
       this.discarded.push(gameId);
     });
+  }
+
+  async headToHead(userA: string, userB: string, recent: number): Promise<HeadToHead> {
+    this.headToHeadCalls.push({ userA, userB, recent });
+    if ((this.failures.headToHead ?? 0) > 0) {
+      this.failures.headToHead!--;
+      throw new Error("fallo simulado en headToHead");
+    }
+    return this.headToHeadResult;
   }
 
   async abandonUnfinished(): Promise<number> {

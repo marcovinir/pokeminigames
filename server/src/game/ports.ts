@@ -25,6 +25,14 @@ export interface FinishInput {
   finalStats: Partial<Record<Seat, number>>;
 }
 
+/** El historial completo entre dos cuentas: victorias de cada una, empates y las últimas partidas (la más reciente primero). */
+export interface HeadToHead {
+  winsA: number;
+  winsB: number;
+  draws: number;
+  recent: ("a" | "b" | "draw")[];
+}
+
 export interface GameRepository {
   /** Crea la partida en `waiting` con el creador en el asiento 1 y devuelve su id. */
   createGame(input: { roomCode: string; config: RoomConfig; creatorUserId: string }): Promise<string>;
@@ -35,6 +43,11 @@ export interface GameRepository {
   finish(gameId: string, input: FinishInput): Promise<void>;
   /** Borra una partida que sigue `waiting` y sus jugadores (porque entró un invitado y esa partida no se guarda). */
   discardGame(gameId: string): Promise<void>;
+  /**
+   * El récord entre dos cuentas: solo partidas `completed` (con `endedAt`) en las que participan las dos, como las
+   * estadísticas. `recent` es cuántas de las últimas se devuelven. Una lectura: no escribe nada.
+   */
+  headToHead(userA: string, userB: string, recent: number): Promise<HeadToHead>;
   /** Marca como abandonadas las partidas que quedaron `waiting` o `in_progress` (p. ej. tras reiniciar). */
   abandonUnfinished(): Promise<number>;
 }

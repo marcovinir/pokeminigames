@@ -76,6 +76,26 @@ export function createPrismaGameRepository(prisma: PrismaClient): GameRepository
       ]);
     },
 
+    async headToHead(userA, userB, recent) {
+      const between = {
+        status: "completed" as const,
+        endedAt: { not: null },
+        AND: [{ players: { some: { userId: userA } } }, { players: { some: { userId: userB } } }],
+      };
+      const [played, winsA, winsB, latest] = await Promise.all([
+        prisma.game.count({ where: between }),
+        prisma.game.count({ where: { ...between, winnerId: userA } }),
+        prisma.game.count({ where: { ...between, winnerId: userB } }),
+        prisma.game.findMany({ where: between, orderBy: { endedAt: "desc" }, take: recent, select: { winnerId: true } }),
+      ]);
+      return {
+        winsA,
+        winsB,
+        draws: played - winsA - winsB,
+        recent: latest.map((game) => (game.winnerId === userA ? "a" : game.winnerId === userB ? "b" : "draw")),
+      };
+    },
+
     async abandonUnfinished() {
       const result = await prisma.game.updateMany({
         where: { status: { in: ["waiting", "in_progress"] } },

@@ -36,6 +36,73 @@ const sampleRound = (): RoundRecord => ({
   ],
 });
 
+/** Una partida entre dos personas, ya terminada (o no) y con la hora de fin fijada para que el orden sea determinista. */
+let roomCounter = 0;
+async function playedGame(
+  first: string,
+  second: string,
+  how: { status?: "completed" | "abandoned" | "in_progress" | "waiting"; winner?: string | null; reason?: "completed" | "forfeit" | "cancelled"; endedAt?: Date },
+): Promise<string> {
+  const id = await repository.createGame({ roomCode: `H${++roomCounter}`.padEnd(6, "X"), config, creatorUserId: first });
+  await repository.addSecondPlayer(id, second);
+  const status = how.status ?? "completed";
+  if (status === "in_progress") await repository.markStarted(id);
+  if (status === "completed" || status === "abandoned") {
+    await repository.finish(id, {
+      status,
+      reason: status === "abandoned" ? "cancelled" : (how.reason ?? "completed"),
+      winnerUserId: how.winner ?? null,
+      finalStats: { 1: 100, 2: 90 },
+    });
+    if (how.endedAt) await prisma.game.update({ where: { id }, data: { endedAt: how.endedAt } });
+  }
+  return id;
+}
+
+describe("headToHead", () => {
+  let brock: string;
+  beforeEach(async () => {
+    roomCounter = 0;
+    brock = (await prisma.user.create({ data: { email: "b@example.com", username: "brock", passwordHash: "h" } })).id;
+  });
+
+  it("cuenta solo las partidas completadas entre esas dos cuentas (ni abandonadas, ni en curso, ni contra otra persona)", async () => {
+    await playedGame(ash, misty, { winner: ash });
+    await playedGame(ash, misty, { status: "abandoned" });
+    await playedGame(ash, misty, { status: "in_progress" });
+    await playedGame(ash, misty, { status: "waiting" });
+    await playedGame(ash, brock, { winner: ash });
+    await playedGame(misty, brock, { winner: brock });
+    expect(await repository.headToHead(ash, misty, 5)).toEqual({ winsA: 1, winsB: 0, draws: 0, recent: ["a"] });
+  });
+
+  it("separa las victorias de cada una y los empates, y la forma reciente va de la más reciente a la más antigua y se queda en 5", async () => {
+    const day = (n: number) => new Date(Date.UTC(2026, 0, n));
+    // De la más antigua a la más reciente: A, B, empate, A, B, empate, A (el creador alterna para probar que no importa el asiento).
+    await playedGame(ash, misty, { winner: ash, endedAt: day(1) });
+    await playedGame(misty, ash, { winner: misty, endedAt: day(2) });
+    await playedGame(ash, misty, { winner: null, endedAt: day(3) });
+    await playedGame(misty, ash, { winner: ash, endedAt: day(4) });
+    await playedGame(ash, misty, { winner: misty, endedAt: day(5) });
+    await playedGame(misty, ash, { winner: null, endedAt: day(6) });
+    await playedGame(ash, misty, { winner: ash, endedAt: day(7) });
+
+    expect(await repository.headToHead(ash, misty, 5)).toEqual({ winsA: 3, winsB: 2, draws: 2, recent: ["a", "draw", "b", "a", "draw"] });
+    // Visto desde la otra persona es el espejo.
+    expect(await repository.headToHead(misty, ash, 5)).toEqual({ winsA: 2, winsB: 3, draws: 2, recent: ["b", "draw", "a", "b", "draw"] });
+    expect((await repository.headToHead(ash, misty, 2)).recent).toEqual(["a", "draw"]);
+  });
+
+  it("sin partidas devuelve ceros y una lista vacía", async () => {
+    expect(await repository.headToHead(ash, misty, 5)).toEqual({ winsA: 0, winsB: 0, draws: 0, recent: [] });
+  });
+
+  it("una partida completada por abandono (forfeit) cuenta, como en las estadísticas", async () => {
+    await playedGame(ash, misty, { winner: misty, reason: "forfeit" });
+    expect(await repository.headToHead(ash, misty, 5)).toEqual({ winsA: 0, winsB: 1, draws: 0, recent: ["b"] });
+  });
+});
+
 describe("createPrismaGameRepository", () => {
   it("createGame crea la partida en espera con el creador en el asiento 1", async () => {
     const id = await repository.createGame({ roomCode: "ABC234", config, creatorUserId: ash });
