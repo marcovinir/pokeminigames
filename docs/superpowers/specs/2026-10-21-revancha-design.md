@@ -35,8 +35,8 @@ Marco quiere además que la espera **no sea un tiempo muerto**: mientras el riva
 **Resumen final (cuando la partida terminó con normalidad: motivo `completed` o `exhausted`).** El botón principal **«Revancha»** sustituye al «Jugar de nuevo» de hoy (que llevaba al lobby con la configuración rellena); junto a él, «Volver al lobby». Si el rival ya no está (abandonó, se desconectó o la sala se canceló o caducó: motivos `forfeit`, `disconnect`, `cancelled`, `expired`, `abandoned`), **no hay «Revancha»**: solo «Volver al lobby».
 
 **Pedí yo primero — pantalla de espera (maqueta B de `espera-revancha.html`).** El bloque de revancha del resumen pasa a: arriba el **récord** («Tú contra misty · 3 – 2 · 5 partidas jugadas · vas ganando» y las últimas 5 partidas como G/P/E), debajo «Esperando a misty… Le quedan N s para decidir» con una barra de tiempo y el botón «Cancelar», y debajo, más pequeño, el **dato curioso** («¿Sabías que…?»), que cambia cada pocos segundos.
-- Primera vez que se enfrentan: en lugar de «0 – 0», «Primera vez que se enfrentan».
-- Si alguno es invitado: **no hay récord**; se ve solo la espera y el dato curioso.
+- Su primera partida juntos (`played = 1`): se ve el marcador de siempre («1 – 0», «0 – 1» o «Empate») con el texto **«Es su primera partida juntos»** en lugar de «N partidas jugadas». «0 – 0» no existe: con dos cuentas la partida recién terminada ya está guardada y cuenta. *(Mi decisión: la maqueta decía «Primera vez que se enfrentan» en lugar de «0 – 0»; como ese caso no puede darse, la frase pasa a acompañar al «1 – 0».)*
+- **No hay récord** (se ve solo la espera y el dato curioso) si alguno es invitado **o si la partida que acaba de terminar no se guardó** (la sala dejó de guardarse porque un invitado pasó por ella): el récord nunca puede quedarse sin la última partida.
 
 **Pidió primero mi rival.** Lo mismo, pero el texto dice «misty quiere la revancha» y los botones son **«Aceptar»** y **«Rechazar»**, con el mismo plazo. El récord y el dato curioso se muestran igual.
 
@@ -45,13 +45,17 @@ Marco quiere además que la espera **no sea un tiempo muerto**: mientras el riva
 **Si no hay revancha**, quien se queda en el resumen ve un aviso y solo «Volver al lobby»:
 - «misty ya no quiere la revancha» (canceló o rechazó),
 - «misty se fue» (se desconectó y no volvió, o salió al lobby),
-- «Se acabó el tiempo» (pasaron 60 s sin que los dos aceptaran),
+- «Se acabó el tiempo» (pasaron 60 s desde la primera petición sin que los dos aceptaran),
+- «La revancha ya no está disponible» (pasaron 5 minutos desde el final de la partida y nadie la pidió),
 - «No se pudo crear la sala» (el servidor falló; los dos vuelven al lobby).
 
 ## 4. Reglas
 
-- **Plazo: 60 s desde la primera petición** (de quien pida primero). No se reinicia.
-- **Cancelar o rechazar** es definitivo para esa oferta. Pulsar «Volver al lobby» mientras hay oferta cuenta como cancelar.
+- **Cuánto vive la oferta (tres relojes).** La oferta existe desde que termina la partida, y tiene un tope para que nunca viva para siempre:
+  - **Ventana para pedir: 5 minutos desde el final de la partida** *(mi decisión)*. Si en ese tiempo nadie pide la revancha, la oferta se cierra: desaparece el botón «Revancha» («La revancha ya no está disponible») y se quita la sala terminada del almacén.
+  - **Plazo para responder: 60 s desde la primera petición** (de quien pida primero). No se reinicia.
+  - **Reconexión: 10 s** si alguien se desconecta (ver abajo).
+- **Cancelar o rechazar** (los botones «Cancelar» y «Rechazar») es definitivo para esa oferta y el rival ve «ya no quiere la revancha». **Salir** (pulsar «Volver al lobby», irse a otra pantalla o cerrar la pestaña) no es lo mismo: el rival ve «misty se fue», haya o no una petición en marcha. Si alguien sale antes de que nadie pida nada, el botón «Revancha» del otro desaparece con ese mismo aviso.
 - **Recarga durante el plazo:** sigues esperando (o decidiendo) con el tiempo que quedaba; el servidor vuelve a mandar el resumen y el estado de la revancha.
 - **Cerrar la pestaña o perder la conexión:** el rival ve «misty se fue» pasado un plazo corto de reconexión (**mi decisión: 10 s**, para no confundir una recarga con una salida). Un jugador desconectado nunca bloquea la oferta.
 - **Entrar a la sala nueva:** los dos asientos están ocupados desde el principio; si el rival **no entra en 30 s** (**mi decisión**), la sala se cancela y quien sí entró ve «misty no llegó» y «Volver al lobby».
@@ -63,7 +67,7 @@ Marco quiere además que la espera **no sea un tiempo muerto**: mientras el riva
 
 ## 5. Récord entre los dos jugadores
 
-- Solo cuando **las dos personas tienen cuenta**. Cuenta las partidas **completadas** (`status = completed`, como las estadísticas) en las que participaron **las dos**.
+- Solo cuando **las dos personas tienen cuenta y la partida recién terminada se guardó** (ver §3). Cuenta las partidas **completadas** (`status = completed`, como las estadísticas) en las que participaron **las dos**.
 - Lo calcula el servidor al abrir la oferta, **después de que la partida recién terminada ya esté guardada** (espera a que termine la cola de escrituras de la sala: el récord debe incluir esa partida). Se envía a los dos desde su punto de vista: `{ mine, theirs, draws, played, recent }`, con `recent` = el resultado de las últimas 5 (más reciente primero, «won/lost/drawn»).
 - Es una consulta de lectura sobre `games` y `game_players` (ya hay índice por `userId`); **no hay tablas nuevas ni migración**. Con un historial largo basta con conteos y un `take: 5`.
 
@@ -74,7 +78,7 @@ Marco quiere además que la espera **no sea un tiempo muerto**: mientras el riva
 
 ## 7. Diseño técnico (propuesto; el constructor puede ajustarlo si respeta lo anterior)
 
-- **La oferta vive en `RoomManager`, no en `GameRoom`.** Un objeto `RematchOffer` (código de la sala vieja, los dos jugadores con `userId`, nombre, `isGuest` y asiento, la configuración, el estado de cada lado, el plazo) con un temporizador del puerto `Scheduler` (60 s, y el de 10 s de reconexión). Se crea cuando la sala termina con motivo `completed` o `exhausted`; se destruye al crear la sala, al cancelarse o al agotarse el plazo.
+- **La oferta vive en `RoomManager`, no en `GameRoom`.** Un objeto `RematchOffer` (código de la sala vieja, los dos jugadores con `userId`, nombre, `isGuest` y asiento, la configuración, el estado de cada lado, el plazo) con temporizadores del puerto `Scheduler`: el tope de 5 minutos para pedir, los 60 s para responder y los 10 s de reconexión. Se crea cuando la sala termina con motivo `completed` o `exhausted`; se destruye (y con ella se limpia la sala terminada) al crear la sala nueva, al cancelarse, al salir alguien o al agotarse cualquiera de los relojes: nunca queda viva más de 5 minutos + 60 s.
 - **La sala terminada debe poder reconectarse durante la oferta.** Hoy se quita del almacén al terminar (`onFinished`), y una recarga da «la sala ya no existe». Mientras la oferta viva, la sala terminada se mantiene en el almacén (ya se excluye de `findByUser`, así que nadie queda «en una partida») y un `join-room` al código viejo devuelve `room-state` (fase `finished`), `game-ended` otra vez y el estado de la revancha. Sin oferta posible se quita al instante, como hoy.
 - **Eventos nuevos** en `shared/src/events.ts` (nombres a decidir): cliente → servidor, pedir/aceptar y cancelar/rechazar; servidor → cliente, el estado de la revancha (quién pidió, plazo con `serverNow`, récord, resultado final de la oferta) y «ve a la sala NUEVO». El cliente añade todos a su lista exhaustiva `SERVER_EVENTS` (`game-client.ts`) y al reductor puro `apply-event.ts`.
 - **Crear la sala de revancha:** un método del `RoomManager` que genera el código con las reglas de siempre, copia la configuración, sienta a los dos (con `guest` donde toque) y, si ninguno es invitado, guarda la partida (`createGame` y el segundo asiento, igual que una sala normal); si alguno es invitado, `persisted = false` sin `createGame`. Una sala de revancha caduca a los **30 s** si el rival no entra (la caducidad de una sala en espera se hace configurable por sala).
@@ -86,7 +90,8 @@ Marco quiere además que la espera **no sea un tiempo muerto**: mientras el riva
 
 TDD, cada prueba vista fallar primero.
 - **Motor/sala/manager (con repositorio y reloj falsos):** oferta solo con motivo `completed`/`exhausted`; pedir primero uno u otro; aceptan a la vez → una sala; cancelar, rechazar, plazo agotado, reconexión de 10 s, cierre y vuelta; el rival ya está en otra sala; sala nueva con configuración idéntica (incluido un campo desconocido); asientos iguales; `persisted` según invitados (cero llamadas de escritura con un invitado, el control con dos cuentas se guarda); la sala de revancha caduca a los 30 s; la sala terminada se limpia al terminar la oferta (sin fugas).
-- **Récord:** con base de datos real; incluye la partida recién terminada; solo completadas; solo entre esas dos cuentas; empates; primera vez; con un invitado no hay récord.
+- **Récord:** con base de datos real; incluye la partida recién terminada; solo completadas; solo entre esas dos cuentas; empates; su primera partida juntos («1 – 0» con la nota); con un invitado, o con una sala que dejó de guardarse, no hay récord.
+- **Relojes de la oferta:** con reloj falso, a los 5 minutos sin petición la oferta y la sala terminada se limpian; a los 60 s de la primera petición se cierra con «se acabó el tiempo»; salir antes de que nadie pida quita el botón del otro con «se fue»; cancelar da «ya no quiere» y salir da «se fue».
 - **Datos curiosos:** cada dato verificado contra el catálogo de pruebas.
 - **Cliente:** `apply-event` de los eventos nuevos; los estados del resumen; navegación a la sala nueva; pantalla B tras una recarga; textos; accesibilidad.
 - **E2E con dos navegadores reales:** aceptan y juegan otra partida entera; uno rechaza; se agota el plazo; recarga durante el plazo; con un invitado (sin récord, sin filas en la base de datos); la partida de revancha entre dos cuentas cuenta en las estadísticas; a 375 px con nombres de 30 letras nada se sale.
@@ -106,6 +111,9 @@ TDD, cada prueba vista fallar primero.
 ## 10. Decisiones mías para que las confirmes al leer
 
 - 10 s de reconexión antes de «se fue».
+- **5 minutos** de ventana para pedir la revancha desde el final de la partida (después se cierra sola; los 60 s de responder empiezan en la primera petición).
+- Cancelar/rechazar («ya no quiere») y salir («se fue») son avisos distintos.
+- «Primera partida juntos»: con `played = 1` se muestra «1 – 0» con esa nota (no «Primera vez que se enfrentan» en lugar de «0 – 0», que no puede darse); sin récord cuando la sala dejó de guardarse.
 - 30 s para que el rival entre a la sala nueva.
 - «Revancha» solo con motivo `completed`/`exhausted`.
 - Mantener la sala terminada en el almacén mientras dure la oferta (en vez de guardar el resumen aparte).
