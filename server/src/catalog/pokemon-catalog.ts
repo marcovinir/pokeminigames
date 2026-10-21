@@ -59,6 +59,11 @@ export class PokemonCatalog {
     return this.byId.get(id);
   }
 
+  /** Todos los Pokémon del catálogo, ordenados por id. */
+  all(): readonly CatalogPokemon[] {
+    return [...this.byId.values()].sort((a, b) => a.id - b.id);
+  }
+
   /** Nombres en español e inglés de todos los Pokémon, por id. No incluye tipos ni stats. */
   names(): { id: number; es: string; en: string }[] {
     return [...this.byId.values()]

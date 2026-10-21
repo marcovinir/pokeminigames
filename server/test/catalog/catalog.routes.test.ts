@@ -59,3 +59,16 @@ describe("GET /pokemon/names", () => {
     });
   });
 });
+
+describe("GET /pokemon/facts", () => {
+  const app = buildTestApp();
+
+  it("es público, devuelve { facts } con datos calculados del catálogo y se cachea un día", async () => {
+    const response = await request(app).get("/pokemon/facts");
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toBe("public, max-age=86400");
+    expect(Object.keys(response.body)).toEqual(["facts"]);
+    expect(response.body.facts).toContainEqual({ kind: "top_stat", stat: "total", pokemon: [{ id: 6, es: "Zeta" }], value: 600 });
+    expect(response.body.facts).toContainEqual({ kind: "dual_type_count", count: 8, total: 10 });
+  });
+});
