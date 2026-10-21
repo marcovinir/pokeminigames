@@ -24,6 +24,20 @@ describe("vistas de la partida", () => {
     expect(view.opponentTeam).toEqual([]);
   });
 
+  it("un invitado aparece con guest: true en el asiento de la vista de los dos; las cuentas no llevan la clave", () => {
+    const h = new Harness({ config: RANDOM_3, creator: { userId: "guest_c", username: "inv", guest: true } });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    for (const seat of [1, 2] as const) {
+      expect(buildRoomState(h.state, seat, "ABC234", h.catalog, h.now).players).toEqual([
+        { seat: 1, username: "inv", connected: false, totalStats: 0, teamSize: 0, guest: true },
+        { seat: 2, username: "misty", connected: false, totalStats: 0, teamSize: 0 },
+      ]);
+    }
+    const joined = new Harness({ config: RANDOM_3 });
+    joined.dispatch({ type: "PLAYER_JOINED", userId: "guest_x", username: "inv", guest: true });
+    expect(buildRoomState(joined.state, 1, "ABC234", joined.catalog, joined.now).players[1]).toMatchObject({ username: "inv", guest: true });
+  });
+
   it("muestra el equipo propio y el que el rival ya reveló al cerrarse las rondas", () => {
     const h = new Harness({ config: RANDOM_3, rng: [0] });
     h.startGame();

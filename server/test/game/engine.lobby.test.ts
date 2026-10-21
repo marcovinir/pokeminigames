@@ -20,6 +20,24 @@ describe("motor: sala y conexiones", () => {
       expect(h.effectsOfKind("persist_seat_taken")).toEqual([{ kind: "persist_seat_taken", userId: "u2" }]);
     });
 
+    it("quien se une como invitado: player-joined lleva guest: true y el asiento queda marcado; una cuenta no lleva el campo", () => {
+      const h = new Harness();
+      h.dispatch({ type: "PLAYER_JOINED", userId: "guest_x", username: "inv", guest: true });
+      expect(h.state.players[2]).toMatchObject({ userId: "guest_x", username: "inv", guest: true });
+      expect(h.payloads("player-joined", 1)).toEqual([{ username: "inv", guest: true }]);
+
+      const account = new Harness();
+      account.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty", guest: false });
+      expect("guest" in account.state.players[2]!).toBe(false);
+      expect(account.payloads("player-joined", 1)).toEqual([{ username: "misty" }]);
+    });
+
+    it("un creador invitado queda marcado en el asiento 1; uno con cuenta no", () => {
+      const guest = new Harness({ creator: { userId: "guest_c", username: "inv", guest: true } });
+      expect(guest.state.players[1]).toMatchObject({ userId: "guest_c", username: "inv", guest: true });
+      expect("guest" in new Harness().state.players[1]!).toBe(false);
+    });
+
     it("ignora a un tercer jugador y a quien llega con la partida ya empezada", () => {
       const h = new Harness();
       h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });

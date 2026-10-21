@@ -38,8 +38,8 @@ interface Ctx {
 
 const ABANDONED_REASONS = new Set(["cancelled", "expired", "abandoned"]);
 
-function newPlayer(seat: Seat, userId: string, username: string): PlayerState {
-  return { seat, userId, username, connected: false, totalStats: 0, team: [] };
+function newPlayer(seat: Seat, userId: string, username: string, guest?: boolean): PlayerState {
+  return { seat, userId, username, ...(guest ? { guest: true } : {}), connected: false, totalStats: 0, team: [] };
 }
 
 function inGame(s: GameState): boolean {
@@ -70,13 +70,13 @@ function randomPlayablePair(c: Ctx): TypePair | null {
 /** Estado inicial de una sala recién creada: el creador ocupa el asiento 1. */
 export function createGame(
   config: RoomConfig,
-  creator: { userId: string; username: string },
+  creator: { userId: string; username: string; guest?: boolean },
   now: number,
 ): ReduceResult {
   const state: GameState = {
     phase: "waiting",
     config,
-    players: { 1: newPlayer(1, creator.userId, creator.username) },
+    players: { 1: newPlayer(1, creator.userId, creator.username, creator.guest) },
     round: null,
     roundsPlayed: 0,
     owners: new Map(),
@@ -101,7 +101,7 @@ export function reduce(prev: GameState, event: GameEvent, now: number, deps: Eng
   const c: Ctx = { s: structuredClone(prev), fx: [], now, deps };
   switch (event.type) {
     case "PLAYER_JOINED":
-      onJoined(c, event.userId, event.username);
+      onJoined(c, event.userId, event.username, event.guest);
       break;
     case "PLAYER_CONNECTED":
       onConnected(c, event.seat);
@@ -127,11 +127,11 @@ export function reduce(prev: GameState, event: GameEvent, now: number, deps: Eng
 
 // --- Sala y conexiones -------------------------------------------------------------
 
-function onJoined(c: Ctx, userId: string, username: string): void {
+function onJoined(c: Ctx, userId: string, username: string, guest?: boolean): void {
   if (c.s.phase !== "waiting" || c.s.players[2]) return;
-  c.s.players[2] = newPlayer(2, userId, username);
+  c.s.players[2] = newPlayer(2, userId, username, guest);
   c.fx.push({ kind: "persist_seat_taken", userId });
-  emit(c, 1, { name: "player-joined", payload: { username } });
+  emit(c, 1, { name: "player-joined", payload: { username, ...(guest ? { guest: true } : {}) } });
 }
 
 function onConnected(c: Ctx, seat: Seat): void {
