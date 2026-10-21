@@ -1,4 +1,5 @@
 import type { ErrorCode } from "./errors.js";
+import type { RematchState } from "./rematch.js";
 import type {
   GameEndReason,
   GamePhase,
@@ -34,6 +35,8 @@ export interface RoomStateView {
   opponentTeam: PokemonView[];
   roundsPlayed: number;
   startsAt: number | null;
+  /** Solo está (y vale `true`) en las salas que nacen de una revancha. Ausente = sala normal. */
+  rematch?: true;
   /** Hasta cuándo puede volver el rival si está desconectado. */
   opponentGraceEndsAt: number | null;
   round: {
@@ -94,6 +97,10 @@ export interface ClientToServerEvents {
   "choose-type": (payload: { type: string }) => void;
   "submit-pokemon": (payload: { text: string }) => void;
   "leave-room": () => void;
+  /** Pedir la revancha o aceptar la que pidió el rival. */
+  "rematch-request": () => void;
+  /** Cancelar la revancha que pedí o rechazar la que pidió el rival. */
+  "rematch-cancel": () => void;
 }
 
 export interface ServerToClientEvents {
@@ -109,6 +116,10 @@ export interface ServerToClientEvents {
   "opponent-disconnected": (payload: { graceEndsAt: number; serverNow: number }) => void;
   "opponent-reconnected": () => void;
   error: (payload: { code: ErrorCode; message: string }) => void;
+  /** El estado de la oferta de revancha tras terminar la partida (se reenvía al cambiar, al llegar el récord y al reconectar). */
+  "rematch-state": (payload: RematchState) => void;
+  /** Los dos aceptaron: la sala de la revancha ya existe, hay que entrar a ella. */
+  "rematch-room": (payload: { code: string }) => void;
 }
 
 export type ServerEventName = keyof ServerToClientEvents;

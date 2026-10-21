@@ -48,6 +48,8 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   "opponent-disconnected": true,
   "opponent-reconnected": true,
   error: true,
+  "rematch-state": true,
+  "rematch-room": true,
 };
 const SERVER_EVENT_NAMES = Object.keys(SERVER_EVENTS) as ServerEventName[];
 

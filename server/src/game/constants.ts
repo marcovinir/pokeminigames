@@ -1,3 +1,5 @@
+import type { GameEndReason } from "@pokemon-minigames/shared";
+
 /** Tiempos y límites de la partida. Son constantes, no variables de entorno. */
 
 export const ROUND_SECONDS = 15;
@@ -31,3 +33,18 @@ export const ROOM_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 export const seconds = (n: number): number => n * 1000;
 export const minutes = (n: number): number => n * 60 * 1000;
+
+// --- Revancha ------------------------------------------------------------------------------------------------------
+
+/** Cuánto tiempo desde el final de la partida se puede pedir la revancha; pasado ese tiempo la oferta se cierra sola. */
+export const REMATCH_ASK_WINDOW_MS = minutes(5);
+/** Plazo para responder, contado desde la primera petición (no se reinicia). */
+export const REMATCH_RESPONSE_MS = seconds(60);
+/** Cuánto puede estar desconectado alguien durante la oferta antes de contar como «se fue» (una recarga no cuenta). */
+export const REMATCH_RECONNECT_GRACE_MS = seconds(10);
+/** Una sala de revancha caduca a los 30 s si el rival no entra. */
+export const REMATCH_ROOM_TTL_SECONDS = 30;
+/** Cuántas partidas recientes se muestran en el récord. */
+export const REMATCH_RECENT_GAMES = 5;
+/** Solo una partida que terminó con normalidad abre una oferta de revancha. */
+export const REMATCH_END_REASONS: readonly GameEndReason[] = ["completed", "exhausted"];

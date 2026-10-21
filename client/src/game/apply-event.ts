@@ -205,5 +205,10 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
 
     case "error":
       return { ...view, lastError: event.payload };
+
+    // La revancha (el estado de la oferta y la sala nueva) se aplica en la Task 8; hasta entonces no cambia la vista.
+    case "rematch-state":
+    case "rematch-room":
+      return view;
   }
 }

@@ -1,4 +1,14 @@
-import type { BaseStats, ErrorCode, GameEndReason, GameResult, PickResult, RoomConfig, TypeName } from "@pokemon-minigames/shared";
+import type {
+  BaseStats,
+  ErrorCode,
+  GameEndReason,
+  GameResult,
+  PickResult,
+  RematchClosedReason,
+  RematchRecord,
+  RoomConfig,
+  TypeName,
+} from "@pokemon-minigames/shared";
 
 export const TYPE_LABELS: Record<TypeName, string> = {
   normal: "normal",
@@ -133,3 +143,51 @@ export const STAT_LABELS: Record<keyof BaseStats, string> = {
   spDefense: "Def. esp.",
   speed: "Velocidad",
 };
+
+// --- Revancha ------------------------------------------------------------------------------------------------------
+
+/** Los textos fijos de la revancha (botones, títulos y etiquetas). */
+export const REMATCH_TEXT = {
+  request: "Revancha",
+  cancel: "Cancelar",
+  accept: "Aceptar",
+  decline: "Rechazar",
+  backToLobby: "Volver al lobby",
+  firstGame: "Es su primera partida juntos",
+  factsLabel: "¿Sabías que…?",
+  loadingTitle: "¡Revancha!",
+  loadingSub: "Preparando la sala…",
+  youReady: "✓ Tú, listo",
+} as const;
+
+export const rematchWaiting = (name: string): string => `Esperando a ${name}…`;
+export const rematchSecondsLeft = (seconds: number): string => `Le quedan ${seconds} s para decidir`;
+export const rematchRequested = (name: string): string => `${name} quiere la revancha`;
+export const rematchEntering = (name: string): string => `${name} entrando…`;
+export const rematchNoShow = (name: string): string => `${name} no llegó.`;
+export const recordTitle = (name: string): string => `Tú contra ${name}`;
+
+/** El aviso de por qué no hubo revancha; `null` si lo canceló quien lo lee (no hace falta decirle nada). */
+export function rematchClosedMessage(reason: RematchClosedReason, name: string): string | null {
+  switch (reason) {
+    case "self":
+      return null;
+    case "declined":
+      return `${name} ya no quiere la revancha.`;
+    case "left":
+      return `${name} se fue.`;
+    case "timeout":
+      return "Se acabó el tiempo.";
+    case "unavailable":
+      return "La revancha ya no está disponible.";
+    case "failed":
+      return "No se pudo crear la sala.";
+  }
+}
+
+/** La línea bajo el marcador del récord: «5 partidas jugadas · vas ganando», o «Es su primera partida juntos». */
+export function recordHeadline(record: RematchRecord, rivalName: string): string {
+  if (record.played === 1) return REMATCH_TEXT.firstGame;
+  const verdict = record.mine > record.theirs ? "vas ganando" : record.mine < record.theirs ? `va ganando ${rivalName}` : "van empatados";
+  return `${record.played} partidas jugadas · ${verdict}`;
+}

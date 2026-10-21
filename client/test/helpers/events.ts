@@ -1,6 +1,7 @@
 import type {
   GameEndedPayload,
   PokemonView,
+  RematchState,
   RoomStateView,
   RoundResultPayload,
   ServerEvent,
@@ -77,6 +78,11 @@ export function gameEnded(overrides: Partial<GameEndedPayload> = {}): GameEndedP
 /** Atajos para armar eventos del servidor completos. */
 export const event = {
   roomState: (overrides?: Partial<RoomStateView>): ServerEvent => ({ name: "room-state", payload: roomState(overrides) }),
+  rematchState: (overrides: Partial<RematchState> = {}): ServerEvent => ({
+    name: "rematch-state",
+    payload: { serverNow: SERVER_NOW, status: "open", deadline: SERVER_NOW + 300_000, ...overrides },
+  }),
+  rematchRoom: (code: string): ServerEvent => ({ name: "rematch-room", payload: { code } }),
   playerJoined: (username: string, guest?: boolean): ServerEvent => ({
     name: "player-joined",
     payload: { username, ...(guest ? { guest: true } : {}) },
