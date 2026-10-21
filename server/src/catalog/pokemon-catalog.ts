@@ -66,6 +66,13 @@ export class PokemonCatalog {
       .map((p) => ({ id: p.id, es: p.names.es, en: p.names.en }));
   }
 
+  /** Lo mismo que `names()`, con los tipos de cada Pokémon (en el orden de sus ranuras). Solo para las salas con pistas. */
+  namesWithTypes(): { id: number; es: string; en: string; types: TypeName[] }[] {
+    return [...this.byId.values()]
+      .sort((a, b) => a.id - b.id)
+      .map((p) => ({ id: p.id, es: p.names.es, en: p.names.en, types: [...p.types] }));
+  }
+
   /** Busca por nombre en español o en inglés, sin distinguir tildes, mayúsculas ni signos. */
   resolveName(text: string): CatalogPokemon | undefined {
     const key = normalizeName(text);
@@ -79,6 +86,12 @@ export class PokemonCatalog {
   /** Un Pokémon sirve para un par solo si tiene los dos tipos. */
   matchesPair(pokemon: CatalogPokemon, pair: TypePair): boolean {
     return pair.every((type) => pokemon.types.includes(type));
+  }
+
+  /** Los Pokémon de doble tipo de ese par que nadie tiene, en el mismo orden estable que `poolSize` cuenta. */
+  freeMembers(pair: TypePair, claimed: ReadonlySet<number>): CatalogPokemon[] {
+    const entry = this.pairs.get(`${pair[0]}|${pair[1]}`);
+    return entry ? entry.members.filter((p) => !claimed.has(p.id)) : [];
   }
 
   /** Cuántos Pokémon de doble tipo de ese par siguen sin reclamar. */

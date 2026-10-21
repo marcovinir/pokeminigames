@@ -1,4 +1,4 @@
-import type { ThemePreferences } from "@pokemon-minigames/shared";
+import type { ThemePreferences, TypeName } from "@pokemon-minigames/shared";
 
 export interface AuthUser {
   id: string;
@@ -25,4 +25,6 @@ export interface PokemonName {
   id: number;
   es: string;
   en: string;
+  /** Solo en la lista pedida con tipos (salas con «Pistas de tipos»). */
+  types?: TypeName[];
 }

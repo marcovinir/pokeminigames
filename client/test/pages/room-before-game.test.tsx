@@ -1,5 +1,8 @@
-import { screen, within } from "@testing-library/react";
+import { TYPE_NAMES } from "@pokemon-minigames/shared";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { typeIconUrl } from "../../src/catalog/artwork";
+import { TYPE_LABELS } from "../../src/i18n/es";
 import { SERVER_NOW, event } from "../helpers/events";
 import { ash, misty, renderRoom, roundState } from "../helpers/room";
 
@@ -81,6 +84,40 @@ describe("elegir tipo (etapa 6)", () => {
     }
   });
 
+  it("cada tesela lleva el icono oficial de su tipo encima del nombre, decorativo", () => {
+    renderRoom([choosing()]);
+    const tiles = within(screen.getByRole("group", { name: "Tipos" })).getAllByRole("button");
+    tiles.forEach((tile, index) => {
+      const type = TYPE_NAMES[index]!;
+      const icon = tile.querySelector("img")!;
+      expect(icon).toHaveAttribute("src", typeIconUrl(type));
+      expect(icon).toHaveAttribute("alt", "");
+      expect(icon).toHaveAttribute("aria-hidden", "true");
+      expect(tile).toHaveAccessibleName(TYPE_LABELS[type]);
+    });
+  });
+
+  it("el contenido de cada tesela va centrado (si falla un icono el nombre no se queda arriba)", () => {
+    renderRoom([choosing()]);
+    const tile = within(screen.getByRole("group", { name: "Tipos" })).getByRole("button", { name: "fuego" });
+    expect(tile.className.split(" ")).toContain("justify-center");
+  });
+
+  it("en un teléfono la tesela es una fila baja (icono a la izquierda) y desde sm una columna: así caben más tipos a la vista", () => {
+    renderRoom([choosing()]);
+    const tile = within(screen.getByRole("group", { name: "Tipos" })).getByRole("button", { name: "fuego" });
+    expect(tile.className.split(" ")).toEqual(expect.arrayContaining(["flex-row", "sm:flex-col", "py-2.5", "sm:py-3"]));
+  });
+
+  it("si un icono no carga, la tesela queda con su nombre como siempre", async () => {
+    const { user } = renderRoom([choosing()]);
+    const fire = screen.getByRole("button", { name: "fuego" });
+    fireEvent.error(fire.querySelector("img")!);
+    expect(fire.querySelector("img")).toBeNull();
+    await user.click(fire);
+    expect(screen.getByRole("button", { name: "fuego" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("el cronómetro es un anillo con su nombre de siempre", () => {
     renderRoom([choosing()]);
     expect(screen.getByRole("timer", { name: "Tiempo para elegir" })).toBeInTheDocument();
@@ -93,5 +130,33 @@ describe("elegir tipo (etapa 6)", () => {
     expect(fire).toHaveAttribute("aria-pressed", "true");
     expect(fire).toHaveAttribute("data-chosen", "true");
     expect(screen.getByRole("button", { name: "agua" })).not.toHaveAttribute("data-chosen");
+  });
+});
+
+describe("sala de espera: configuración y pistas de tipos (etapa 8)", () => {
+  const withConfig = (config: object) =>
+    event.roomState({
+      phase: "waiting",
+      players: [ash()],
+      config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, ...config },
+    });
+
+  it("muestra la configuración de la sala, para que quien se une sepa cómo se va a jugar", () => {
+    renderRoom([withConfig({})]);
+    expect(screen.getByLabelText("Configuración de la sala")).toHaveTextContent("Tipos aleatorios · 3 rondas");
+  });
+
+  it("con pistas muestra la insignia «Pistas de tipos»", () => {
+    renderRoom([withConfig({ typeHints: true })]);
+    const settings = screen.getByLabelText("Configuración de la sala");
+    expect(within(settings).getByText("Pistas de tipos")).toBeInTheDocument();
+  });
+
+  it("sin pistas (apagadas o sin el campo) no hay insignia", () => {
+    for (const config of [{ typeHints: false }, {}]) {
+      const { unmount } = renderRoom([withConfig(config)]);
+      expect(screen.queryByText("Pistas de tipos")).not.toBeInTheDocument();
+      unmount();
+    }
   });
 });

@@ -26,8 +26,10 @@ export interface RoomStateView {
   config: RoomConfig;
   mySeat: Seat;
   players: RoomPlayerView[];
-  /** Equipo propio completo. Del rival solo se conocen los totales (`players`). */
+  /** Equipo propio completo. */
   myTeam: PokemonView[];
+  /** El equipo del rival: solo lo que ya se reveló al cerrarse cada ronda (nunca lo que escribió en la ronda abierta). */
+  opponentTeam: PokemonView[];
   roundsPlayed: number;
   startsAt: number | null;
   /** Hasta cuándo puede volver el rival si está desconectado. */
@@ -61,6 +63,11 @@ export interface RoundResultPayload {
   type1: TypeName;
   type2: TypeName;
   results: Record<Seat, RoundPlayerResult>;
+  /**
+   * Un Pokémon de ese par que nadie tiene, para enseñar qué se podía contestar. Solo viene si acertaron 0 o 1 jugadores y
+   * queda alguno libre.
+   */
+  example?: PokemonView;
 }
 
 export interface GameEndedPayload {

@@ -56,7 +56,7 @@ export function RoundResultView() {
     <section className="flex flex-col gap-5">
       <div className="text-center">
         <h1 className="font-display text-2xl font-semibold">Resultado de la ronda {result.round}</h1>
-        <div className="mt-3 flex justify-center gap-3" aria-label="Par de tipos">
+        <div className="mt-3 flex flex-wrap justify-center gap-3" aria-label="Par de tipos">
           <TypeChip type={result.type1} size="lg" />
           <TypeChip type={result.type2} size="lg" />
         </div>
@@ -67,7 +67,21 @@ export function RoundResultView() {
         Ronda {result.round}. Tú: {PICK_RESULT_LABELS[mine.result]}
         {mine.pokemon ? `, ${mine.pokemon.names.es}` : ""}. {opponent?.username ?? "Rival"}: {PICK_RESULT_LABELS[theirs.result]}
         {theirs.pokemon ? `, ${theirs.pokemon.names.es}` : ""}.
+        {result.example ? ` Un Pokémon que servía: ${result.example.names.es}.` : ""}
       </p>
+
+      {/* Si nadie o solo una persona acertó, el servidor muestra uno de los que servían para este par. Va arriba (compacto):
+          la pausa dura 6 s y debajo de las dos tarjetas de resultado, en un teléfono, no se llegaría a ver. */}
+      {result.example ? (
+        <section
+          aria-label={`Un Pokémon que servía: ${result.example.names.es}`}
+          style={rise(2)}
+          className="animate-rise mx-auto w-full max-w-md"
+        >
+          <h2 className="mb-1.5 text-center font-display text-base font-semibold">Un Pokémon que servía</h2>
+          <PokemonCard pokemon={result.example} eager />
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <ResultCard title="Tú" result={mine} index={0} />

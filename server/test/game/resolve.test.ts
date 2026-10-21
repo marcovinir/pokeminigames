@@ -1,7 +1,7 @@
 import type { Seat } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
-import { type ResolveInput, resolveRound } from "../../src/game/engine/resolve.js";
+import { type ResolveInput, pickExample, resolveRound } from "../../src/game/engine/resolve.js";
 import type { PickState } from "../../src/game/engine/types.js";
 import { fixtureCatalog } from "../helpers/fixtures.js";
 import { sequenceRng } from "../helpers/rng.js";
@@ -19,6 +19,27 @@ function resolve(
 }
 
 const pick = (text: string, at = 1000): PickState => ({ text, at });
+
+describe("pickExample", () => {
+  it("sortea entre los Pokémon del par que nadie tiene, con el generador inyectado", () => {
+    expect(pickExample(catalog, pair, new Set(), sequenceRng([0]))?.id).toBe(1);
+    expect(pickExample(catalog, pair, new Set(), sequenceRng([2]))?.id).toBe(3);
+    // Con Alfa reclamado, el índice 1 de los libres [2, 3] es Gama.
+    expect(pickExample(catalog, pair, new Set([1]), sequenceRng([1]))?.id).toBe(3);
+  });
+
+  it("nunca devuelve uno reclamado", () => {
+    for (let value = 0; value < 6; value++) {
+      expect(pickExample(catalog, pair, new Set([1, 3]), sequenceRng([value]))?.id).toBe(2);
+    }
+  });
+
+  it("sin Pokémon libres devuelve null y no gasta azar", () => {
+    const rng = sequenceRng([0]);
+    expect(pickExample(catalog, pair, new Set([1, 2, 3]), rng)).toBeNull();
+    expect(rng.calls).toBe(0);
+  });
+});
 
 describe("resolveRound", () => {
   it("acepta dos Pokémon válidos distintos", () => {

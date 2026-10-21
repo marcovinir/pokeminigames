@@ -41,6 +41,7 @@ export function roomState(overrides: Partial<RoomStateView> = {}): RoomStateView
     mySeat: 1,
     players: [player(1, "ash"), player(2, "misty")],
     myTeam: [],
+    opponentTeam: [],
     roundsPlayed: 0,
     startsAt: null,
     opponentGraceEndsAt: null,

@@ -1,5 +1,5 @@
 import type { RoomConfig, TypeMode } from "@pokemon-minigames/shared";
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ApiError } from "../api/client";
 import type { CurrentRoom } from "../api/endpoints";
@@ -113,6 +113,7 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const hintsId = useId();
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -207,6 +208,29 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
             hint="La partida termina al final de la ronda en que alguien llegue a la meta."
           />
         ) : null}
+
+        <label className="block cursor-pointer">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={form.typeHints}
+            aria-labelledby={`${hintsId}-label`}
+            aria-describedby={`${hintsId}-hint`}
+            onChange={(event) => setForm({ ...form, typeHints: event.target.checked })}
+            className="peer sr-only"
+          />
+          <span className="framed-field flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ring peer-checked:[&_[data-check]]:opacity-100">
+            <span className="min-w-0 flex-1">
+              <span id={`${hintsId}-label`} className="font-display font-semibold">
+                Pistas de tipos
+              </span>
+              <span id={`${hintsId}-hint`} className="block text-sm text-muted">
+                Muestra los tipos en las sugerencias; hace la ronda más fácil.
+              </span>
+            </span>
+            <CheckIcon />
+          </span>
+        </label>
 
         <Button type="submit" variant="primary" size="lg" loading={submitting}>
           Crear sala

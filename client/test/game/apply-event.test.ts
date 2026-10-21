@@ -226,3 +226,64 @@ describe("pureza", () => {
     expect(view.code).toBe("ABC234");
   });
 });
+
+describe("equipo del rival (etapa 8)", () => {
+  const withRival = (rival: ReturnType<typeof pokemon> | null, round = 1) =>
+    event.roundResult({
+      round,
+      results: {
+        1: { seat: 1, result: "VALID", text: "a", pokemon: pokemon(1, 500), totalStats: 500, teamSize: 1 },
+        2: rival
+          ? { seat: 2, result: "VALID", text: "b", pokemon: rival, totalStats: rival.totalStats, teamSize: 1 }
+          : { seat: 2, result: "NOT_FOUND", text: "zzz", pokemon: null, totalStats: 0, teamSize: 0 },
+      },
+    });
+
+  it("empieza vacío", () => {
+    expect(initialGameView.opponentTeam).toEqual([]);
+    expect(play([[event.roomState()]]).opponentTeam).toEqual([]);
+  });
+
+  it("room-state lo reemplaza con el equipo del rival que manda el servidor (también al reconectar)", () => {
+    const view = play([[event.roomState({ opponentTeam: [pokemon(7, 400), pokemon(8, 300)] })]]);
+    expect(view.opponentTeam.map((p) => p.id)).toEqual([7, 8]);
+  });
+
+  it("round-result suma el Pokémon que ganó el rival (el del otro asiento)", () => {
+    const first = play([[event.roomState({ mySeat: 1 })], [withRival(pokemon(2, 300))]]);
+    expect(first.opponentTeam.map((p) => p.id)).toEqual([2]);
+
+    // Desde el asiento 2, el rival es el asiento 1: el Pokémon que entra es el del asiento 1.
+    const second = play([[event.roomState({ mySeat: 2 })], [withRival(pokemon(2, 300))]]);
+    expect(second.opponentTeam.map((p) => p.id)).toEqual([1]);
+  });
+
+  it("un resultado repetido no duplica al Pokémon del rival", () => {
+    const view = play([[event.roomState({ mySeat: 1 })], [withRival(pokemon(2, 300))], [withRival(pokemon(2, 300))]]);
+    expect(view.opponentTeam).toHaveLength(1);
+  });
+
+  it("si el rival no ganó nada, su equipo no cambia", () => {
+    const view = play([[event.roomState({ mySeat: 1 })], [withRival(null)]]);
+    expect(view.opponentTeam).toEqual([]);
+  });
+
+  it("conserva el orden en que el rival fue ganando Pokémon", () => {
+    const view = play([[event.roomState({ mySeat: 1 })], [withRival(pokemon(5, 300), 1)], [withRival(pokemon(2, 450), 2)]]);
+    expect(view.opponentTeam.map((p) => p.id)).toEqual([5, 2]);
+  });
+
+  it("un room-state posterior sustituye lo acumulado: manda el servidor", () => {
+    const view = play([
+      [event.roomState({ mySeat: 1 })],
+      [withRival(pokemon(2, 300))],
+      [event.roomState({ mySeat: 1, opponentTeam: [pokemon(9, 410)] })],
+    ]);
+    expect(view.opponentTeam.map((p) => p.id)).toEqual([9]);
+  });
+
+  it("lastResult conserva el ejemplo que mandó el servidor", () => {
+    const view = play([[event.roomState({ mySeat: 1 })], [event.roundResult({ example: pokemon(25, 480) })]]);
+    expect(view.lastResult?.example?.id).toBe(25);
+  });
+});

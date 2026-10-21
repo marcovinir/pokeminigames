@@ -6,6 +6,8 @@ export interface CreateRoomRequest {
   lengthMode: LengthMode;
   roundsLimit?: number;
   statsGoal?: number;
+  /** Pistas de tipos en las sugerencias (por defecto, apagadas). */
+  typeHints?: boolean;
 }
 
 export interface CreateRoomResponse {

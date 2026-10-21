@@ -2,7 +2,7 @@
 
 Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga ambos. Gana quien acumule más stats base. El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/).
 
-**Estado:** etapa 6 (rediseño visual del cliente) completa sobre el juego de las etapas 1 a 5: servidor, cliente web, estadísticas, perfil y temas. Listo para desplegarse gratis en Render y Neon: la guía está en [`docs/despliegue.md`](docs/despliegue.md).
+**Estado:** etapa 8 (pulido de la partida) completa sobre el juego de las etapas 1 a 7: servidor, cliente web, estadísticas, perfil, el rediseño visual de la etapa 6 (temas incluidos) y las cuentas con código por correo de la etapa 7. Listo para desplegarse gratis en Render y Neon: la guía está en [`docs/despliegue.md`](docs/despliegue.md).
 
 ## Capturas
 
@@ -70,7 +70,7 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 | `npm run dev:client` | Cliente web con recarga en caliente |
 | `npm run build` | Construye el cliente (`client/dist`) y empaqueta el servidor (`server/dist/index.js`) |
 | `npm start` | Arranca la construcción de producción (necesita las variables de `NODE_ENV=production`, ver la guía de despliegue) |
-| `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el límite de login, las cuentas con código por correo, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento y las tipografías): crea su propia base de datos, la borra al terminar |
+| `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el límite de login, las cuentas con código por correo, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
 | `npm test` | Todas las pruebas: servidor (usan la base `pokemon_minigames_test`) y cliente |
 | `npm run typecheck` | Verifica los tipos con `tsc` en todos los paquetes |
 | `npm run db:migrate -w server` | Crea/aplica migraciones en desarrollo |
@@ -85,13 +85,17 @@ Variable opcional del cliente: `VITE_API_URL` (URL base del servidor; vacía = e
 
 El servidor sirve el cliente construido, la API y Socket.io desde un solo origen, así que en producción no hay CORS y la cookie de sesión es `Secure` + `SameSite=Lax`. Las peticiones que cambian algo se rechazan si vienen de otro origen (403 `FORBIDDEN`) y hay límites por IP en memoria: 5 intentos de login fallidos cada 15 minutos por IP y correo (y 30 por IP sumando todos los correos), 5 registros por hora y 300 peticiones por minuto a la API (429 `RATE_LIMITED` con `Retry-After`). Cómo desplegarlo, qué esperar de la capa gratuita y cómo comprobarlo: [`docs/despliegue.md`](docs/despliegue.md). Cómo activar las cuentas con código por correo en el sitio en vivo (dominio, Resend, variables de Render y marcha atrás): [`docs/correo.md`](docs/correo.md).
 
-`npm run e2e` necesita Chromium: `npx playwright install chromium` desde `e2e/`, o define `E2E_CHANNEL=msedge` (o `chrome`) para usar el navegador ya instalado. Con `E2E_ADMIN_DATABASE_URL` (o tu `server/.env`) crea la base `pokemon_minigames_e2e`. En GitHub, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre tipos, pruebas, construcción y E2E en cada push a `main` y en cada pull request.
+`npm run e2e` necesita Chromium: `npx playwright install chromium` desde `e2e/`, o define `E2E_CHANNEL=msedge` (o `chrome`) para usar el navegador ya instalado. Las imágenes de PokeAPI (iconos, sprites y arte) se sirven falsas durante la E2E para no depender de la red; con `E2E_REAL_IMAGES=1` se usan las de verdad (y una prueba comprueba que los 18 iconos reales siguen siendo píldoras de 200 × 40). Con `E2E_ADMIN_DATABASE_URL` (o tu `server/.env`) crea la base `pokemon_minigames_e2e`. En GitHub, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) corre tipos, pruebas, construcción y E2E en cada push a `main` y en cada pull request.
 
 ## Cuentas con código por correo
 
 Con `EMAIL_VERIFICATION=on`, registrarse crea la cuenta pendiente y envía un código de 6 dígitos al correo (`/verificar`); sin escribirlo no se abre sesión. En el inicio de sesión aparece «¿Olvidaste tu contraseña?» (`/olvide` → `/restablecer`), que cambia la contraseña con otro código y cierra las sesiones abiertas. Un código dura 10 minutos, vale una vez y se bloquea tras 5 intentos; se guarda solo como huella (HMAC) y nunca se escribe en el registro; las respuestas no revelan si un correo tiene cuenta; hay límites de envío (un código por minuto por correo, 5 por hora por correo y 10 por hora por IP) y de intentos (5 cada 10 minutos por correo y 20 por hora por IP). Apagada (`off`, el valor de partida) la aplicación se comporta como antes y las rutas nuevas no existen.
 
 Los correos los envía [Resend](https://resend.com) (`MAIL_PROVIDER=resend`, con `RESEND_API_KEY` y `MAIL_FROM`); en desarrollo, la consola del servidor, y en las pruebas, un buzón en memoria.
+
+## Pulido de la partida
+
+En **Elegir tipo** y en todos los chips de tipo se ve el símbolo oficial de cada tipo (el de PokeAPI, recortado de su imagen; es decorativo: el nombre sigue siendo el texto). En el campo de respuesta, cada sugerencia lleva el sprite del Pokémon, su número de Pokédex y los nombres en español e inglés. La opción de la sala **Pistas de tipos** (apagada por defecto, la elige quien crea la sala y vale para los dos) añade a cada sugerencia sus tipos, lo que vuelve la ronda mucho más fácil; sin ella los tipos ni viajan al navegador (`GET /pokemon/names` sin `?types=1`). Si en una ronda acierta 0 o 1 jugador, el servidor sortea entre los Pokémon de ese par que nadie tiene y lo muestra como «Un Pokémon que servía»; si aciertan los dos o no queda ninguno libre, no aparece. El panel del rival lista los Pokémon que ya ganó (nada que no se haya revelado antes en `round-result`), también tras recargar o reconectar.
 
 ## Estadísticas y perfil
 
@@ -121,11 +125,11 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `POST /auth/logout` | Cierra la sesión y borra la cookie |
 | `GET /auth/me` | Usuario actual |
 | `PUT /auth/me/preferences` | Guarda el tema: `{ theme: "clasico" \| "pokedex", themeMode: "auto" \| "claro" \| "oscuro" }` |
-| `POST /rooms` | Crea una sala: `{ typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal? }`; devuelve `{ code }` |
+| `POST /rooms` | Crea una sala: `{ typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`; devuelve `{ code }`. `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
-| `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado |
+| `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado; con `?types=1` cada elemento lleva además `types` (el cliente solo lo pide en salas con «Pistas de tipos») |
 | `GET /stats` | Tus estadísticas: `{ username, stats }` |
 | `GET /stats/history?limit=&before=` | Tus partidas completadas, de la más reciente a la más antigua (`limit` de 1 a 50, por defecto 20); `before` es el `nextCursor` de la página anterior. Devuelve `{ games, nextCursor }` |
 | `GET /users/:username/stats` | Las estadísticas de otra persona (nunca su correo ni su historial); `404 USER_NOT_FOUND` si no existe |
@@ -145,10 +149,10 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 
 | Servidor → cliente | Cuándo |
 |---|---|
-| `room-state` | Al entrar o reconectar: estado completo de la partida |
+| `room-state` | Al entrar o reconectar: estado completo de la partida, con tu equipo y el del rival (solo lo ya revelado) |
 | `player-joined`, `game-starting`, `choose-types`, `round-started` | Avance de la partida |
 | `type-received`, `answer-received` | Confirman la recepción, sin decir si acertaste |
-| `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` |
+| `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` y, si acertaron 0 o 1 jugadores, un `example`: un Pokémon libre de ese par que servía |
 | `game-ended` | Ganador, motivo, equipos y totales |
 | `opponent-disconnected`, `opponent-reconnected` | Caída y vuelta del rival |
 | `error` | `{ code, message }` |

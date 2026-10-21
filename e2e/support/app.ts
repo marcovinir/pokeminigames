@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { crc32, deflateSync } from "node:zlib";
 import { type Browser, type BrowserContext, type Page, expect } from "@playwright/test";
 
 export const PASSWORD = "pikachu-123";
@@ -13,11 +14,55 @@ const snapshot = JSON.parse(
   readFileSync(fileURLToPath(new URL("../../server/data/catalog.snapshot.json", import.meta.url)), "utf8"),
 ) as { pokemon: SnapshotPokemon[] };
 
-/** Un Pokémon que tiene los dos tipos del par (el servidor garantiza que cada par tiene al menos dos). */
-export function validAnswerFor(types: string[]): string {
-  const found = snapshot.pokemon.find((p) => p.types.length === 2 && types.every((type) => p.types.includes(type)));
-  if (!found) throw new Error(`No hay ningún Pokémon con los tipos ${types.join(" y ")}`);
+/**
+ * Un Pokémon que tiene los dos tipos del par (el servidor garantiza que cada par tiene al menos dos). Con `skip` se salta
+ * esos primeros: así dos personas pueden nombrar Pokémon distintos del mismo par.
+ */
+export function validAnswerFor(types: string[], skip = 0): string {
+  const matches = snapshot.pokemon.filter((p) => p.types.length === 2 && types.every((type) => p.types.includes(type)));
+  const found = matches[skip];
+  if (!found) throw new Error(`No hay un Pokémon número ${skip + 1} con los tipos ${types.join(" y ")}`);
   return found.names.en;
+}
+
+/** Un chunk de un PNG: longitud, tipo, datos y CRC. */
+function pngChunk(type: string, data: Buffer): Buffer {
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+
+/** Un PNG liso (gris) del tamaño pedido, sin dependencias: sirve de imagen falsa. */
+function solidPng(width: number, height: number): Buffer {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // 8 bits por canal
+  header[9] = 6; // RGBA
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 4, 0x99)]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  return Buffer.concat([signature, pngChunk("IHDR", header), pngChunk("IDAT", deflateSync(raw)), pngChunk("IEND", Buffer.alloc(0))]);
+}
+
+const POKEAPI_IMAGES = /^https:\/\/raw\.githubusercontent\.com\/PokeAPI\/sprites\//;
+// Los iconos de tipo de PokeAPI son píldoras de 200 × 40; el resto de las imágenes (sprites y arte) las tratamos cuadradas.
+const FAKE_TYPE_ICON = solidPng(200, 40);
+const FAKE_SQUARE = solidPng(96, 96);
+
+/**
+ * Las imágenes de Pokémon vienen de GitHub (PokeAPI): la E2E no debe depender de la red ni de su velocidad (una carga lenta
+ * alargaba el `load` de cada pantalla y agotaba plazos como los 15 s de «Elegir tipo»). Se sirven imágenes falsas del mismo
+ * tamaño que las reales. Con `E2E_REAL_IMAGES=1` (o al generar capturas) se usan las de verdad.
+ */
+async function fakePokeApiImages(context: BrowserContext): Promise<void> {
+  if (process.env.E2E_REAL_IMAGES || process.env.E2E_SCREENSHOTS) return;
+  await context.route(POKEAPI_IMAGES, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: route.request().url().includes("/sprites/types/") ? FAKE_TYPE_ICON : FAKE_SQUARE }),
+  );
 }
 
 export interface Player {
@@ -37,6 +82,7 @@ export async function newPlayer(browser: Browser, label: string): Promise<Player
   const name = `${label}_${randomInt(10_000, 99_999)}`;
   const ip = `10.${randomInt(1, 255)}.${randomInt(1, 255)}.${randomInt(1, 255)}`;
   const context = await browser.newContext({ extraHTTPHeaders: { "X-Forwarded-For": ip } });
+  await fakePokeApiImages(context);
   const page = await context.newPage();
   return { name, email: `${name}@example.com`, ip, context, page };
 }
@@ -117,6 +163,29 @@ export async function logIn(page: Page, email: string, password: string): Promis
 export async function createRoomWithRounds(page: Page, rounds: number): Promise<string> {
   await page.getByLabel("Largo de la partida").selectOption("custom-rounds");
   await page.getByLabel("Máximo de rondas").fill(String(rounds));
+  await page.getByRole("button", { name: "Crear sala" }).click();
+  const code = page.getByLabel("Código de la sala");
+  await expect(code).toBeVisible();
+  return ((await code.textContent()) ?? "").trim();
+}
+
+/**
+ * Crea una sala con las opciones dadas y devuelve su código. Sin opciones es la de siempre: tipos aleatorios, 3 rondas y
+ * sin pistas. Las opciones son casillas ocultas visualmente: se activan pulsando su texto, como lo haría una persona.
+ */
+export async function createRoom(
+  page: Page,
+  options: { rounds?: number; chosenTypes?: boolean; typeHints?: boolean } = {},
+): Promise<string> {
+  if (options.chosenTypes) await page.getByText("Elegido", { exact: true }).click();
+  if (options.typeHints) {
+    await page.getByText("Pistas de tipos", { exact: true }).click();
+    await expect(page.getByRole("switch", { name: "Pistas de tipos" })).toBeChecked();
+  }
+  if (options.rounds !== undefined) {
+    await page.getByLabel("Largo de la partida").selectOption("custom-rounds");
+    await page.getByLabel("Máximo de rondas").fill(String(options.rounds));
+  }
   await page.getByRole("button", { name: "Crear sala" }).click();
   const code = page.getByLabel("Código de la sala");
   await expect(code).toBeVisible();
