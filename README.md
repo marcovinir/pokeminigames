@@ -4,6 +4,8 @@ Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tip
 
 **Estado:** etapa 8 (pulido de la partida) completa sobre el juego de las etapas 1 a 7: servidor, cliente web, estadísticas, perfil, el rediseño visual de la etapa 6 (temas incluidos). Listo para desplegarse gratis en Render y Neon: la guía está en [`docs/despliegue.md`](docs/despliegue.md).
 
+**Para quien trabaje en el código (persona o agente):** la guía está en [`AGENTS.md`](AGENTS.md) y el trabajo pendiente, en las [issues de GitHub](https://github.com/marcovinir/pokemon-minigames/issues) (la que lleva la etiqueta `hoja-de-ruta` da el orden).
+
 ## Capturas
 
 Tema Clásico oscuro, en un navegador de 1280 × 720 (las genera la prueba `e2e/tests/screenshots.spec.ts`).
