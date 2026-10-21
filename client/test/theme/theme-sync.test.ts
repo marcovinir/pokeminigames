@@ -2,11 +2,11 @@ import type { ThemePreferences } from "@pokemon-minigames/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type StoreApi, createStore } from "zustand";
 import type { Endpoints } from "../../src/api/endpoints";
-import type { AuthUser } from "../../src/api/types";
+import type { AuthUser, SessionUser } from "../../src/api/types";
 import type { SessionState } from "../../src/session/session-store";
 import { syncThemeWithSession } from "../../src/theme/theme-sync";
 import { THEME_STORAGE_KEY, createThemeStore } from "../../src/theme/theme-store";
-import { ASH } from "../helpers/services";
+import { ASH, GUEST } from "../helpers/services";
 
 const userWith = (preferences: ThemePreferences | null, id = "u1"): AuthUser => ({ ...ASH, id, preferences });
 
@@ -25,7 +25,7 @@ function setup(options: { saved?: object; savePreferences?: () => Promise<void> 
   const savePreferences = vi.fn(options.savePreferences ?? (async () => {}));
   const endpoints = { auth: { savePreferences } } as unknown as Endpoints;
   const stop = syncThemeWithSession({ session, theme, endpoints });
-  const signIn = (user: AuthUser) => session.setState({ status: "authenticated", user });
+  const signIn = (user: SessionUser) => session.setState({ status: "authenticated", user });
   const signOut = () => session.setState({ status: "anonymous", user: null });
   const changeSystemTheme = (dark: boolean) => {
     media.matches = dark;
@@ -86,6 +86,40 @@ describe("al iniciar sesión", () => {
     theme.getState().setTheme("clasico");
     signIn(userWith({ theme: "pokedex", themeMode: "oscuro" })); // p. ej. una renovación de la sesión
     expect(theme.getState().preference.theme).toBe("clasico");
+  });
+});
+
+describe("con un invitado", () => {
+  it("entrar como invitado no sube la preferencia del navegador y cambiar el tema nunca llama a savePreferences", () => {
+    const { theme, signIn, savePreferences } = setup({ saved: { theme: "pokedex", mode: "oscuro" } });
+    signIn(GUEST);
+    expect(savePreferences).not.toHaveBeenCalled();
+    theme.getState().setTheme("clasico");
+    theme.getState().setMode("claro");
+    expect(savePreferences).not.toHaveBeenCalled();
+    expect(theme.getState().preference).toEqual({ theme: "clasico", mode: "claro" });
+  });
+
+  it("un invitado que crea una cuenta sigue el camino de siempre: manda la del servidor, o sube la elegida si no hay ninguna", () => {
+    const withStored = setup();
+    withStored.signIn(GUEST);
+    withStored.signIn(userWith({ theme: "pokedex", themeMode: "oscuro" }));
+    expect(withStored.theme.getState().preference).toEqual({ theme: "pokedex", mode: "oscuro" });
+    expect(withStored.savePreferences).not.toHaveBeenCalled();
+
+    const without = setup();
+    without.signIn(GUEST);
+    without.theme.getState().setTheme("pokedex");
+    expect(without.savePreferences).not.toHaveBeenCalled();
+    without.signIn(userWith(null));
+    expect(without.savePreferences).toHaveBeenCalledWith({ theme: "pokedex", themeMode: "auto" });
+  });
+
+  it("con una cuenta sigue todo igual: cada cambio se guarda", () => {
+    const { theme, signIn, savePreferences } = setup();
+    signIn(userWith({ theme: "clasico", themeMode: "auto" }));
+    theme.getState().setTheme("pokedex");
+    expect(savePreferences).toHaveBeenCalledTimes(1);
   });
 });
 

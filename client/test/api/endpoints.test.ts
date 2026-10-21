@@ -36,6 +36,24 @@ describe("endpoints de autenticación", () => {
     expect(api.getToken()).toBe("tok");
   });
 
+  it("auth.guest envía { username } sin token a /auth/guest y guarda el token de acceso", async () => {
+    const guest = { user: { id: "guest_x", username: "inv_1", guest: true }, accessToken: "gtok" };
+    const { api, endpoints, fetchMock } = setup(() => json(201, guest));
+    api.setToken("viejo");
+    const result = await endpoints.auth.guest("inv_1");
+    expect(result).toEqual(guest);
+    expect(lastCall(fetchMock)).toEqual({ url: "/auth/guest", method: "POST", body: { username: "inv_1" } });
+    const headers = new Headers(fetchMock.mock.calls.at(-1)![1]?.headers);
+    expect(headers.has("Authorization")).toBe(false);
+    expect(api.getToken()).toBe("gtok");
+  });
+
+  it("un nombre de invitado rechazado no deja token", async () => {
+    const { api, endpoints } = setup(() => json(400, { error: { code: "VALIDATION_ERROR", message: "x" } }));
+    await expect(endpoints.auth.guest("ab")).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(api.getToken()).toBeNull();
+  });
+
   it("un login fallido no deja token", async () => {
     const { api, endpoints } = setup(() => json(401, { error: { code: "INVALID_CREDENTIALS", message: "x" } }));
     await expect(endpoints.auth.login({ email: "a@b.co", password: "x" })).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });

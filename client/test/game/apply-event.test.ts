@@ -66,6 +66,23 @@ describe("eventos de la sala de espera y del inicio", () => {
     expect(renamed.players.map((p) => p.username)).toEqual(["ash", "gary"]);
   });
 
+  it("room-state y player-joined conservan guest en players y lo quitan si el nuevo jugador no lo es", () => {
+    const seat1 = { seat: 1 as const, username: "ash", connected: true, totalStats: 0, teamSize: 0 };
+    const fromState = play([[event.roomState({ players: [seat1, { ...seat1, seat: 2, username: "inv", guest: true }] })]]);
+    expect(fromState.players.map((p) => p.guest)).toEqual([undefined, true]);
+
+    const alone = play([[event.roomState({ players: [seat1] })]]);
+    const guestJoined = applyServerEvent(alone, event.playerJoined("inv", true), SERVER_NOW);
+    expect(guestJoined.players[1]).toMatchObject({ seat: 2, username: "inv", guest: true });
+
+    const accountJoined = applyServerEvent(guestJoined, event.playerJoined("misty"), SERVER_NOW);
+    expect(accountJoined.players[1]).toMatchObject({ username: "misty" });
+    expect("guest" in accountJoined.players[1]!).toBe(false);
+
+    const plain = applyServerEvent(alone, event.playerJoined("misty"), SERVER_NOW);
+    expect("guest" in plain.players[1]!).toBe(false);
+  });
+
   it("game-starting pasa a la cuenta atrás y mide el desfase", () => {
     const view = play([[event.roomState()], [event.gameStarting(SERVER_NOW + 5000, SERVER_NOW), SERVER_NOW + 2000]]);
     expect(view).toMatchObject({ phase: "starting", startsAt: SERVER_NOW + 5000, clockOffset: -2000 });

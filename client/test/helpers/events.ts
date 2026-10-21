@@ -77,7 +77,10 @@ export function gameEnded(overrides: Partial<GameEndedPayload> = {}): GameEndedP
 /** Atajos para armar eventos del servidor completos. */
 export const event = {
   roomState: (overrides?: Partial<RoomStateView>): ServerEvent => ({ name: "room-state", payload: roomState(overrides) }),
-  playerJoined: (username: string): ServerEvent => ({ name: "player-joined", payload: { username } }),
+  playerJoined: (username: string, guest?: boolean): ServerEvent => ({
+    name: "player-joined",
+    payload: { username, ...(guest ? { guest: true } : {}) },
+  }),
   gameStarting: (startsAt: number, serverNow = SERVER_NOW): ServerEvent => ({
     name: "game-starting",
     payload: { startsAt, serverNow },

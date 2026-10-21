@@ -9,9 +9,23 @@ export interface AuthUser {
   preferences: ThemePreferences | null;
 }
 
-/** Respuesta de /auth/register, /auth/login y /auth/refresh. */
+/** Quien entró como invitado: sin cuenta, sin correo y sin estadísticas; su partida no se guarda. */
+export interface GuestUser {
+  id: string;
+  username: string;
+  guest: true;
+}
+
+/** Quien tiene la sesión abierta: una cuenta o un invitado. */
+export type SessionUser = AuthUser | GuestUser;
+
+export function isGuest(user: SessionUser | null): user is GuestUser {
+  return user !== null && "guest" in user && user.guest === true;
+}
+
+/** Respuesta de /auth/register, /auth/login, /auth/guest y /auth/refresh. */
 export interface AuthSession {
-  user: AuthUser;
+  user: SessionUser;
   accessToken: string;
 }
 

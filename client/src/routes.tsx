@@ -1,5 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { isGuest } from "./api/types";
 import { useSession } from "./services";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { LobbyPage } from "./pages/Lobby";
@@ -15,11 +16,22 @@ function RequireAuth() {
   return <Outlet />;
 }
 
-/** Rutas para quien aún no ha entrado: con sesión llevan al lobby. */
+/** Rutas solo de cuentas (perfil y estadísticas): un invitado no tiene nada que ver ahí y vuelve al lobby. */
+function RequireAccount() {
+  const user = useSession((s) => s.user);
+  if (isGuest(user)) return <Navigate to="/" replace />;
+  return <Outlet />;
+}
+
+/**
+ * Rutas para quien aún no ha entrado: con una cuenta abierta llevan al lobby. Un invitado sí puede verlas: es cómo
+ * se pasa de invitado a tener cuenta.
+ */
 function PublicOnly() {
   const status = useSession((s) => s.status);
+  const user = useSession((s) => s.user);
   if (status === "loading") return <LoadingScreen />;
-  if (status === "authenticated") return <Navigate to="/" replace />;
+  if (status === "authenticated" && !isGuest(user)) return <Navigate to="/" replace />;
   return <Outlet />;
 }
 
@@ -33,8 +45,10 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<LobbyPage />} />
         <Route path="/sala/:code" element={<RoomPage />} />
-        <Route path="/perfil" element={<ProfilePage />} />
-        <Route path="/jugador/:username" element={<ProfilePage />} />
+        <Route element={<RequireAccount />}>
+          <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/jugador/:username" element={<ProfilePage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

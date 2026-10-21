@@ -1,5 +1,6 @@
 import type { StoreApi } from "zustand";
 import type { Endpoints } from "../api/endpoints";
+import { isGuest } from "../api/types";
 import type { SessionState } from "../session/session-store";
 import type { ThemePreference, ThemeState } from "./theme-store";
 
@@ -18,6 +19,7 @@ const same = (a: ThemePreference, b: ThemePreference): boolean => a.theme === b.
  * - Con la sesión iniciada, cada cambio se guarda en el servidor sin bloquear nada: si falla, la preferencia
  *   local sigue valiendo. Aplicar la que vino del servidor no la vuelve a guardar (sin eco).
  * - Sin sesión, todo queda en el navegador. Cerrar sesión conserva el tema actual.
+ * - Un invitado no tiene perfil: el tema queda en el navegador y nunca se sube nada.
  * Devuelve la función que detiene la sincronización.
  */
 export function syncThemeWithSession({ session, theme, endpoints }: ThemeSyncDeps): () => void {
@@ -32,6 +34,10 @@ export function syncThemeWithSession({ session, theme, endpoints }: ThemeSyncDep
   const onSession = (state: SessionState, previous?: SessionState): void => {
     if (state.status === "anonymous") known = null;
     if (state.status !== "authenticated") return;
+    if (isGuest(state.user)) {
+      known = null;
+      return;
+    }
     // Otra actualización de la misma sesión (p. ej. al renovarla) no debe pisar lo que la persona eligió.
     if (previous?.status === "authenticated" && previous.user?.id === state.user?.id) return;
 
@@ -50,7 +56,8 @@ export function syncThemeWithSession({ session, theme, endpoints }: ThemeSyncDep
   const stopTheme = theme.subscribe((state, previous) => {
     // Solo importan los cambios de la preferencia, no los del modo resuelto cuando cambia el tema del sistema.
     if (state.preference === previous.preference) return;
-    if (session.getState().status !== "authenticated") return;
+    const { status, user } = session.getState();
+    if (status !== "authenticated" || isGuest(user)) return;
     if (known && same(state.preference, known)) return;
     save(state.preference);
   });

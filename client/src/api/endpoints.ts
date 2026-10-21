@@ -29,6 +29,8 @@ export interface Endpoints {
   auth: {
     register(input: Registration): Promise<AuthSession>;
     login(input: Credentials): Promise<AuthSession>;
+    /** Entra como invitado, solo con un nombre: sin cuenta y sin estadísticas. */
+    guest(username: string): Promise<AuthSession>;
     /** Renueva la sesión con la cookie de refresco; `null` si no hay sesión. */
     refresh(): Promise<AuthSession | null>;
     logout(): Promise<void>;
@@ -67,6 +69,7 @@ export function createEndpoints(api: ApiClient): Endpoints {
     auth: {
       register: (input) => startSession("/auth/register", input),
       login: (input) => startSession("/auth/login", input),
+      guest: (username) => startSession("/auth/guest", { username }),
       refresh: () => api.refreshSession(),
       async logout() {
         try {

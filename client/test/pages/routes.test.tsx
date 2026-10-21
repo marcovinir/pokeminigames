@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { AppRoutes } from "../../src/routes";
-import { LocationProbe, fakeServices, renderWithServices, signIn } from "../helpers/services";
+import { GUEST, LocationProbe, fakeServices, renderWithServices, signIn } from "../helpers/services";
 
 function renderApp(route: string, prepare?: (services: ReturnType<typeof fakeServices>) => void) {
   const services = fakeServices();
@@ -34,6 +34,36 @@ describe("rutas del perfil", () => {
   it("con sesión, /jugador/:username muestra el perfil de esa persona", async () => {
     renderApp("/jugador/misty", (s) => signIn(s));
     expect(await screen.findByRole("heading", { name: "misty" })).toBeInTheDocument();
+  });
+});
+
+describe("rutas para un invitado", () => {
+  it("un invitado en /perfil o /jugador/misty termina en el lobby (no tiene perfil ni estadísticas)", async () => {
+    for (const route of ["/perfil", "/jugador/misty"]) {
+      const { unmount } = renderApp(route, (s) => signIn(s, GUEST));
+      expect(await screen.findByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+      expect(screen.getByTestId("location")).toHaveTextContent("/");
+      unmount();
+    }
+  });
+
+  it("un invitado puede ver el lobby y una sala", async () => {
+    const { unmount } = renderApp("/", (s) => signIn(s, GUEST));
+    expect(screen.getByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+    unmount();
+    renderApp("/sala/ABC234", (s) => signIn(s, GUEST));
+    expect(screen.getByTestId("location")).toHaveTextContent("/sala/ABC234");
+  });
+
+  it("en /login y /registro un invitado se queda (puede crear una cuenta)", async () => {
+    const login = renderApp("/login", (s) => signIn(s, GUEST));
+    expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/login");
+    login.unmount();
+
+    renderApp("/registro", (s) => signIn(s, GUEST));
+    expect(await screen.findByRole("heading", { name: "Crear cuenta" })).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/registro");
   });
 });
 

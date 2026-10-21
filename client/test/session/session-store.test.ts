@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../src/api/client";
-import { ASH, fakeServices } from "../helpers/services";
+import { isGuest } from "../../src/api/types";
+import { ASH, GUEST, fakeServices } from "../helpers/services";
 
 function setup() {
   const services = fakeServices();
@@ -63,6 +64,50 @@ describe("sesión", () => {
       await store.getState().register({ email: "ash@example.com", username: "ash", password: "pikachu-123" });
       expect(endpoints.auth.register).toHaveBeenCalledTimes(1);
       expect(store.getState().user).toEqual(ASH);
+    });
+  });
+
+  describe("invitado", () => {
+    it("loginAsGuest abre la sesión como invitado: status authenticated y user { guest: true }", async () => {
+      const { store, endpoints } = setup();
+      await store.getState().loginAsGuest("inv_9");
+      expect(endpoints.auth.guest).toHaveBeenCalledWith("inv_9");
+      expect(store.getState()).toMatchObject({ status: "authenticated", user: { ...GUEST, username: "inv_9" } });
+      expect(isGuest(store.getState().user)).toBe(true);
+    });
+
+    it("un nombre rechazado lanza el error y no abre la sesión", async () => {
+      const { store, endpoints } = setup();
+      vi.mocked(endpoints.auth.guest).mockRejectedValueOnce(new ApiError(429, "RATE_LIMITED"));
+      await expect(store.getState().loginAsGuest("inv_9")).rejects.toMatchObject({ code: "RATE_LIMITED" });
+      expect(store.getState()).toMatchObject({ status: "loading", user: null });
+    });
+
+    it("bootstrap con la cookie de invitado (refresh devuelve un invitado) deja al invitado autenticado", async () => {
+      const { store, endpoints } = setup();
+      vi.mocked(endpoints.auth.refresh).mockResolvedValueOnce({ user: GUEST, accessToken: "tok" });
+      await store.getState().bootstrap();
+      expect(store.getState()).toMatchObject({ status: "authenticated", user: GUEST });
+      expect(isGuest(store.getState().user)).toBe(true);
+    });
+
+    it("iniciar sesión o registrarse siendo invitado sustituye al invitado por la cuenta", async () => {
+      const { store } = setup();
+      await store.getState().loginAsGuest("inv_9");
+      await store.getState().login({ email: "ash@example.com", password: "pikachu-123" });
+      expect(store.getState().user).toEqual(ASH);
+      expect(isGuest(store.getState().user)).toBe(false);
+
+      await store.getState().logout();
+      await store.getState().loginAsGuest("inv_9");
+      await store.getState().register({ email: "ash@example.com", username: "ash", password: "pikachu-123" });
+      expect(store.getState().user).toEqual(ASH);
+    });
+
+    it("isGuest distingue al invitado de una cuenta y de nadie", () => {
+      expect(isGuest(GUEST)).toBe(true);
+      expect(isGuest(ASH)).toBe(false);
+      expect(isGuest(null)).toBe(false);
     });
   });
 

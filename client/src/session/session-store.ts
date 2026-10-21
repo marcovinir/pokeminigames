@@ -1,16 +1,18 @@
 import { type StoreApi, createStore } from "zustand";
 import type { Credentials, Endpoints, Registration } from "../api/endpoints";
-import type { AuthUser } from "../api/types";
+import type { SessionUser } from "../api/types";
 
 export type SessionStatus = "loading" | "authenticated" | "anonymous";
 
 export interface SessionState {
   status: SessionStatus;
-  user: AuthUser | null;
+  user: SessionUser | null;
   /** Al cargar la aplicación: intenta recuperar la sesión con la cookie de refresco. Solo corre una vez. */
   bootstrap(): Promise<void>;
   login(credentials: Credentials): Promise<void>;
   register(registration: Registration): Promise<void>;
+  /** Entra como invitado, solo con un nombre: juega igual que una cuenta pero no guarda nada. */
+  loginAsGuest(username: string): Promise<void>;
   logout(): Promise<void>;
   /** La sesión se perdió (no se pudo renovar): hay que volver a iniciar sesión. */
   expire(): void;
@@ -38,6 +40,11 @@ export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState>
 
     async register(registration) {
       const session = await endpoints.auth.register(registration);
+      set({ status: "authenticated", user: session.user });
+    },
+
+    async loginAsGuest(username) {
+      const session = await endpoints.auth.guest(username);
       set({ status: "authenticated", user: session.user });
     },
 

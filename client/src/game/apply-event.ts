@@ -105,14 +105,21 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     }
 
     case "player-joined": {
+      const { username, guest } = event.payload;
+      // `guest` solo está (y vale true) en los invitados: quien llega sustituye al anterior, no hereda su marca.
+      const joiner = (rest: Omit<RoomPlayerView, "guest">): RoomPlayerView => ({ ...rest, username, ...(guest ? { guest: true } : {}) });
       const exists = view.players.some((p) => p.seat !== view.mySeat);
       return {
         ...view,
         players: exists
-          ? view.players.map((p) => (p.seat !== view.mySeat ? { ...p, username: event.payload.username } : p))
+          ? view.players.map((p) => {
+              if (p.seat === view.mySeat) return p;
+              const { guest: _previous, ...rest } = p;
+              return joiner(rest);
+            })
           : [
               ...view.players,
-              { seat: view.mySeat === 1 ? 2 : 1, username: event.payload.username, connected: false, totalStats: 0, teamSize: 0 },
+              joiner({ seat: view.mySeat === 1 ? 2 : 1, username, connected: false, totalStats: 0, teamSize: 0 }),
             ],
       };
     }

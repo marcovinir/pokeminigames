@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { vi } from "vitest";
 import type { Endpoints } from "../../src/api/endpoints";
-import type { AuthUser, PokemonName } from "../../src/api/types";
+import type { AuthUser, GuestUser, PokemonName, SessionUser } from "../../src/api/types";
 import { createNamesStore } from "../../src/catalog/names-store";
 import { createGameStore } from "../../src/game/store";
 import { ServicesProvider, type Services } from "../../src/services";
@@ -18,6 +18,9 @@ export const ASH: AuthUser = {
   createdAt: "2026-01-01T00:00:00.000Z",
   preferences: null,
 };
+
+/** Una persona que entró como invitada: sin cuenta, sin correo, sin estadísticas. */
+export const GUEST: GuestUser = { id: "guest_abc", username: "inv_1", guest: true };
 
 /** Estadísticas de una persona que todavía no ha jugado. */
 export const NO_STATS: Stats = {
@@ -54,6 +57,7 @@ export function fakeServices(): FakeServices {
     auth: {
       register: vi.fn(async () => ({ user: ASH, accessToken: "tok" })),
       login: vi.fn(async () => ({ user: ASH, accessToken: "tok" })),
+      guest: vi.fn(async (username: string) => ({ user: { ...GUEST, username }, accessToken: "tok" })),
       refresh: vi.fn(async () => null),
       logout: vi.fn(async () => {}),
       savePreferences: vi.fn(async () => {}),
@@ -89,7 +93,7 @@ export function fakeServices(): FakeServices {
 }
 
 /** Deja la sesión como iniciada, sin pasar por el arranque. */
-export function signIn(services: Services, user: AuthUser = ASH): void {
+export function signIn(services: Services, user: SessionUser = ASH): void {
   services.session.setState({ status: "authenticated", user });
 }
 
