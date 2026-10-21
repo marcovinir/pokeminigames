@@ -1,9 +1,8 @@
+import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ApiError } from "../api/client";
 import { useServices } from "../services";
-import { useEmailVerification } from "../session/auth-options";
 import { AuthForm } from "./AuthForm";
-import { AuthLayout } from "./AuthLayout";
+import { AuthHero } from "./AuthHero";
 import { validateLogin, validateRegistration } from "./auth-validation";
 
 /** A dónde volver tras iniciar sesión: la pantalla que se intentó abrir, o el lobby. */
@@ -12,13 +11,20 @@ function useReturnPath(): string {
   return state?.from?.pathname ?? "/";
 }
 
+/** El lema y la explicación a un lado y el formulario al otro (uno encima del otro en pantallas estrechas). */
+function AuthLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="mx-auto grid max-w-4xl grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-12">
+      <AuthHero />
+      {children}
+    </div>
+  );
+}
+
 export function LoginPage() {
   const { session } = useServices();
   const navigate = useNavigate();
   const returnTo = useReturnPath();
-  // Con la verificación apagada no hay correos que enviar: no se ofrece recuperar la contraseña.
-  const emailVerification = useEmailVerification();
-  const notice = (useLocation().state as { notice?: string } | null)?.notice;
 
   return (
     <AuthLayout>
@@ -26,26 +32,9 @@ export function LoginPage() {
         title="Iniciar sesión"
         submitLabel="Entrar"
         validate={validateLogin}
-        notice={notice}
-        extra={
-          emailVerification ? (
-            <Link to="/olvide" className="text-sm font-semibold text-accent underline">
-              ¿Olvidaste tu contraseña?
-            </Link>
-          ) : undefined
-        }
         onSubmit={async ({ email, password }) => {
-          try {
-            await session.getState().login({ email, password });
-            navigate(returnTo, { replace: true });
-          } catch (error) {
-            // La contraseña era correcta pero falta verificar el correo (el servidor ya envió un código nuevo): a verificarlo.
-            if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
-              navigate("/verificar", { state: { email, notice: "Tu correo aún no está verificado. Te enviamos un código.", returnTo } });
-              return;
-            }
-            throw error;
-          }
+          await session.getState().login({ email, password });
+          navigate(returnTo, { replace: true });
         }}
         footer={
           <>
@@ -72,12 +61,7 @@ export function RegisterPage() {
         withUsername
         validate={validateRegistration}
         onSubmit={async ({ email, username, password }) => {
-          const pending = await session.getState().register({ email, username, password });
-          // Con la verificación activa no hay sesión todavía: el código llegó por correo.
-          if (pending) {
-            navigate("/verificar", { state: { email: pending.email } });
-            return;
-          }
+          await session.getState().register({ email, username, password });
           navigate("/", { replace: true });
         }}
         footer={

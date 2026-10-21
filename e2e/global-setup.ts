@@ -80,11 +80,6 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       COOKIE_SECURE: "true",
       COOKIE_SAME_SITE: "lax",
       TRUST_PROXY: "1",
-      // Las cuentas piden el código del correo, y los correos no salen: quedan en un buzón en memoria que la prueba lee
-      // en /auth/test-outbox (en producción esa ruta solo existe con ALLOW_MEMORY_MAIL=true, que solo pone este servidor).
-      EMAIL_VERIFICATION: "on",
-      MAIL_PROVIDER: "memory",
-      ALLOW_MEMORY_MAIL: "true",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
