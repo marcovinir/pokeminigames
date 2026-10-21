@@ -48,6 +48,11 @@ describe("textos del historial", () => {
 });
 
 describe("mensajes de error", () => {
+  it("los errores del modo invitado tienen su mensaje en español", () => {
+    expect(errorMessage("ACCOUNT_REQUIRED")).toBe("Necesitas una cuenta para esto.");
+    expect(errorMessage("NAME_IN_USE")).toBe("Ya hay alguien con ese nombre en la sala. Entra con otro nombre.");
+  });
+
   it("una petición de otro origen tiene su propio mensaje, no el genérico", () => {
     expect(errorMessage("FORBIDDEN")).toBe("Esa petición no está permitida desde este sitio.");
     expect(errorMessage("FORBIDDEN")).not.toBe(errorMessage("INTERNAL_ERROR"));

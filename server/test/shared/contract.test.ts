@@ -36,6 +36,11 @@ describe("paquete shared", () => {
     expect(THEME_MODES).toEqual(["auto", "claro", "oscuro"]);
   });
 
+  it("incluye los códigos del modo invitado", () => {
+    expect(ERROR_CODES).toContain("ACCOUNT_REQUIRED");
+    expect(ERROR_CODES).toContain("NAME_IN_USE");
+  });
+
   it("los códigos de error no se repiten e incluyen los de salas y partida", () => {
     expect(new Set(ERROR_CODES).size).toBe(ERROR_CODES.length);
     for (const code of ["ALREADY_IN_GAME", "ROOM_NOT_FOUND", "ROOM_FULL", "ROOM_CLOSED", "NOT_IN_ROOM", "WRONG_PHASE", "ALREADY_ANSWERED", "ALREADY_CHOSEN", "INVALID_TYPE", "RATE_LIMITED"]) {

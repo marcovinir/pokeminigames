@@ -6,6 +6,8 @@ export const ERROR_CODES = [
   "INVALID_CREDENTIALS",
   "UNAUTHORIZED",
   "FORBIDDEN",
+  /** Un invitado intentó algo que es solo de cuentas (perfil, estadísticas, preferencias). */
+  "ACCOUNT_REQUIRED",
   "INVALID_REFRESH_TOKEN",
   "NOT_FOUND",
   "USER_NOT_FOUND",
@@ -15,6 +17,8 @@ export const ERROR_CODES = [
   "ROOM_NOT_FOUND",
   "ROOM_FULL",
   "ROOM_CLOSED",
+  /** Quien se une tiene el mismo nombre que la otra persona de la sala. */
+  "NAME_IN_USE",
   // Partida (Socket.io)
   "NOT_IN_ROOM",
   "WRONG_PHASE",

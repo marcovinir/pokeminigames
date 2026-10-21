@@ -12,6 +12,8 @@ import type {
 export interface RoomPlayerView {
   seat: Seat;
   username: string;
+  /** Solo está (y vale `true`) si es un invitado: sin cuenta, sin estadísticas. Ausente = cuenta. */
+  guest?: boolean;
   connected: boolean;
   totalStats: number;
   teamSize: number;
@@ -96,7 +98,7 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   "room-state": (payload: RoomStateView) => void;
-  "player-joined": (payload: { username: string }) => void;
+  "player-joined": (payload: { username: string; guest?: boolean }) => void;
   "game-starting": (payload: { startsAt: number; serverNow: number }) => void;
   "choose-types": (payload: { round: number; deadline: number; serverNow: number }) => void;
   "type-received": (payload: { round: number }) => void;
