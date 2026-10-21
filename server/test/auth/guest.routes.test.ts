@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { GUEST_COOKIE, GUEST_SESSION_TTL_MS, createGuestSessions } from "../../src/auth/guest-sessions.js";
-import { DEFAULT_RATE_LIMITS } from "../../src/http/limits.js";
+import { DEFAULT_RATE_LIMITS, rateLimitsFor } from "../../src/http/limits.js";
 import { buildTestContext } from "../helpers/app.js";
 import { prisma, resetDatabase } from "../helpers/db.js";
 
@@ -146,6 +146,11 @@ describe("la cuenta sustituye al invitado y salir cierra todo", () => {
 });
 
 describe("límite de sesiones de invitado por IP", () => {
+  it("en producción el límite es de 20 sesiones por hora y por IP", () => {
+    expect(DEFAULT_RATE_LIMITS.guestSessions).toEqual({ limit: 20, windowMs: 60 * 60 * 1000 });
+    expect(rateLimitsFor("production")).toMatchObject({ guestSessions: { limit: 20, windowMs: 60 * 60 * 1000 } });
+  });
+
   it("la tercera sesión de la misma IP con un límite de 2 da 429 RATE_LIMITED con Retry-After", async () => {
     const limited = buildTestContext({}, { rateLimits: { ...DEFAULT_RATE_LIMITS, guestSessions: { limit: 2, windowMs: 60_000 } } });
     for (const name of ["inv_1", "inv_2"]) expect((await request(limited.app).post("/auth/guest").send({ username: name })).status).toBe(201);
