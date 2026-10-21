@@ -11,6 +11,27 @@ describe("motor: sala y conexiones", () => {
     expect(h.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire" } }]);
   });
 
+  it("una sala de revancha caduca a los 30 s y su estado lo dice; una normal sigue caducando a los 10 min y sin la clave", () => {
+    const rematch = new Harness({ rematch: true });
+    expect(rematch.state.rematch).toBe(true);
+    expect(rematch.pending).toEqual([{ at: START_TIME + 30 * 1000, timer: { kind: "expire" } }]);
+
+    const normal = new Harness();
+    expect("rematch" in normal.state).toBe(false);
+    expect(normal.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire" } }]);
+  });
+
+  it("si el rival no entra a la sala de revancha, a los 30 s caduca como una sala en espera (abandonada, motivo expired)", () => {
+    const h = new Harness({ rematch: true });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(29_000);
+    expect(h.state.phase).toBe("waiting");
+    h.advance(1_000);
+    expect(h.state.phase).toBe("finished");
+    expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+  });
+
   describe("PLAYER_JOINED", () => {
     it("ocupa el asiento 2, avisa al creador y pide guardar el asiento", () => {
       const h = new Harness();

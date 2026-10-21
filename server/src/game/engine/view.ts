@@ -77,6 +77,7 @@ export function buildRoomState(
     opponentTeam: teamViews(state, otherSeat(seat), catalog),
     roundsPlayed: state.roundsPlayed,
     startsAt: state.phase === "starting" ? state.startsAt : null,
+    ...(state.rematch ? { rematch: true as const } : {}),
     opponentGraceEndsAt: state.graceEndsAt[otherSeat(seat)] ?? null,
     round,
   };

@@ -59,6 +59,8 @@ export interface GameState {
   owners: Map<number, Seat>;
   /** Hora a la que caduca la sala si sigue en espera. */
   expiresAt: number;
+  /** Solo está (y vale `true`) en las salas que nacen de una revancha: caducan a los 30 s en vez de a los 10 min. */
+  rematch?: true;
   startsAt: number | null;
   /** Si un jugador está desconectado en plena partida: hasta cuándo puede volver. */
   graceEndsAt: Partial<Record<Seat, number>>;

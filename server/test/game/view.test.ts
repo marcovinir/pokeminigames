@@ -3,6 +3,13 @@ import { buildGameEnded, buildRoomState } from "../../src/game/engine/view.js";
 import { CHOSEN_3, Harness, RANDOM_3 } from "./harness.js";
 
 describe("vistas de la partida", () => {
+  it("room-state lleva rematch: true solo en las salas de revancha y los toEqual de siempre no cambian", () => {
+    const rematch = new Harness({ config: RANDOM_3, rematch: true });
+    expect(buildRoomState(rematch.state, 1, "ABC234", rematch.catalog, rematch.now).rematch).toBe(true);
+    const normal = new Harness({ config: RANDOM_3 });
+    expect("rematch" in buildRoomState(normal.state, 1, "ABC234", normal.catalog, normal.now)).toBe(false);
+  });
+
   it("incluye la hora del servidor con la que se generó el estado", () => {
     const h = new Harness({ config: RANDOM_3 });
     h.advance(1234);

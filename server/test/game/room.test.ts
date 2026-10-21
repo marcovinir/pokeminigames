@@ -8,7 +8,7 @@ import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
 const ONE_ROUND: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
 const creator = { userId: "u1", username: "ash", isGuest: false };
 
-function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0], opts: { gameId?: string | null; creator?: RoomUser } = {}) {
+function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0], opts: { gameId?: string | null; creator?: RoomUser; rematch?: boolean } = {}) {
   const time = new FakeTime();
   const broadcaster = new RecordingBroadcaster();
   const repository = new FakeRepository();
@@ -25,7 +25,7 @@ function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0], opts: { game
       persistAttempts: 3,
       persistRetryDelayMs: 0,
     },
-    { code: "ABC234", gameId: opts.gameId === undefined ? "game-1" : opts.gameId, config, creator: opts.creator ?? creator },
+    { code: "ABC234", gameId: opts.gameId === undefined ? "game-1" : opts.gameId, config, creator: opts.creator ?? creator, rematch: opts.rematch },
   );
   return { room, time, broadcaster, repository, logger };
 }
@@ -129,6 +129,61 @@ describe("GameRoom", () => {
     expect(onFinished).toHaveBeenCalledTimes(1);
     await room.idle();
     expect(repository.finishInput).toMatchObject({ status: "abandoned", reason: "expired", winnerUserId: null });
+  });
+
+  describe("al terminar: resultado y resumen reenviable (revancha)", () => {
+    it("outcome expone el motivo al terminar y es null antes", () => {
+      const { room, time } = setup();
+      expect(room.outcome).toBeNull();
+      startGame(room, time);
+      expect(room.outcome).toBeNull();
+      room.dispatch({ type: "LEAVE", seat: 2 });
+      expect(room.outcome).toEqual({ winnerSeat: 1, reason: "forfeit" });
+    });
+
+    it("players() devuelve usuario, nombre e isGuest por asiento", () => {
+      const { room } = setup();
+      expect(room.players()).toEqual({ 1: { userId: "u1", username: "ash", isGuest: false } });
+      room.dispatch({ type: "PLAYER_JOINED", userId: "guest_a", username: "inv", guest: true });
+      expect(room.players()).toEqual({
+        1: { userId: "u1", username: "ash", isGuest: false },
+        2: { userId: "guest_a", username: "inv", isGuest: true },
+      });
+    });
+
+    it("replaySummary manda room-state (finished) y game-ended solo a ese asiento, con los mismos equipos y totales", () => {
+      const { room, time, broadcaster } = setup();
+      startGame(room, time);
+      room.dispatch({ type: "SUBMIT", seat: 1, text: "Alfa" });
+      time.advance(15_000);
+      expect(room.phase).toBe("finished");
+      const original = broadcaster.last("game-ended")!;
+
+      const before = broadcaster.sent.length;
+      room.replaySummary(2);
+      const added = broadcaster.sent.slice(before);
+      expect(added.map((entry) => [entry.to, entry.event.name])).toEqual([
+        [2, "room-state"],
+        [2, "game-ended"],
+      ]);
+      expect(added[0]!.event.payload).toMatchObject({ phase: "finished", mySeat: 2, code: "ABC234" });
+      expect(added[1]!.event.payload).toEqual(original);
+    });
+
+    it("replaySummary en una sala sin terminar no envía nada", () => {
+      const { room, broadcaster } = setup();
+      const before = broadcaster.sent.length;
+      room.replaySummary(1);
+      expect(broadcaster.sent.length).toBe(before);
+    });
+
+    it("una sala creada con rematch: true lo dice en su estado y caduca a los 30 s", () => {
+      const { room, time, broadcaster } = setup(ONE_ROUND, [0], { rematch: true });
+      room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+      expect(broadcaster.last("room-state", 1)).toMatchObject({ rematch: true });
+      time.advance(30_000);
+      expect(room.phase).toBe("finished");
+    });
   });
 
   describe("salas con un invitado: sin rastro en la base de datos", () => {

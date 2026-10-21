@@ -3,6 +3,7 @@ import { PokemonCatalog, type TypePair } from "../../catalog/pokemon-catalog.js"
 import {
   MIN_POOL_PER_PAIR,
   RECONNECT_GRACE_SECONDS,
+  REMATCH_ROOM_TTL_SECONDS,
   RESULT_PAUSE_SECONDS,
   ROUND_SECONDS,
   SIMULTANEOUS_WINDOW_MS,
@@ -72,6 +73,8 @@ export function createGame(
   config: RoomConfig,
   creator: { userId: string; username: string; guest?: boolean },
   now: number,
+  /** `rematch`: la sala nace de una revancha y los dos ya están dentro; si el rival no entra caduca pronto. */
+  options: { rematch?: boolean } = {},
 ): ReduceResult {
   const state: GameState = {
     phase: "waiting",
@@ -80,7 +83,8 @@ export function createGame(
     round: null,
     roundsPlayed: 0,
     owners: new Map(),
-    expiresAt: now + minutes(WAITING_ROOM_TTL_MINUTES),
+    expiresAt: now + (options.rematch ? seconds(REMATCH_ROOM_TTL_SECONDS) : minutes(WAITING_ROOM_TTL_MINUTES)),
+    ...(options.rematch ? { rematch: true as const } : {}),
     startsAt: null,
     graceEndsAt: {},
     outcome: null,

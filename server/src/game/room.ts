@@ -4,11 +4,12 @@ import { createGame, reduce } from "./engine/engine.js";
 import {
   type Effect,
   type GameEvent,
+  type GameOutcome,
   type GameState,
   type RoundRecord,
   SEATS,
 } from "./engine/types.js";
-import { buildRoomState } from "./engine/view.js";
+import { buildGameEnded, buildRoomState } from "./engine/view.js";
 import type { Broadcaster, Clock, GameRepository, Scheduler } from "./ports.js";
 import type { Rng } from "./rng.js";
 
@@ -55,13 +56,14 @@ export class GameRoom {
 
   static create(
     ports: GameRoomPorts,
-    input: { code: string; gameId: string | null; config: RoomConfig; creator: RoomUser },
+    input: { code: string; gameId: string | null; config: RoomConfig; creator: RoomUser; rematch?: boolean },
   ): GameRoom {
     const { creator } = input;
     const { state, effects } = createGame(
       input.config,
       { userId: creator.userId, username: creator.username, guest: creator.isGuest },
       ports.clock.now(),
+      { rematch: input.rematch },
     );
     const room = new GameRoom(ports, input.code, input.gameId, state);
     room.execute(effects);
@@ -74,6 +76,32 @@ export class GameRoom {
 
   get config(): RoomConfig {
     return this.state.config;
+  }
+
+  /** Cómo terminó la partida (ganador y motivo); `null` mientras no ha terminado. */
+  get outcome(): GameOutcome | null {
+    return this.state.outcome;
+  }
+
+  /** Quién está sentado en cada asiento, con si es invitado (sale del estado del motor). */
+  players(): Partial<Record<Seat, RoomUser>> {
+    const players: Partial<Record<Seat, RoomUser>> = {};
+    for (const seat of SEATS) {
+      const player = this.state.players[seat];
+      if (player) players[seat] = { userId: player.userId, username: player.username, isGuest: player.guest === true };
+    }
+    return players;
+  }
+
+  /**
+   * Vuelve a mandarle a ese asiento el resumen de una partida terminada (el estado y el final), para quien recarga o
+   * reconecta mientras la sala sigue viva por una oferta de revancha. En una sala sin terminar no hace nada.
+   */
+  replaySummary(seat: Seat): void {
+    if (this.state.phase !== "finished") return;
+    const { broadcaster, catalog } = this.ports;
+    broadcaster.toSeat(this.code, seat, { name: "room-state", payload: this.view(seat) });
+    broadcaster.toSeat(this.code, seat, { name: "game-ended", payload: buildGameEnded(this.state, catalog) });
   }
 
   /** ¿Se guarda esta partida en la base de datos? Deja de guardarse en cuanto entra un invitado, y ya no vuelve. */
