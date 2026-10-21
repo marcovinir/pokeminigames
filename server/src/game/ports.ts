@@ -33,6 +33,8 @@ export interface GameRepository {
   markStarted(gameId: string): Promise<void>;
   saveRound(gameId: string, round: RoundRecord): Promise<void>;
   finish(gameId: string, input: FinishInput): Promise<void>;
+  /** Borra una partida que sigue `waiting` y sus jugadores (porque entró un invitado y esa partida no se guarda). */
+  discardGame(gameId: string): Promise<void>;
   /** Marca como abandonadas las partidas que quedaron `waiting` o `in_progress` (p. ej. tras reiniciar). */
   abandonUnfinished(): Promise<number>;
 }

@@ -84,6 +84,8 @@ export class FakeRepository implements GameRepository {
   delays: Record<string, number> = {};
   rounds: RoundRecord[] = [];
   finishInput: FinishInput | null = null;
+  /** Ids de las partidas descartadas (borradas porque entró un invitado). */
+  discarded: string[] = [];
   abandonCalls = 0;
   private nextId = 1;
 
@@ -126,6 +128,12 @@ export class FakeRepository implements GameRepository {
   finish(_gameId: string, input: FinishInput): Promise<void> {
     return this.run("finish", `finish:${input.status}`, () => {
       this.finishInput = input;
+    });
+  }
+
+  discardGame(gameId: string): Promise<void> {
+    return this.run("discardGame", `discardGame:${gameId}`, () => {
+      this.discarded.push(gameId);
     });
   }
 

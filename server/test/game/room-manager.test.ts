@@ -1,5 +1,5 @@
 import type { RoomConfig } from "@pokemon-minigames/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Prisma } from "../../src/generated/prisma/client.js";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../src/game/constants.js";
 import { RoomManager, generateRoomCode } from "../../src/game/room-manager.js";
@@ -12,8 +12,10 @@ const config: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", rou
 const ash = { userId: "u1", username: "ash" };
 const misty = { userId: "u2", username: "misty" };
 const brock = { userId: "u3", username: "brock" };
+const inv = { userId: "guest_a", username: "inv", isGuest: true };
 
 function setup(generateCode?: () => string) {
+  const logger = { error: vi.fn() };
   const time = new FakeTime();
   const repository = new FakeRepository();
   const store = new InMemoryRoomStore();
@@ -26,9 +28,19 @@ function setup(generateCode?: () => string) {
     rng: seededRng(7),
     store,
     generateCode,
+    logger,
     persistRetryDelayMs: 0,
   });
-  return { manager, time, repository, store };
+  return { manager, time, repository, store, logger };
+}
+
+/** Conecta a los dos asientos, deja pasar la cuenta atrás y juega una ronda hasta el final de la partida. */
+function playOneRound(room: NonNullable<ReturnType<InMemoryRoomStore["get"]>>, time: FakeTime): void {
+  room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+  room.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+  time.advance(5000);
+  room.dispatch({ type: "SUBMIT", seat: 1, text: "Alfa" });
+  time.advance(15_000);
 }
 
 async function rejection(promise: unknown): Promise<{ status: number; code: string }> {
@@ -121,6 +133,114 @@ describe("RoomManager.createRoom", () => {
     time.advance(10 * 60 * 1000); // caduca sin que nadie se una
     expect(store.get(code)).toBeUndefined();
     await expect(manager.createRoom(ash, config)).resolves.toBeTruthy();
+  });
+});
+
+describe("RoomManager con invitados", () => {
+  const oneRound: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
+
+  it("una sala creada por un invitado no llama a createGame ni a ninguna escritura durante toda la partida", async () => {
+    const { manager, store, repository, time } = setup();
+    const { code } = await manager.createRoom(inv, oneRound);
+    expect(store.get(code)?.seatOf("guest_a")).toBe(1);
+    manager.joinRoom(misty, code);
+    const room = store.get(code)!;
+    expect(room.persisted).toBe(false);
+    playOneRound(room, time);
+    expect(room.phase).toBe("finished");
+    await room.idle();
+    expect(repository.calls).toEqual([]);
+    expect(repository.timeline).toEqual([]);
+  });
+
+  it("una cuenta crea y se une un invitado: discardGame se llama una vez y, después, ni asiento, inicio, rondas ni final", async () => {
+    const { manager, store, repository, time } = setup();
+    const { code } = await manager.createRoom(ash, oneRound);
+    expect(repository.calls).toEqual(["createGame"]);
+    manager.joinRoom(inv, code);
+    const room = store.get(code)!;
+    playOneRound(room, time);
+    expect(room.phase).toBe("finished");
+    await room.idle();
+    expect(repository.calls).toEqual(["createGame", "discardGame:game-1"]);
+  });
+
+  it("si el invitado se va antes de empezar y entra una cuenta, la sala sigue sin guardarse (markNotPersisted es permanente)", async () => {
+    const { manager, store, repository } = setup();
+    const { code } = await manager.createRoom(ash, oneRound);
+    manager.joinRoom(inv, code);
+    const room = store.get(code)!;
+    room.dispatch({ type: "LEAVE", seat: 2 });
+    expect(room.hasSeat(2)).toBe(false);
+    manager.joinRoom(misty, code);
+    expect(room.seatOf("u2")).toBe(2);
+    expect(room.persisted).toBe(false);
+    await room.idle();
+    expect(repository.calls).toEqual(["createGame", "discardGame:game-1"]);
+  });
+
+  it("si discardGame falla, se registra el error y la partida se juega igual sin guardarse", async () => {
+    const { manager, store, repository, time, logger } = setup();
+    repository.failures.discardGame = 99;
+    const { code } = await manager.createRoom(ash, oneRound);
+    manager.joinRoom(inv, code);
+    const room = store.get(code)!;
+    playOneRound(room, time);
+    await room.idle();
+    expect(room.phase).toBe("finished");
+    expect(repository.calls).toEqual(["createGame"]);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+  });
+
+  it("dos cuentas se siguen guardando como siempre: sin descarte", async () => {
+    const { manager, store, repository } = setup();
+    const { code } = await manager.createRoom(ash, oneRound);
+    manager.joinRoom(misty, code);
+    await store.get(code)!.idle();
+    expect(store.get(code)!.persisted).toBe(true);
+    expect(repository.calls).toEqual(["createGame", "addSecondPlayer:u2"]);
+  });
+
+  it("NAME_IN_USE (409) al unirse con el mismo nombre que el creador, sin distinguir mayúsculas, sea invitado o cuenta; con otro nombre entra", async () => {
+    const { manager, store, repository } = setup();
+    const { code } = await manager.createRoom(ash, oneRound);
+    for (const joiner of [
+      { userId: "u9", username: "ASH" },
+      { userId: "guest_b", username: "Ash", isGuest: true },
+    ]) {
+      expect(syncRejection(() => manager.joinRoom(joiner, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
+    }
+    // Un intento rechazado no cambia nada: la sala sigue libre y guardándose.
+    const room = store.get(code)!;
+    expect(room.hasSeat(2)).toBe(false);
+    expect(room.persisted).toBe(true);
+    await room.idle();
+    expect(repository.calls).toEqual(["createGame"]);
+
+    expect(manager.joinRoom(inv, code)).toEqual({ code });
+    expect(room.seatOf("guest_a")).toBe(2);
+  });
+
+  it("NAME_IN_USE también cuando el creador es el invitado y quien llega es una cuenta", async () => {
+    const { manager } = setup();
+    const { code } = await manager.createRoom(inv, oneRound);
+    expect(syncRejection(() => manager.joinRoom({ userId: "u9", username: "INV" }, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
+  });
+
+  it("el creador invitado puede volver a pedir unirse a su sala (idempotente) y no puede crear otra", async () => {
+    const { manager } = setup();
+    const { code } = await manager.createRoom(inv, oneRound);
+    expect(manager.joinRoom(inv, code)).toEqual({ code });
+    expect(await rejection(manager.createRoom(inv, oneRound))).toEqual({ status: 409, code: "ALREADY_IN_GAME" });
+  });
+
+  it("el código de la sala de un invitado solo se comprueba contra las salas en memoria: si choca, genera otro", async () => {
+    const codes = ["AAAAAA", "AAAAAA", "BBBBBB"];
+    const { manager, repository } = setup(() => codes.shift()!);
+    await manager.createRoom(ash, oneRound);
+    const { code } = await manager.createRoom(inv, oneRound);
+    expect(code).toBe("BBBBBB");
+    expect(repository.calls).toEqual(["createGame"]);
   });
 });
 

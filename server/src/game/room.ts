@@ -46,7 +46,8 @@ export class GameRoom {
   private constructor(
     private readonly ports: GameRoomPorts,
     readonly code: string,
-    private readonly gameId: string,
+    /** La fila de `games` de esta sala; `null` si no se guarda (la juega un invitado). */
+    private gameId: string | null,
     state: GameState,
   ) {
     this.state = state;
@@ -54,9 +55,14 @@ export class GameRoom {
 
   static create(
     ports: GameRoomPorts,
-    input: { code: string; gameId: string; config: RoomConfig; creator: RoomUser },
+    input: { code: string; gameId: string | null; config: RoomConfig; creator: RoomUser },
   ): GameRoom {
-    const { state, effects } = createGame(input.config, input.creator, ports.clock.now());
+    const { creator } = input;
+    const { state, effects } = createGame(
+      input.config,
+      { userId: creator.userId, username: creator.username, guest: creator.isGuest },
+      ports.clock.now(),
+    );
     const room = new GameRoom(ports, input.code, input.gameId, state);
     room.execute(effects);
     return room;
@@ -68,6 +74,22 @@ export class GameRoom {
 
   get config(): RoomConfig {
     return this.state.config;
+  }
+
+  /** ¿Se guarda esta partida en la base de datos? Deja de guardarse en cuanto entra un invitado, y ya no vuelve. */
+  get persisted(): boolean {
+    return this.gameId !== null;
+  }
+
+  /**
+   * Entra un invitado: esta partida no deja rastro para nadie. Si ya había una fila de `games` la descarta, en la misma
+   * cadena de escrituras (detrás de lo que ya estuviera encolado) y con el reintento de siempre. Es permanente e idempotente.
+   */
+  markNotPersisted(): void {
+    const gameId = this.gameId;
+    if (gameId === null) return;
+    this.gameId = null;
+    this.enqueue("descartar la partida", () => this.ports.repository.discardGame(gameId));
   }
 
   seatOf(userId: string): Seat | undefined {
@@ -136,24 +158,24 @@ export class GameRoom {
           broadcaster.toSeat(this.code, effect.to, { name: "room-state", payload: this.view(effect.to) });
           break;
         case "persist_seat_taken":
-          this.persist("unir al segundo jugador", () => repository.addSecondPlayer(this.gameId, effect.userId));
+          this.persist("unir al segundo jugador", (gameId) => repository.addSecondPlayer(gameId, effect.userId));
           break;
         case "persist_seat_freed":
-          this.persist("liberar el asiento 2", () => repository.removeSecondPlayer(this.gameId));
+          this.persist("liberar el asiento 2", (gameId) => repository.removeSecondPlayer(gameId));
           break;
         case "persist_started":
-          this.persist("marcar el inicio", () => repository.markStarted(this.gameId));
+          this.persist("marcar el inicio", (gameId) => repository.markStarted(gameId));
           break;
         case "persist_round": {
           const record: RoundRecord = effect.record;
-          this.persist(`guardar la ronda ${record.number}`, () => repository.saveRound(this.gameId, record));
+          this.persist(`guardar la ronda ${record.number}`, (gameId) => repository.saveRound(gameId, record));
           break;
         }
         case "persist_end": {
           const winner = effect.outcome.winnerSeat;
           const winnerUserId = winner ? (this.state.players[winner]?.userId ?? null) : null;
-          this.persist("guardar el final", () =>
-            repository.finish(this.gameId, {
+          this.persist("guardar el final", (gameId) =>
+            repository.finish(gameId, {
               status: effect.status,
               reason: effect.outcome.reason,
               winnerUserId,
@@ -166,12 +188,19 @@ export class GameRoom {
     }
   }
 
+  /** Encola una escritura de esta partida; si la sala no se guarda (invitados), la ignora. */
+  private persist(label: string, operation: (gameId: string) => Promise<void>): void {
+    const gameId = this.gameId;
+    if (gameId === null) return;
+    this.enqueue(label, () => operation(gameId));
+  }
+
   /**
    * Encola una escritura. Se ejecutan de una en una y en orden (la ronda 2 nunca se guarda
    * antes que la ronda 1). Un fallo se reintenta y, si persiste, se registra: la partida en
    * curso nunca se detiene por un problema de guardado.
    */
-  private persist(label: string, operation: () => Promise<void>): void {
+  private enqueue(label: string, operation: () => Promise<void>): void {
     this.persistChain = this.persistChain.then(async () => {
       const attempts = this.ports.persistAttempts ?? 3;
       const delay = this.ports.persistRetryDelayMs ?? 500;

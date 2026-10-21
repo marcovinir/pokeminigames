@@ -47,13 +47,16 @@ export class RoomManager {
         const code = this.deps.generateCode?.() ?? generateRoomCode(this.deps.rng);
         if (this.deps.store.get(code)) continue;
 
-        let gameId: string;
-        try {
-          gameId = await this.deps.repository.createGame({ roomCode: code, config, creatorUserId: user.userId });
-        } catch (error) {
-          // El código ya se usó en una partida anterior (la base de datos lo exige único).
-          if (isUniqueViolation(error)) continue;
-          throw error;
+        // Un invitado no tiene fila en `users`: su sala no se guarda (y su código solo debe ser único entre las salas vivas).
+        let gameId: string | null = null;
+        if (!user.isGuest) {
+          try {
+            gameId = await this.deps.repository.createGame({ roomCode: code, config, creatorUserId: user.userId });
+          } catch (error) {
+            // El código ya se usó en una partida anterior (la base de datos lo exige único).
+            if (isUniqueViolation(error)) continue;
+            throw error;
+          }
         }
 
         const room = GameRoom.create(this.deps, { code, gameId, config, creator: user });
@@ -77,8 +80,14 @@ export class RoomManager {
     if (room.hasSeat(2)) throw new AppError(409, "ROOM_FULL", "La sala está llena");
     // También cuenta quien está creando una sala en este momento: si no, podría quedar sentado en dos.
     if (this.deps.store.findByUser(user.userId) || this.pendingCreates.has(user.userId)) throw alreadyInGame();
+    // Dos personas con el mismo nombre en una sala no se distinguirían en pantalla (los invitados eligen su nombre).
+    if (room.creatorName().toLowerCase() === user.username.toLowerCase()) {
+      throw new AppError(409, "NAME_IN_USE", "Ya hay alguien con ese nombre en la sala");
+    }
 
-    room.dispatch({ type: "PLAYER_JOINED", userId: user.userId, username: user.username });
+    // Con un invitado la partida no deja rastro para nadie: se descarta ANTES de sentarlo, para que no se guarde su asiento.
+    if (user.isGuest) room.markNotPersisted();
+    room.dispatch({ type: "PLAYER_JOINED", userId: user.userId, username: user.username, ...(user.isGuest ? { guest: true } : {}) });
     return { code: room.code };
   }
 

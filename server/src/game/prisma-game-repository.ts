@@ -68,6 +68,14 @@ export function createPrismaGameRepository(prisma: PrismaClient): GameRepository
       });
     },
 
+    async discardGame(gameId) {
+      // Solo las que esperan: descartar nunca debe llevarse una partida con rondas ni unos stats ya guardados.
+      await prisma.$transaction([
+        prisma.gamePlayer.deleteMany({ where: { gameId, game: { status: "waiting" } } }),
+        prisma.game.deleteMany({ where: { id: gameId, status: "waiting" } }),
+      ]);
+    },
+
     async abandonUnfinished() {
       const result = await prisma.game.updateMany({
         where: { status: { in: ["waiting", "in_progress"] } },

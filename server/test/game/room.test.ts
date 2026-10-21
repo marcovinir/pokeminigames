@@ -1,6 +1,6 @@
 import type { RoomConfig } from "@pokemon-minigames/shared";
 import { describe, expect, it, vi } from "vitest";
-import { GameRoom } from "../../src/game/room.js";
+import { GameRoom, type RoomUser } from "../../src/game/room.js";
 import { fixtureCatalog } from "../helpers/fixtures.js";
 import { sequenceRng } from "../helpers/rng.js";
 import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
@@ -8,7 +8,7 @@ import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
 const ONE_ROUND: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
 const creator = { userId: "u1", username: "ash" };
 
-function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0]) {
+function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0], opts: { gameId?: string | null; creator?: RoomUser } = {}) {
   const time = new FakeTime();
   const broadcaster = new RecordingBroadcaster();
   const repository = new FakeRepository();
@@ -25,7 +25,7 @@ function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0]) {
       persistAttempts: 3,
       persistRetryDelayMs: 0,
     },
-    { code: "ABC234", gameId: "game-1", config, creator },
+    { code: "ABC234", gameId: opts.gameId === undefined ? "game-1" : opts.gameId, config, creator: opts.creator ?? creator },
   );
   return { room, time, broadcaster, repository, logger };
 }
@@ -129,6 +129,89 @@ describe("GameRoom", () => {
     expect(onFinished).toHaveBeenCalledTimes(1);
     await room.idle();
     expect(repository.finishInput).toMatchObject({ status: "abandoned", reason: "expired", winnerUserId: null });
+  });
+
+  describe("salas con un invitado: sin rastro en la base de datos", () => {
+    const guest: RoomUser = { userId: "guest_a", username: "inv", isGuest: true };
+
+    it("una sala con gameId null no se guarda: juega una partida entera y no escribe nada", async () => {
+      const { room, time, repository } = setup(ONE_ROUND, [0], { gameId: null, creator: guest });
+      expect(room.persisted).toBe(false);
+      startGame(room, time);
+      room.dispatch({ type: "SUBMIT", seat: 1, text: "Alfa" });
+      time.advance(15_000);
+      expect(room.phase).toBe("finished");
+      await room.idle();
+      expect(repository.calls).toEqual([]);
+      expect(repository.timeline).toEqual([]);
+    });
+
+    it("el creador invitado queda marcado en el estado de la sala", () => {
+      const { room, broadcaster } = setup(ONE_ROUND, [0], { gameId: null, creator: guest });
+      room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+      expect(broadcaster.last("room-state", 1)!.players[0]).toMatchObject({ username: "inv", guest: true });
+    });
+
+    it("una sala con gameId sí se guarda (persisted)", () => {
+      expect(setup().room.persisted).toBe(true);
+    });
+
+    it("markNotPersisted descarta la partida una sola vez y deja de guardar asiento, inicio, rondas y final", async () => {
+      const { room, time, repository } = setup();
+      room.markNotPersisted();
+      room.markNotPersisted(); // idempotente
+      expect(room.persisted).toBe(false);
+      room.dispatch({ type: "PLAYER_JOINED", userId: "guest_a", username: "inv", guest: true });
+      room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+      room.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+      time.advance(5000);
+      room.dispatch({ type: "SUBMIT", seat: 1, text: "Alfa" });
+      time.advance(15_000);
+      expect(room.phase).toBe("finished");
+      await room.idle();
+      expect(repository.calls).toEqual(["discardGame:game-1"]);
+    });
+
+    it("el descarte espera a lo que ya estaba en la cola y reintenta si falla", async () => {
+      const { room, repository } = setup();
+      repository.failures.discardGame = 2;
+      room.markNotPersisted();
+      await room.idle();
+      expect(repository.discarded).toEqual(["game-1"]);
+      expect(repository.timeline.filter((entry) => entry.startsWith("discardGame:"))).toEqual([
+        "discardGame:start",
+        "discardGame:fail",
+        "discardGame:start",
+        "discardGame:fail",
+        "discardGame:start",
+        "discardGame:end",
+      ]);
+    });
+
+    it("si el descarte falla siempre, se registra el error y la sala sigue jugando sin guardarse", async () => {
+      const { room, time, repository, logger } = setup();
+      repository.failures.discardGame = 99;
+      room.markNotPersisted();
+      room.dispatch({ type: "PLAYER_JOINED", userId: "guest_a", username: "inv", guest: true });
+      room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+      room.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+      time.advance(5000);
+      room.dispatch({ type: "SUBMIT", seat: 1, text: "Alfa" });
+      time.advance(15_000);
+      await room.idle();
+      expect(room.phase).toBe("finished");
+      expect(room.persisted).toBe(false);
+      expect(repository.calls).toEqual([]);
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      expect(logger.error.mock.calls[0]![0]).toContain("descartar");
+    });
+
+    it("markNotPersisted en una sala que nunca se guardó no llama a la base de datos", async () => {
+      const { room, repository } = setup(ONE_ROUND, [0], { gameId: null, creator: guest });
+      room.markNotPersisted();
+      await room.idle();
+      expect(repository.timeline).toEqual([]);
+    });
   });
 
   describe("guardado en la base de datos", () => {

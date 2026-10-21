@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { RoomConfig } from "@pokemon-minigames/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedCatalog } from "../../src/catalog/seed.js";
@@ -128,6 +129,32 @@ describe("createPrismaGameRepository", () => {
     ).rejects.toThrow();
     const game = await prisma.game.findUniqueOrThrow({ where: { id } });
     expect(game).toMatchObject({ status: "waiting", endReason: null, endedAt: null });
+  });
+
+  it("discardGame borra la partida en espera y sus jugadores y no toca otras partidas", async () => {
+    const waiting = await repository.createGame({ roomCode: "ABC234", config, creatorUserId: ash });
+    await repository.addSecondPlayer(waiting, misty);
+    const other = await repository.createGame({ roomCode: "ZZZ999", config, creatorUserId: misty });
+
+    await repository.discardGame(waiting);
+
+    expect(await prisma.game.findMany({ select: { id: true } })).toEqual([{ id: other }]);
+    const players = await prisma.gamePlayer.findMany();
+    expect(players.map((p) => [p.gameId, p.userId, p.seat])).toEqual([[other, misty, 1]]);
+  });
+
+  it("discardGame solo borra partidas que esperan: una que ya empezó o terminó se queda, y un id que no existe no falla", async () => {
+    const started = await repository.createGame({ roomCode: "ABC234", config, creatorUserId: ash });
+    await repository.markStarted(started);
+    const finished = await repository.createGame({ roomCode: "DEF567", config, creatorUserId: ash });
+    await repository.finish(finished, { status: "abandoned", reason: "cancelled", winnerUserId: null, finalStats: {} });
+
+    await repository.discardGame(started);
+    await repository.discardGame(finished);
+    await expect(repository.discardGame(randomUUID())).resolves.toBeUndefined();
+
+    expect(await prisma.game.count()).toBe(2);
+    expect(await prisma.gamePlayer.count()).toBe(2);
   });
 
   it("abandonUnfinished marca como abandonadas solo las partidas en espera o en curso", async () => {
