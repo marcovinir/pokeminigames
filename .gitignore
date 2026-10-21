@@ -10,3 +10,6 @@ server/src/generated/
 
 e2e/test-results/
 e2e/playwright-report/
+
+# Maquetas y artefactos de las sesiones de diseño (brainstorming)
+.superpowers/

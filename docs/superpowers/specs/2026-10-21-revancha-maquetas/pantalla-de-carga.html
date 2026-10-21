@@ -1,0 +1,81 @@
+<style>
+  .rm-phone{background:linear-gradient(#d7e9ff,#eef6ff);border-radius:14px;padding:18px 14px;min-height:430px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Fredoka","Nunito",system-ui,sans-serif;color:#14213d}
+  .rm-card{background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(20,33,61,.14);padding:22px 16px;width:100%;max-width:270px;text-align:center}
+  .rm-h{font-size:21px;font-weight:600;margin:0 0 4px;line-height:1.15}
+  .rm-sub{font-size:12.5px;color:#4a5a78;margin:6px 0}
+  .rm-vs{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0 10px}
+  .rm-av{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:19px}
+  .rm-av.a{background:#1f5fd1}.rm-av.b{background:#8a4b0f}
+  .rm-vstxt{font-weight:700;color:#5a6b8c;font-size:15px}
+  .rm-ball{width:54px;height:54px;border-radius:50%;border:4px solid #1b1f2a;background:linear-gradient(#d6322f 0 46%,#1b1f2a 46% 54%,#fff 54% 100%);position:relative;animation:rm-rock 1.1s ease-in-out infinite;margin:0 auto}
+  .rm-ball::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#fff;border:3.5px solid #1b1f2a}
+  @keyframes rm-rock{0%,100%{transform:rotate(-16deg)}50%{transform:rotate(16deg)}}
+  .rm-ring{width:84px;height:84px;border-radius:50%;border:9px solid #d6322f;border-top-color:#e7eefc;margin:12px auto 6px;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700}
+  .rm-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;background:#e8f3ea;color:#1f6b34;margin:2px}
+  .rm-pill.wait{background:#fff3d6;color:#8a5a00}
+  .rm-serie{margin-top:12px;padding-top:10px;border-top:1px solid #e1e8f5;font-size:12.5px;color:#4a5a78}
+  .rm-serie b{color:#14213d;font-size:15px}
+  .rm-dots{display:flex;justify-content:center;gap:5px;margin-top:8px}
+  .rm-dots i{width:8px;height:8px;border-radius:50%;background:#c9d6ee;display:block}
+  .rm-dots i.on{background:#d6322f}
+</style>
+
+<h2>¿Qué pasa entre «los dos aceptaron» y «empieza la partida»?</h2>
+<p class="subtitle">Tres ideas para la pantalla de carga de la revancha (así se vería en el teléfono, con el tema Clásico). Pulsa la que más te guste.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="rm-phone">
+        <div class="rm-card">
+          <p class="rm-h">¡Revancha contra misty!</p>
+          <div class="rm-vs"><div class="rm-av a">A5</div><span class="rm-vstxt">VS</span><div class="rm-av b">MI</div></div>
+          <p class="rm-sub">La partida empieza en…</p>
+          <div class="rm-ring">5</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Directo a la cuenta atrás</h3>
+      <p>Sin pantalla nueva: el resumen salta a la cuenta atrás de siempre, solo con el título «¡Revancha!». Lo más simple.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="rm-phone">
+        <div class="rm-card">
+          <p class="rm-h">¡Revancha!</p>
+          <div class="rm-vs"><div class="rm-av a">A5</div><div class="rm-ball"></div><div class="rm-av b">MI</div></div>
+          <p class="rm-sub">Preparando la sala…</p>
+          <div><span class="rm-pill">✓ Tú, listo</span><span class="rm-pill wait">misty entrando…</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Pantalla «¡Revancha!» con Poké Ball</h3>
+      <p>Una pantalla corta y con personalidad: los dos avatares, una Poké Ball que se mece y quién ya entró a la sala nueva. Dura lo que tarde en abrirse (casi siempre 1–2 s) y pasa sola a la cuenta atrás.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="rm-phone">
+        <div class="rm-card">
+          <p class="rm-h">¡Revancha n.º 2!</p>
+          <div class="rm-vs"><div class="rm-av a">A5</div><div class="rm-ball"></div><div class="rm-av b">MI</div></div>
+          <p class="rm-sub">Preparando la sala…</p>
+          <div class="rm-serie">Serie contra misty<br><b>1 – 0</b> a tu favor
+            <div class="rm-dots"><i class="on"></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Como B, con el marcador de la serie</h3>
+      <p>Además cuenta las victorias entre estas dos personas mientras sigan rematchando («1 – 0»). Es solo memoria de la sala: no se guarda en la base de datos. Más «rivalidad», algo más de trabajo.</p>
+    </div>
+  </div>
+
+</div>

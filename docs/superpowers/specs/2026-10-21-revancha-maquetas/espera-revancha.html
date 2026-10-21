@@ -1,0 +1,95 @@
+<style>
+  .rw-phone{background:linear-gradient(#d7e9ff,#eef6ff);border-radius:14px;padding:16px 12px;min-height:470px;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:flex-start;font-family:"Fredoka","Nunito",system-ui,sans-serif;color:#14213d}
+  .rw-card{background:#fff;border-radius:18px;box-shadow:0 6px 18px rgba(20,33,61,.13);padding:14px 14px;width:100%;max-width:280px;text-align:center}
+  .rw-h{font-size:17px;font-weight:600;margin:0}
+  .rw-sub{font-size:12px;color:#4a5a78;margin:4px 0 0}
+  .rw-bar{height:7px;border-radius:99px;background:#e1e8f5;overflow:hidden;margin-top:9px}
+  .rw-bar i{display:block;height:100%;width:72%;background:#d6322f;border-radius:99px}
+  .rw-btns{display:flex;gap:8px;justify-content:center;margin-top:10px}
+  .rw-btn{border-radius:99px;padding:6px 14px;font-size:12.5px;font-weight:600;border:2px solid #c9d6ee;background:#fff;color:#14213d}
+  .rw-btn.p{background:#c1272d;color:#fff;border-color:#9d1e23}
+  .rw-fact{background:#fff8e1;border:2px dashed #f0cf6b}
+  .rw-fact .lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#8a5a00;font-weight:700}
+  .rw-fact p{font-size:13px;margin:5px 0 0;line-height:1.35}
+  .rw-dots{display:flex;justify-content:center;gap:5px;margin-top:8px}
+  .rw-dots i{width:7px;height:7px;border-radius:50%;background:#e6d49a;display:block}.rw-dots i.on{background:#c98e00}
+  .rw-rec .lbl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#4a5a78;font-weight:700}
+  .rw-score{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px}
+  .rw-score .n{font-size:30px;font-weight:700;line-height:1}
+  .rw-score .who{font-size:12px;color:#4a5a78;font-weight:600}
+  .rw-av{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
+  .rw-av.a{background:#1f5fd1}.rw-av.b{background:#8a4b0f}
+  .rw-form{display:flex;justify-content:center;gap:4px;margin-top:8px}
+  .rw-form i{width:20px;height:20px;border-radius:50%;font-style:normal;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+  .rw-form .w{background:#d6efdc;color:#1f6b34}.rw-form .l{background:#fbdcdc;color:#a02020}.rw-form .d{background:#e6eaf3;color:#4a5a78}
+  .rw-note{font-size:12.5px;color:#4a5a78;margin-top:10px}
+</style>
+
+<h2>Mientras el rival decide: dato curioso y récord</h2>
+<p class="subtitle">Así se vería el bloque de revancha en el resumen, justo después de que pulsas «Revancha». El récord cuenta las partidas completadas entre esas dos cuentas (nuestra suposición, igual que en las estadísticas). Pulsa la distribución que prefieras.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="rw-phone">
+        <div class="rw-card">
+          <p class="rw-h">Esperando a misty…</p>
+          <p class="rw-sub">Le quedan 43 s para decidir</p>
+          <div class="rw-bar"><i></i></div>
+          <div class="rw-btns"><span class="rw-btn">Cancelar</span></div>
+        </div>
+        <div class="rw-card rw-fact">
+          <span class="lbl">¿Sabías que…?</span>
+          <p>Shuckle tiene la defensa base más alta de todos los Pokémon: 230.</p>
+          <div class="rw-dots"><i class="on"></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="rw-card rw-rec">
+          <span class="lbl">Récord contra misty</span>
+          <div class="rw-score"><span class="rw-av a">A5</span><span class="n">3 – 2</span><span class="rw-av b">MI</span></div>
+          <div class="rw-form"><i class="w">G</i><i class="l">P</i><i class="w">G</i><i class="d">E</i><i class="w">G</i></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Dato curioso primero</h3>
+      <p>Arriba lo importante (quién falta y cuánto tiempo), en medio el dato que cambia cada pocos segundos y abajo el récord con las últimas 5 partidas (G = ganada, P = perdida, E = empate).</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="rw-phone">
+        <div class="rw-card rw-rec">
+          <span class="lbl">Tú contra misty</span>
+          <div class="rw-score"><span class="rw-av a">A5</span><span class="n" style="font-size:38px">3 – 2</span><span class="rw-av b">MI</span></div>
+          <p class="rw-sub">5 partidas jugadas · vas ganando</p>
+          <div class="rw-form"><i class="w">G</i><i class="l">P</i><i class="w">G</i><i class="d">E</i><i class="w">G</i></div>
+        </div>
+        <div class="rw-card">
+          <p class="rw-h">Esperando a misty…</p>
+          <p class="rw-sub">Le quedan 43 s para decidir</p>
+          <div class="rw-bar"><i></i></div>
+          <div class="rw-btns"><span class="rw-btn">Cancelar</span></div>
+        </div>
+        <div class="rw-card rw-fact" style="padding:10px 14px">
+          <span class="lbl">¿Sabías que…?</span>
+          <p style="font-size:12.5px">Hay 18 tipos, pero solo 153 combinaciones de dos tipos distintos.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Récord primero (la rivalidad)</h3>
+      <p>El marcador grande arriba, como un cartel de combate; debajo el estado de la espera y, más pequeño, el dato curioso. Más protagonismo para la rivalidad.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section">
+  <h3>Y en los casos raros</h3>
+  <ul>
+    <li><strong>Primera vez que se enfrentan:</strong> en vez de «0 – 0», «Primera vez que se enfrentan». Aparece el dato curioso igual.</li>
+    <li><strong>Hay un invitado:</strong> los invitados no existen en la base de datos, así que no hay récord; solo se ve el dato curioso (y la partida tampoco cuenta para nadie).</li>
+  </ul>
+</div>
