@@ -124,6 +124,8 @@ describe("el bloque de revancha del resumen", () => {
     await serverSends(services, event.rematchState({ status: "theirs", deadline: SERVER_NOW + 60_000 }));
     expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("misty quiere la revancha");
     expect(screen.getByRole("heading", { name: "misty quiere la revancha" })).toHaveFocus();
+    // El título no es un control (no está en el orden del tabulador): recibir el foco no le pinta el aro de los botones.
+    expect(screen.getByRole("heading", { name: "misty quiere la revancha" }).className).toContain("outline-none");
   });
 });
 

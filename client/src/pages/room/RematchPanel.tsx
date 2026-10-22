@@ -157,7 +157,7 @@ export function RematchPanel() {
       {offer.record ? <RecordCard record={offer.record} me={me?.username ?? "Tú"} rival={rival} /> : null}
       <Card as="section" aria-labelledby={headingId} className="p-4 text-center">
         <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
-          <h2 id={headingId} ref={headingRef} tabIndex={-1} className="min-w-0 font-display text-lg font-semibold [overflow-wrap:anywhere]">
+          <h2 id={headingId} ref={headingRef} tabIndex={-1} className="min-w-0 font-display text-lg font-semibold outline-none [overflow-wrap:anywhere]">
             {mine ? rematchWaiting(rival) : rematchRequested(rival)}
           </h2>
           {opponent?.guest ? <GuestTag /> : null}
