@@ -69,7 +69,7 @@ test("un invitado y una cuenta juegan una partida completa; el invitado recarga 
     await expect(guest.page.getByRole("heading", { name: "Perdiste" })).toBeVisible({ timeout: 30_000 });
 
     // Sin perfiles: ni el invitado ni la cuenta pueden abrir el del otro desde el resumen.
-    await expect(ash.page.getByRole("button", { name: "Jugar de nuevo" })).toBeVisible();
+    await expect(ash.page.getByRole("button", { name: "Volver al lobby" })).toBeVisible();
     await expect(ash.page.getByRole("button", { name: /Ver perfil de/ })).toHaveCount(0);
     await expect(guest.page.getByRole("button", { name: /Ver perfil de/ })).toHaveCount(0);
 

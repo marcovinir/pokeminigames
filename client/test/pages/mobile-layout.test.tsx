@@ -227,3 +227,16 @@ describe("revancha en pantallas estrechas", () => {
     expect(classesOf(pill.closest("ul"))).toContain("flex-wrap");
   });
 });
+
+describe("resumen en pantallas estrechas", () => {
+  it("«Ver perfil de …» con un nombre de 30 letras se parte en vez de ensanchar la pantalla", () => {
+    const longName = "m".repeat(30);
+    renderRoom([
+      event.roomState({ phase: "finished", mySeat: 1, players: [ash(), misty({ username: longName })] }),
+      event.gameEnded({ winnerSeat: 1 }),
+    ]);
+    const button = screen.getByRole("button", { name: `Ver perfil de ${longName}` });
+    expect(classesOf(button)).toContain("max-w-full");
+    expect(classesOf(button)).toContain("[overflow-wrap:anywhere]");
+  });
+});

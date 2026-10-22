@@ -70,7 +70,7 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 | `npm run dev:client` | Cliente web con recarga en caliente |
 | `npm run build` | Construye el cliente (`client/dist`) y empaqueta el servidor (`server/dist/index.js`) |
 | `npm start` | Arranca la construcción de producción (necesita las variables de `NODE_ENV=production`, ver la guía de despliegue) |
-| `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el modo invitado, el límite de login, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
+| `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el modo invitado, la revancha, el límite de login, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
 | `npm test` | Todas las pruebas: servidor (usan la base `pokemon_minigames_test`) y cliente |
 | `npm run typecheck` | Verifica los tipos con `tsc` en todos los paquetes |
 | `npm run db:migrate -w server` | Crea/aplica migraciones en desarrollo |
@@ -99,6 +99,15 @@ En `/login`, bajo el formulario, «¿Sin cuenta? Juega como invitado» pide solo
 - **Sesión.** La cookie `guest_session` (HttpOnly, solo viaja a `/auth`) dura 24 horas y se renueva cada vez que se recupera la sesión; es un JWT firmado, sin nada en el servidor. Iniciar sesión o registrarse la borra: la cuenta sustituye al invitado. Salir borra todas las cookies de sesión. Quien se registra después empieza de cero.
 - **Se nota.** Donde aparece el nombre de un invitado (sala de espera, cuenta atrás, panel del rival y barra «Marcador», resultado de la ronda y resumen final) lleva la etiqueta «Invitado», y su encabezado muestra «Invitado» y «Crear cuenta» en lugar de «Mi perfil». En una sala no puede haber dos jugadores con el mismo nombre (sin distinguir mayúsculas): quien se une con uno repetido recibe `409 NAME_IN_USE`. El resumen no ofrece «Ver perfil de …» si alguno de los dos es invitado, y `/perfil` y `/jugador/:username` llevan a un invitado al lobby.
 - **Límite.** Hasta 20 sesiones de invitado por hora y por IP (429 `RATE_LIMITED`).
+
+## Revancha
+
+Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si las dos personas aceptan, el servidor abre una **sala nueva** con los mismos jugadores en los mismos asientos y **la misma configuración** (entera: también «Pistas de tipos» y cualquier opción futura), las dos pasan solas a ella por una pantalla corta, «¡Revancha!», y empieza la cuenta atrás de siempre. Ya no hay «Jugar de nuevo»; para jugar con otra persona, «Volver al lobby».
+
+- **Relojes.** Hay **5 minutos** desde el final de la partida para pedirla; quien la pide espera, y el rival tiene **60 s** desde esa petición para aceptar o rechazar. Si alguien se desconecta tiene **10 s** para volver (una recarga no cuenta como irse: el resumen y el estado de la revancha vuelven solos). Si en la sala nueva el rival no entra en **30 s**, la sala se cancela («… no llegó.»).
+- **Cuándo no hay.** Si la partida terminó por abandono, desconexión, cancelación o caducidad no se ofrece. Si se cierra sin revancha, quien se queda ve por qué: «… ya no quiere la revancha.» (canceló o rechazó), «… se fue.» (volvió al lobby, cerró la pestaña o no volvió en 10 s), «Se acabó el tiempo.», «La revancha ya no está disponible.» o «No se pudo crear la sala.».
+- **Mientras se espera.** Arriba, el **récord** entre las dos cuentas (todas las partidas completadas entre ellas, con las últimas 5 como G/P/E; en la primera, «Es su primera partida juntos»); debajo, el plazo y un **dato curioso** de Pokémon que cambia cada 6 s, calculado del catálogo (nunca hay cifras escritas a mano).
+- **Invitados.** La revancha funciona igual con invitados, pero sin récord, y la sala nueva tampoco se guarda (una partida con un invitado no deja filas). Entre dos cuentas cada revancha es una partida más en las estadísticas.
 
 ## Pulido de la partida
 
@@ -132,6 +141,7 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
+| `GET /pokemon/facts` | Público. Los datos curiosos de la pantalla de espera de la revancha: `{ facts }`, cada uno estructurado (`kind` y sus datos, p. ej. el Pokémon con más defensa base o cuántos Pokémon hay de un tipo); el cliente los redacta en español |
 | `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado; con `?types=1` cada elemento lleva además `types` (el cliente solo lo pide en salas con «Pistas de tipos») |
 | `GET /stats` | Tus estadísticas: `{ username, stats }` |
 | `GET /stats/history?limit=&before=` | Tus partidas completadas, de la más reciente a la más antigua (`limit` de 1 a 50, por defecto 20); `before` es el `nextCursor` de la página anterior. Devuelve `{ games, nextCursor }` |
@@ -148,7 +158,9 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `join-room` | `{ code }` (también sirve para reconectar; una segunda pestaña reemplaza a la primera) |
 | `choose-type` | `{ type }` (modo elegido) |
 | `submit-pokemon` | `{ text }` (un intento por ronda, máximo 100 caracteres) |
-| `leave-room` | — |
+| `leave-room` | — (también cuenta como salir de una oferta de revancha: el rival ve «se fue») |
+| `rematch-request` | — (pedir la revancha o aceptar la del rival) |
+| `rematch-cancel` | — (cancelar la propia o rechazar la del rival) |
 
 | Servidor → cliente | Cuándo |
 |---|---|
@@ -158,4 +170,6 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` y, si acertaron 0 o 1 jugadores, un `example`: un Pokémon libre de ese par que servía |
 | `game-ended` | Ganador, motivo, equipos y totales |
 | `opponent-disconnected`, `opponent-reconnected` | Caída y vuelta del rival |
+| `rematch-state` | Tras una partida terminada con normalidad: el estado de la oferta (`open`, `mine`, `theirs`, `starting` o `closed` con su `closedReason`), su `deadline` con `serverNow` y, entre dos cuentas, el `record` |
+| `rematch-room` | Los dos aceptaron: `{ code }` de la sala nueva (que trae `rematch: true` en su `room-state`) |
 | `error` | `{ code, message }` |

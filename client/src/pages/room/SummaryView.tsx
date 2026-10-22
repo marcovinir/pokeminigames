@@ -100,7 +100,8 @@ export function SummaryView() {
       <div className="flex flex-wrap justify-center gap-3">
         {/* Un invitado no tiene perfil: ni se ofrece el suyo ni el de quien juega contra él. */}
         {opponent && !opponent.guest && !isGuest(sessionUser) ? (
-          <Button size="lg" onClick={() => navigate(`/jugador/${encodeURIComponent(opponent.username)}`)}>
+          // Con un nombre largo (hasta 30 letras seguidas) el botón se parte en vez de ensanchar la pantalla del teléfono.
+          <Button size="lg" className="max-w-full [overflow-wrap:anywhere]" onClick={() => navigate(`/jugador/${encodeURIComponent(opponent.username)}`)}>
             Ver perfil de {opponent.username}
           </Button>
         ) : null}

@@ -175,6 +175,29 @@ export async function answer(page: Page, text: string): Promise<void> {
   await field.press("Enter");
 }
 
+/**
+ * Una partida de una ronda: `creator` crea la sala, `joiner` se une, el creador acierta y el otro falla. Termina con
+ * «Ganaste» y «Perdiste» en pantalla y devuelve el código de la sala.
+ */
+export async function playOneRoundGame(creator: Player, joiner: Player): Promise<string> {
+  const code = await createOneRoundRoom(creator.page);
+  await joinRoom(joiner.page, code);
+  const types = await roundTypes(creator.page);
+  await roundTypes(joiner.page);
+  await answer(creator.page, validAnswerFor(types));
+  await answer(joiner.page, "zzzzzz");
+  await expect(creator.page.getByRole("heading", { name: "Ganaste" })).toBeVisible({ timeout: 30_000 });
+  await expect(joiner.page.getByRole("heading", { name: "Perdiste" })).toBeVisible({ timeout: 30_000 });
+  return code;
+}
+
+/** El código de la sala que la página tiene abierta (`/sala/CODIGO`). */
+export function roomCodeOf(page: Page): string {
+  const match = /\/sala\/([^/?#]+)/.exec(page.url());
+  if (!match) throw new Error(`La página no está en una sala: ${page.url()}`);
+  return decodeURIComponent(match[1]!);
+}
+
 /** El valor que acompaña a una etiqueta de las estadísticas del perfil ("Partidas" → "1"). */
 export function fact(page: Page, label: string) {
   return page.getByText(label, { exact: true }).locator("xpath=following-sibling::dd");
