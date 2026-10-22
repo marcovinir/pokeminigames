@@ -8,6 +8,8 @@ import { GuestTag } from "../../components/GuestTag";
 import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
 import { END_REASON_LABELS } from "../../i18n/es";
+import { RematchLoadingView } from "./RematchLoadingView";
+import { RematchPanel } from "./RematchPanel";
 import { useRoom } from "./use-room";
 
 /** El Pokémon de más puntos va primero (con el arte grande); los demás siguen en el orden en que se ganaron. */
@@ -62,11 +64,13 @@ function BalanceIcon() {
 }
 
 export function SummaryView() {
-  const { view, opponent } = useRoom();
+  const { view, opponent, client } = useRoom();
   const navigate = useNavigate();
   const sessionUser = useSession((s) => s.user);
   const ended = view.ended;
   if (!ended || view.mySeat === null) return null;
+  // Los dos aceptaron la revancha: mientras se abre la sala nueva se ve la pantalla «¡Revancha!».
+  if (view.rematchOffer?.status === "starting" || view.nextRoom !== null) return <RematchLoadingView />;
 
   const mySeat = view.mySeat;
   const rivalSeat: Seat = mySeat === 1 ? 2 : 1;
@@ -86,22 +90,29 @@ export function SummaryView() {
         <p className="mt-3 font-num text-3xl tabular-nums">{scoreLabel(ended, mySeat)}</p>
       </Card>
 
+      <RematchPanel />
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
         <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} guest={opponent?.guest === true} />
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">
-        <Button variant="primary" size="lg" onClick={() => navigate("/", { state: { config: view.config } })}>
-          Jugar de nuevo
-        </Button>
         {/* Un invitado no tiene perfil: ni se ofrece el suyo ni el de quien juega contra él. */}
         {opponent && !opponent.guest && !isGuest(sessionUser) ? (
           <Button size="lg" onClick={() => navigate(`/jugador/${encodeURIComponent(opponent.username)}`)}>
             Ver perfil de {opponent.username}
           </Button>
         ) : null}
-        <Button size="lg" variant="ghost" onClick={() => navigate("/")}>
+        {/* Salir es explícito: con una oferta de revancha en marcha, el rival ve «se fue» al instante. */}
+        <Button
+          size="lg"
+          variant="ghost"
+          onClick={() => {
+            client.leave();
+            navigate("/");
+          }}
+        >
           Volver al lobby
         </Button>
       </div>

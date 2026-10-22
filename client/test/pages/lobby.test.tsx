@@ -15,6 +15,7 @@ describe("límites y duraciones del cliente", () => {
     expect(durations.TYPE_CHOICE_MS).toBe(serverConstants.TYPE_CHOICE_SECONDS * 1000);
     expect(durations.START_COUNTDOWN_MS).toBe(serverConstants.START_COUNTDOWN_SECONDS * 1000);
     expect(durations.RESULT_PAUSE_MS).toBe(serverConstants.RESULT_PAUSE_SECONDS * 1000);
+    expect(durations.REMATCH_RESPONSE_MS).toBe(serverConstants.REMATCH_RESPONSE_MS);
     expect(durations.CUSTOM_ROUNDS_MIN).toBe(serverConstants.CUSTOM_ROUNDS_MIN);
     expect(durations.CUSTOM_ROUNDS_MAX).toBe(serverConstants.CUSTOM_ROUNDS_MAX);
     expect(durations.CUSTOM_STATS_GOAL_MIN).toBe(serverConstants.CUSTOM_STATS_GOAL_MIN);

@@ -62,9 +62,9 @@ describe("resumen final (etapa 6)", () => {
     expect(within(screen.getByRole("region", { name: "Equipo de Tú" })).getByText("800").className).toContain("text-3xl");
   });
 
-  it("jugar de nuevo es el botón principal y grande", () => {
-    renderRoom(finished(1, 1));
-    const button = screen.getByRole("button", { name: "Jugar de nuevo" });
+  it("«Revancha» es el botón principal y grande", () => {
+    renderRoom([...finished(1, 1), event.rematchState({ status: "open" })]);
+    const button = screen.getByRole("button", { name: "Revancha" });
     expect(button.className).toContain("bg-accent");
     expect(button.className).toContain("py-3");
   });

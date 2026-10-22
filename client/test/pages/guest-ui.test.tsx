@@ -125,7 +125,7 @@ describe("resumen final: «Ver perfil de …»", () => {
   it("no se ofrece si el rival es invitado", () => {
     renderRoom(finished([ash(), misty({ guest: true })]));
     expect(screen.queryByRole("button", { name: /Ver perfil de/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Jugar de nuevo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Volver al lobby" })).toBeInTheDocument();
   });
 
   it("no se ofrece si quien mira es invitado (sesión de invitado), aunque el rival tenga cuenta", () => {

@@ -339,12 +339,10 @@ describe("resumen final", () => {
     expect(screen.getByText("Un jugador se desconectó")).toBeInTheDocument();
   });
 
-  it("'Jugar de nuevo' vuelve al lobby con la misma configuración", async () => {
-    const { user } = renderRoom(finished(1, 1));
-    await user.click(screen.getByRole("button", { name: "Jugar de nuevo" }));
-    const probe = screen.getByTestId("location");
-    expect(probe).toHaveTextContent("/");
-    expect(JSON.parse(probe.dataset.state!)).toEqual({ config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 1800 } });
+  it("ya no ofrece «Jugar de nuevo»: lo sustituye la revancha (que aparece solo si el servidor abre la oferta)", () => {
+    renderRoom(finished(1, 1));
+    expect(screen.queryByRole("button", { name: "Jugar de nuevo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Revancha" })).toBeNull();
   });
 
   it("'Ver perfil de' lleva al perfil del rival", async () => {

@@ -6,7 +6,7 @@ import { Header } from "../../src/components/Header";
 import { LoginPage } from "../../src/pages/AuthPages";
 import { LobbyPage } from "../../src/pages/Lobby";
 import { ProfilePage } from "../../src/pages/profile/ProfilePage";
-import { event, pokemon } from "../helpers/events";
+import { SERVER_NOW, event, pokemon } from "../helpers/events";
 import { ash, misty, renderRoom, roundState } from "../helpers/room";
 import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
 
@@ -202,5 +202,28 @@ describe("textos largos y tarjetas sueltas en pantallas estrechas", () => {
   it("perfil: el nombre propio largo se recorta", async () => {
     await renderProfile();
     expect(classesOf(screen.getByText("a".repeat(30)))).toContain("truncate");
+  });
+});
+
+describe("revancha en pantallas estrechas", () => {
+  const longName = "m".repeat(30);
+
+  it("el bloque de espera envuelve el título y la etiqueta en vez de ensanchar la pantalla", () => {
+    renderRoom([
+      event.roomState({ phase: "finished", mySeat: 1, players: [ash(), misty({ username: longName, guest: true })] }),
+      event.gameEnded({ winnerSeat: 1 }),
+      event.rematchState({ status: "theirs", deadline: SERVER_NOW + 60_000 }),
+    ]);
+    const heading = screen.getByRole("heading", { name: `${longName} quiere la revancha` });
+    expect(classesOf(heading)).toContain("[overflow-wrap:anywhere]");
+    expect(classesOf(heading)).toContain("min-w-0");
+    expect(classesOf(heading.parentElement)).toContain("flex-wrap");
+  });
+
+  it("la pantalla «¡Revancha!» parte un nombre largo en las fichas de quién entró", () => {
+    renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), misty({ username: longName, connected: false })] })]);
+    const pill = screen.getByText(`${longName} entrando…`);
+    expect(classesOf(pill)).toContain("[overflow-wrap:anywhere]");
+    expect(classesOf(pill.closest("ul"))).toContain("flex-wrap");
   });
 });

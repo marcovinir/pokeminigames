@@ -4,9 +4,10 @@ import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
 import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
-import { ROOM_GONE_CODES, TYPE_LABELS, errorMessage } from "../../i18n/es";
+import { REMATCH_TEXT, ROOM_GONE_CODES, TYPE_LABELS, errorMessage, rematchClosedMessage, rematchNoShow, rematchRequested, rematchWaiting } from "../../i18n/es";
 import { useGame, useServices } from "../../services";
 import { CountdownView } from "./CountdownView";
+import { RematchLoadingView, RematchNoShow } from "./RematchLoadingView";
 import { RoundResultView } from "./RoundResultView";
 import { RoundView } from "./RoundView";
 import { SummaryView, scoreLabel, verdictLabel } from "./SummaryView";
@@ -28,6 +29,23 @@ function OpponentAwayNotice() {
   );
 }
 
+/** Lo que se anuncia de la revancha (tras el veredicto): quién espera a quién, si empieza o por qué no hubo. */
+function rematchAnnouncement(view: GameView): string {
+  const rival = view.players.find((player) => player.seat !== view.mySeat)?.username ?? "Tu rival";
+  switch (view.rematchOffer?.status) {
+    case "mine":
+      return rematchWaiting(rival);
+    case "theirs":
+      return rematchRequested(rival);
+    case "starting":
+      return `${REMATCH_TEXT.loadingTitle} ${REMATCH_TEXT.loadingSub}`;
+    case "closed":
+      return rematchClosedMessage(view.rematchOffer.closedReason ?? "failed", rival) ?? "";
+    default:
+      return "";
+  }
+}
+
 /** Lo que se anuncia a los lectores de pantalla al cambiar de fase (lo visual cambia, pero no se oye). */
 function announcement(view: GameView): string {
   switch (view.phase) {
@@ -39,8 +57,13 @@ function announcement(view: GameView): string {
       return view.round?.pair
         ? `Ronda ${view.round.number}: ${TYPE_LABELS[view.round.pair[0]]} y ${TYPE_LABELS[view.round.pair[1]]}.`
         : "";
-    case "finished":
-      return view.ended && view.mySeat !== null ? `${verdictLabel(view.ended, view.mySeat)}. ${scoreLabel(view.ended, view.mySeat)}` : "";
+    case "finished": {
+      if (!view.ended || view.mySeat === null) return "";
+      if (view.isRematchRoom && view.ended.reason === "expired") {
+        return rematchNoShow(view.players.find((player) => player.seat !== view.mySeat)?.username ?? "Tu rival");
+      }
+      return [`${verdictLabel(view.ended, view.mySeat)}. ${scoreLabel(view.ended, view.mySeat)}`, rematchAnnouncement(view)].filter(Boolean).join(" ");
+    }
     default:
       return "";
   }
@@ -50,7 +73,8 @@ function RoomView() {
   const { view } = useRoom();
   switch (view.phase) {
     case "waiting":
-      return <WaitingView />;
+      // Una sala de revancha ya tiene a los dos sentados: no hay código que compartir, solo esperar a que entren.
+      return view.isRematchRoom ? <RematchLoadingView /> : <WaitingView />;
     case "starting":
       return <CountdownView />;
     case "choosing_types":
@@ -60,7 +84,8 @@ function RoomView() {
     case "round_result":
       return <RoundResultView />;
     case "finished":
-      return <SummaryView />;
+      // Si la sala de la revancha caducó porque el rival no entró, no hubo partida: no hay veredicto.
+      return view.isRematchRoom && view.ended?.reason === "expired" ? <RematchNoShow /> : <SummaryView />;
     default:
       return (
         <p role="status" className="text-center text-muted">
@@ -80,12 +105,18 @@ export function RoomPage() {
   const ended = useGame((s) => s.view.ended);
   const view = useGame((s) => s.view);
   const typeHints = useGame((s) => s.view.config?.typeHints === true);
+  const nextRoom = useGame((s) => s.view.nextRoom);
 
   useEffect(() => {
     game.client.join(code);
     // Al salir de la pantalla se cierra la conexión (y se limpia el estado).
     return () => game.client.dispose();
   }, [game.client, code]);
+
+  // Los dos aceptaron la revancha: a la sala nueva (sin dejar la vieja en el historial del navegador).
+  useEffect(() => {
+    if (nextRoom) navigate(`/sala/${encodeURIComponent(nextRoom)}`, { replace: true });
+  }, [nextRoom, navigate]);
 
   // Los tipos de cada Pokémon solo se piden en las salas con «Pistas de tipos»; sin ellas ni siquiera viajan.
   useEffect(() => {
