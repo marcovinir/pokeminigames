@@ -354,12 +354,18 @@ describe("RoomManager: la revancha", () => {
     const accounts = setup();
     accounts.repository.headToHeadResult = { winsA: 1, winsB: 0, draws: 0, recent: ["a"] };
     accounts.repository.delays.finish = 30;
+    // Cuando se lee el récord, el final de la partida ya tiene que estar escrito (si no, el récord no la incluiría).
+    const finishSavedWhenRead: boolean[] = [];
+    const readRecord = accounts.repository.headToHead.bind(accounts.repository);
+    accounts.repository.headToHead = (userA, userB, recent) => {
+      finishSavedWhenRead.push(accounts.repository.calls.includes("finish:completed"));
+      return readRecord(userA, userB, recent);
+    };
     const room = await startedRoom(accounts);
     finishNormally(accounts, room);
-    expect(accounts.repository.headToHeadCalls).toEqual([]); // el final aún no se guardó
     await room.idle();
     await flush();
-    expect(accounts.repository.calls).toContain("finish:completed");
+    expect(finishSavedWhenRead).toEqual([true]);
     expect(accounts.repository.headToHeadCalls).toEqual([{ userA: "u1", userB: "u2", recent: 5 }]);
     expect(accounts.broadcaster.payloads("rematch-state", 1).at(-1)).toMatchObject({ record: { mine: 1, theirs: 0, draws: 0, played: 1, recent: ["won"] } });
     expect(accounts.broadcaster.payloads("rematch-state", 2).at(-1)).toMatchObject({ record: { mine: 0, theirs: 1, played: 1, recent: ["lost"] } });
