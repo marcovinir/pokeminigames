@@ -46,6 +46,7 @@ export class RoomManager {
       broadcaster: deps.broadcaster,
       release: (code) => deps.store.remove(code),
       createRoom: (input) => this.createRematchRoom(input),
+      cancelRoom: (code) => this.cancelRematchRoom(code),
       logger: deps.logger,
     });
   }
@@ -126,6 +127,12 @@ export class RoomManager {
     }
   }
 
+  /** Cancela una sala de revancha que nadie va a jugar: termina como cancelada (sin partida) y sale del almacén. */
+  cancelRematchRoom(code: string): void {
+    // Que el asiento 1 «salga» de una sala en espera la cancela: es el mismo camino que «Cancelar sala».
+    this.deps.store.get(code)?.dispatch({ type: "LEAVE", seat: 1 });
+  }
+
   /** Registra la sala y decide qué pasa cuando termina: una oferta de revancha o salir del almacén. */
   private track(room: GameRoom): void {
     room.onFinished(() => this.onRoomFinished(room));
@@ -149,7 +156,11 @@ export class RoomManager {
         ? room
             .idle()
             .then(() => this.deps.repository.headToHead(one.userId, two.userId, REMATCH_RECENT_GAMES))
-            .then((head) => recordFor(head, 1))
+            // Sin partidas (el final no llegó a guardarse) no hay récord: nunca uno que no incluya esta partida.
+            .then((head) => {
+              const record = recordFor(head, 1);
+              return record.played === 0 ? null : record;
+            })
         : null;
     this.rematch.open({ code: room.code, players: { 1: one, 2: two }, config: room.config, record });
   }

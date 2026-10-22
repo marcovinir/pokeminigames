@@ -13,6 +13,7 @@ import {
   rematchRequested,
   rematchSecondsLeft,
   rematchWaiting,
+  rematchYourSecondsLeft,
 } from "../../src/i18n/es";
 
 const RESULTS: GameResult[] = ["won", "drawn", "lost"];
@@ -105,6 +106,7 @@ describe("textos de la revancha", () => {
     });
     expect(rematchWaiting("misty")).toBe("Esperando a misty…");
     expect(rematchSecondsLeft(43)).toBe("Le quedan 43 s para decidir");
+    expect(rematchYourSecondsLeft(43)).toBe("Te quedan 43 s para decidir");
     expect(rematchRequested("misty")).toBe("misty quiere la revancha");
     expect(rematchEntering("misty")).toBe("misty entrando…");
     expect(rematchNoShow("misty")).toBe("misty no llegó.");

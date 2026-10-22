@@ -96,6 +96,12 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
   socket.on(
     "join-room",
     handle(joinSchema, ({ code }) => {
+      // Los dos aceptaron la revancha justo cuando esta persona recargaba o reconectaba: se le dice a qué sala ir.
+      const forwarded = deps.manager.rematch.forwardFor(code, user.userId);
+      if (forwarded) {
+        socket.emit("rematch-room", { code: forwarded });
+        return;
+      }
       const { room, seat } = deps.manager.connect(user, code);
       if (binding && (binding.room !== room || binding.seat !== seat)) release();
 

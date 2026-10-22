@@ -162,6 +162,8 @@ export const REMATCH_TEXT = {
 
 export const rematchWaiting = (name: string): string => `Esperando a ${name}…`;
 export const rematchSecondsLeft = (seconds: number): string => `Le quedan ${seconds} s para decidir`;
+/** El mismo plazo dicho a quien decide (la petición la hizo el rival). */
+export const rematchYourSecondsLeft = (seconds: number): string => `Te quedan ${seconds} s para decidir`;
 export const rematchRequested = (name: string): string => `${name} quiere la revancha`;
 export const rematchEntering = (name: string): string => `${name} entrando…`;
 export const rematchNoShow = (name: string): string => `${name} no llegó.`;

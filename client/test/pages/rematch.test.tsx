@@ -60,6 +60,44 @@ describe("el bloque de revancha del resumen", () => {
     await waitFor(() => expect(document.querySelector("[data-fact]")).not.toBeNull());
   });
 
+  it("theirs: el plazo se dice a quien decide («Te quedan…»), no como si decidiera el rival", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(SERVER_NOW);
+    renderRoom(summary({ status: "theirs", deadline: SERVER_NOW + 43_000 }));
+    expect(screen.getByText("Te quedan 43 s para decidir")).toBeInTheDocument();
+    expect(screen.queryByText(/Le quedan/)).toBeNull();
+  });
+
+  it("su primera partida juntos terminó en empate: se ve «Empate», no «0 – 0»", () => {
+    renderRoom(summary({ status: "mine", deadline: SERVER_NOW + 60_000, record: { mine: 0, theirs: 0, draws: 1, played: 1, recent: ["drawn"] } }));
+    const card = screen.getByRole("region", { name: "Récord contra misty" });
+    expect(within(card).getByText("Empate")).toBeInTheDocument();
+    expect(within(card).queryByText("0 – 0")).toBeNull();
+    expect(within(card).getByText("Es su primera partida juntos")).toBeInTheDocument();
+  });
+
+  it("si el foco está en otro control, una petición del rival no lo mueve", async () => {
+    const { services } = renderRoom(summary({ status: "open" }));
+    const lobby = screen.getByRole("button", { name: "Volver al lobby" });
+    lobby.focus();
+    await serverSends(services, event.rematchState({ status: "theirs", deadline: SERVER_NOW + 60_000 }));
+    expect(lobby).toHaveFocus();
+  });
+
+  it("si el botón con el foco desaparece, el foco no se pierde: va al aviso de cierre o al título de «¡Revancha!»", async () => {
+    const declined = renderRoom(summary({ status: "mine", deadline: SERVER_NOW + 60_000 }));
+    screen.getByRole("button", { name: "Cancelar" }).focus();
+    await serverSends(declined.services, event.rematchState({ status: "closed", closedReason: "declined", deadline: null }));
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement).toHaveTextContent("misty ya no quiere la revancha.");
+    declined.unmount();
+
+    const accepted = renderRoom(summary({ status: "theirs", deadline: SERVER_NOW + 60_000 }));
+    await accepted.user.click(within(accepted.container).getByRole("button", { name: "Aceptar" }));
+    await serverSends(accepted.services, event.rematchState({ status: "starting", deadline: null }));
+    expect(within(accepted.container).getByRole("heading", { name: "¡Revancha!" })).toHaveFocus();
+  });
+
   it("theirs: «misty quiere la revancha» con «Aceptar» y «Rechazar»", async () => {
     const { user, services } = renderRoom(summary({ status: "theirs", deadline: SERVER_NOW + 60_000 }));
     expect(screen.getByRole("heading", { name: "misty quiere la revancha" })).toBeInTheDocument();

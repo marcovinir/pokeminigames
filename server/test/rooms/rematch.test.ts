@@ -181,6 +181,24 @@ describe("revancha de punta a punta", () => {
     expect(server.roomManager.rematch.has(code)).toBe(true);
   });
 
+  it("un join-room al código viejo después de crear la sala responde rematch-room con el código nuevo (recarga justo cuando el rival acepta)", async () => {
+    const ash = await registerUser(server.app, "ash");
+    const misty = await registerUser(server.app, "misty");
+    const { code, one, two } = await playFirstGame(ash, misty);
+    await untilState(one, "open");
+    one.emit("rematch-request");
+    await untilState(two, "theirs");
+    two.emit("rematch-request");
+    await one.next("rematch-room");
+
+    const reloaded = new TestClient(server.url, ash.token);
+    clients.push(reloaded);
+    await reloaded.connected();
+    reloaded.emit("join-room", { code });
+    expect(await reloaded.next<{ code: string }>("rematch-room")).toEqual({ code: "GAME02" });
+    await reloaded.expectNone("error");
+  });
+
   it("leave-room durante la oferta: el otro ve closed/left", async () => {
     const ash = await registerUser(server.app, "ash");
     const misty = await registerUser(server.app, "misty");

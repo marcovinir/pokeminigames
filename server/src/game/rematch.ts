@@ -1,6 +1,6 @@
 import type { RematchClosedReason, RematchRecord, RematchState, RoomConfig, Seat } from "@pokemon-minigames/shared";
 import { AppError } from "../http/errors.js";
-import { REMATCH_ASK_WINDOW_MS, REMATCH_RECONNECT_GRACE_MS, REMATCH_RESPONSE_MS } from "./constants.js";
+import { REMATCH_ASK_WINDOW_MS, REMATCH_RECONNECT_GRACE_MS, REMATCH_RESPONSE_MS, REMATCH_ROOM_TTL_SECONDS, seconds } from "./constants.js";
 import { SEATS } from "./engine/types.js";
 import type { Broadcaster, Clock, Scheduler } from "./ports.js";
 import { mirrorRecord } from "./rematch-record.js";
@@ -22,6 +22,8 @@ export interface RematchDeps {
    * dos ya está en otra sala lanza `AppError` con código `ALREADY_IN_GAME` y `details: { seat }`.
    */
   createRoom(input: { players: Record<Seat, RematchPlayer>; config: RoomConfig }): Promise<{ code: string }>;
+  /** Cancela una sala de revancha recién creada (alguien se fue mientras se creaba): sin partida y fuera del almacén. */
+  cancelRoom(code: string): void;
   logger?: { error(message: string, error?: unknown): void };
 }
 
@@ -42,7 +44,18 @@ interface Offer {
   cancelResponse: (() => void) | null;
   /** Una recarga no cuenta como salir: cada desconexión tiene unos segundos para volver. */
   grace: Partial<Record<Seat, () => void>>;
+  /** Quien salió mientras se creaba la sala: la sala nueva se cancela al terminar de crearse. */
+  leftDuringCreate: Seat | null;
 }
+
+/** Tras crear la sala, durante un rato la sala vieja «apunta» a la nueva (para quien recargó o reconectó en ese momento). */
+interface Forward {
+  code: string;
+  userIds: string[];
+  cancel: () => void;
+}
+
+const normalizeCode = (code: string): string => code.trim().toUpperCase();
 
 /**
  * La oferta de revancha de una partida terminada. Vive aquí y no en `GameRoom`: la sala ya terminó y lo único que queda
@@ -51,6 +64,7 @@ interface Offer {
  */
 export class RematchCoordinator {
   private readonly offers = new Map<string, Offer>();
+  private readonly forwards = new Map<string, Forward>();
 
   constructor(private readonly deps: RematchDeps) {}
 
@@ -72,6 +86,7 @@ export class RematchCoordinator {
       cancelAskWindow: () => {},
       cancelResponse: null,
       grace: {},
+      leftDuringCreate: null,
     };
     offer.cancelAskWindow = this.deps.scheduler.schedule(REMATCH_ASK_WINDOW_MS, () => this.close(offer, "unavailable"));
     this.offers.set(code, offer);
@@ -89,6 +104,15 @@ export class RematchCoordinator {
 
   has(code: string): boolean {
     return this.offers.has(code);
+  }
+
+  /**
+   * Si los dos aceptaron hace poco (lo que dura la sala de revancha esperando), el código de la sala nueva para esa
+   * persona: quien recarga o reconecta justo cuando el rival acepta se perdió `rematch-room` y así lo recupera.
+   */
+  forwardFor(oldCode: string, userId: string): string | null {
+    const forward = this.forwards.get(normalizeCode(oldCode));
+    return forward && forward.userIds.includes(userId) ? forward.code : null;
   }
 
   /** El estado vigente para ese asiento, o `null` si no hay oferta (se usa al reconectar). */
@@ -132,7 +156,12 @@ export class RematchCoordinator {
   /** Salir (volver al lobby, irse o cerrar la pestaña sin volver): el otro ve «se fue». */
   leave(code: string, seat: Seat): void {
     const offer = this.offers.get(code);
-    if (!offer || offer.phase === "creating") return;
+    if (!offer) return;
+    // Mientras se crea la sala no se puede cerrar todavía: se anota y la sala nueva se cancela en cuanto exista.
+    if (offer.phase === "creating") {
+      offer.leftDuringCreate = seat;
+      return;
+    }
     this.close(offer, "left", seat);
   }
 
@@ -162,12 +191,22 @@ export class RematchCoordinator {
     try {
       const { code } = await this.deps.createRoom({ players: offer.players, config: offer.config });
       if (this.offers.get(offer.code) !== offer) return;
+      if (offer.leftDuringCreate !== null) {
+        // Alguien se fue mientras se creaba: no se juega. Quien se queda ve «se fue», como con cualquier salida.
+        this.deps.cancelRoom(code);
+        this.close(offer, "left", offer.leftDuringCreate);
+        return;
+      }
       this.finish(offer);
+      this.addForward(offer, code);
       for (const seat of SEATS) this.deps.broadcaster.toSeat(offer.code, seat, { name: "rematch-room", payload: { code } });
     } catch (error) {
       if (error instanceof AppError && error.code === "ALREADY_IN_GAME") {
-        // Quien ya estaba en otra sala cuenta como «se fue»; a esa persona no se le avisa de nada.
-        this.close(offer, "left", (error.details as { seat?: Seat } | undefined)?.seat);
+        // Quien ya estaba en otra sala cuenta como «se fue» para el otro; a esa persona (si aún tiene abierta la pestaña
+        // vieja en el resumen) se le dice que la revancha ya no está, para que no se quede en «¡Revancha!».
+        const busy = (error.details as { seat?: Seat } | undefined)?.seat;
+        this.close(offer, "left", busy);
+        if (busy) this.send(offer, busy, { serverNow: this.deps.clock.now(), status: "closed", deadline: null, closedReason: "unavailable" });
         return;
       }
       this.deps.logger?.error(`No se pudo crear la sala de la revancha (sala ${offer.code})`, error);
@@ -185,6 +224,13 @@ export class RematchCoordinator {
       const closedReason: RematchClosedReason = reason === "declined" && seat === by ? "self" : reason;
       this.send(offer, seat, { serverNow, status: "closed", deadline: null, closedReason });
     }
+  }
+
+  private addForward(offer: Offer, code: string): void {
+    const key = normalizeCode(offer.code);
+    this.forwards.get(key)?.cancel();
+    const cancel = this.deps.scheduler.schedule(seconds(REMATCH_ROOM_TTL_SECONDS), () => this.forwards.delete(key));
+    this.forwards.set(key, { code, userIds: SEATS.map((seat) => offer.players[seat].userId), cancel });
   }
 
   /** Quita la oferta, cancela todos sus temporizadores y libera la sala terminada. */

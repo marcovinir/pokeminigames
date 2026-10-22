@@ -74,6 +74,11 @@ export const initialGameView: GameView = {
   lastError: null,
 };
 
+/** Errores con los que la sala ya no existe para quien la pide (los mismos con los que la sala muestra «ya no existe»). */
+const ROOM_GONE: ReadonlySet<string> = new Set(["ROOM_NOT_FOUND", "NOT_IN_ROOM", "ROOM_CLOSED"]);
+/** Estados de la oferta que siguen esperando algo del servidor. */
+const LIVE_OFFER: ReadonlySet<string> = new Set(["open", "mine", "theirs", "starting"]);
+
 function setConnected(players: RoomPlayerView[], seat: Seat | null, connected: boolean): RoomPlayerView[] {
   return players.map((p) => (p.seat !== seat ? { ...p, connected } : p));
 }
@@ -214,8 +219,15 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     case "opponent-reconnected":
       return { ...view, opponentGraceEndsAt: null, players: setConnected(view.players, view.mySeat, true) };
 
-    case "error":
+    case "error": {
+      // La sala vieja ya no existe para esta persona (se cortó más de 10 s, o la oferta se cerró sin que llegara el aviso):
+      // la oferta no puede seguir viva en pantalla, o se quedaría esperando para siempre.
+      const offer = view.rematchOffer;
+      if (offer && LIVE_OFFER.has(offer.status) && ROOM_GONE.has(event.payload.code)) {
+        return { ...view, lastError: event.payload, rematchOffer: { ...offer, status: "closed", closedReason: "unavailable", deadline: null } };
+      }
       return { ...view, lastError: event.payload };
+    }
 
     case "rematch-state":
       return { ...view, rematchOffer: event.payload, clockOffset: clockOffset(event.payload.serverNow, receivedAt) };

@@ -203,14 +203,14 @@ describe("reconexión con una oferta de revancha", () => {
     return ctx;
   }
 
-  it.each(["open", "mine", "theirs"] as const)("al reconectar con el resumen visible y la oferta %s vuelve a entrar a la sala", (status) => {
+  it.each(["open", "mine", "theirs", "starting"] as const)("al reconectar con el resumen visible y la oferta %s vuelve a entrar a la sala", (status) => {
     const { socket } = finishedWith(status);
     socket().serverDrops();
     socket().serverConnects();
     expect(socket().sent("join-room")).toEqual([{ code: "ABC234" }, { code: "ABC234" }]);
   });
 
-  it.each(["starting", "closed"] as const)("con la oferta %s no vuelve a entrar (la sala vieja ya no importa)", (status) => {
+  it.each(["closed"] as const)("con la oferta %s no vuelve a entrar (la sala vieja ya no importa)", (status) => {
     const { socket } = finishedWith(status);
     socket().serverDrops();
     socket().serverConnects();

@@ -16,10 +16,16 @@ import {
   rematchRequested,
   rematchSecondsLeft,
   rematchWaiting,
+  rematchYourSecondsLeft,
 } from "../../i18n/es";
 import { factText } from "../../i18n/facts";
 import { useFacts, useServices } from "../../services";
 import { useRoom } from "./use-room";
+
+/** El foco se perdió (el elemento que lo tenía desapareció): queda en el cuerpo de la página. */
+export function focusWasLost(): boolean {
+  return document.activeElement === null || document.activeElement === document.body;
+}
 
 /** Cada cuánto cambia el dato curioso. */
 const FACT_EVERY_MS = 6000;
@@ -37,7 +43,10 @@ function RecordCard({ record, me, rival }: { record: RematchRecord; me: string; 
       <p className="text-xs font-semibold uppercase tracking-wide text-muted [overflow-wrap:anywhere]">{recordTitle(rival)}</p>
       <div className="mt-2 flex items-center justify-center gap-3">
         <Avatar name={me} size="sm" />
-        <p className="font-num text-4xl font-semibold tabular-nums">{`${record.mine} – ${record.theirs}`}</p>
+        <p className="font-num text-4xl font-semibold tabular-nums">
+          {/* Su primera partida juntos en empate se dice con palabras: «0 – 0» parecería que no han jugado. */}
+          {record.played === 1 && record.draws === 1 ? "Empate" : `${record.mine} – ${record.theirs}`}
+        </p>
         <Avatar name={rival} size="sm" />
       </div>
       <p className="mt-1 text-sm text-muted">{recordHeadline(record, rival)}</p>
@@ -102,13 +111,13 @@ function FactCard() {
 }
 
 /** Cuánto le queda a la oferta: el texto y la barra son visuales (los lectores de pantalla no oyen cada segundo). */
-function OfferCountdown({ deadline, offset }: { deadline: number | null; offset: number }) {
+function OfferCountdown({ deadline, offset, mine }: { deadline: number | null; offset: number; mine: boolean }) {
   const remaining = useCountdown(deadline, offset);
   const fraction = Math.min(1, remaining / REMATCH_RESPONSE_MS);
   return (
     <>
       <p aria-hidden="true" className="mt-1 text-sm text-muted">
-        {rematchSecondsLeft(secondsLeft(remaining))}
+        {(mine ? rematchSecondsLeft : rematchYourSecondsLeft)(secondsLeft(remaining))}
       </p>
       <div aria-hidden="true" data-rematch-bar className="mx-auto mt-2 h-1.5 w-full max-w-64 overflow-hidden rounded-pill bg-surface-2">
         <div style={{ width: `${fraction * 100}%` }} className="h-full rounded-pill bg-accent transition-[width] duration-300 ease-linear" />
@@ -127,11 +136,15 @@ export function RematchPanel() {
   const rival = opponent?.username ?? "Tu rival";
   const headingId = useId();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const closedRef = useRef<HTMLDivElement>(null);
   const status = offer?.status;
 
-  // Al pasar a esperar o a decidir el foco va al título: el botón que se pulsó desaparece y el lector de pantalla sigue ahí.
+  // Si al cambiar el estado desaparece el botón que tenía el foco, el foco va al título (o al aviso de cierre) en vez de
+  // perderse; si la persona está en otro control (sus equipos, «Volver al lobby») no se le mueve.
   useEffect(() => {
+    if (!focusWasLost()) return;
     if (status === "mine" || status === "theirs") headingRef.current?.focus();
+    else if (status === "closed") closedRef.current?.focus();
   }, [status]);
 
   if (!offer || offer.status === "starting") return null;
@@ -148,7 +161,11 @@ export function RematchPanel() {
 
   if (offer.status === "closed") {
     const message = rematchClosedMessage(offer.closedReason ?? "failed", rival);
-    return message ? <Notice>{message}</Notice> : null;
+    return message ? (
+      <div ref={closedRef} tabIndex={-1} className="outline-none">
+        <Notice>{message}</Notice>
+      </div>
+    ) : null;
   }
 
   const mine = offer.status === "mine";
@@ -162,7 +179,7 @@ export function RematchPanel() {
           </h2>
           {opponent?.guest ? <GuestTag /> : null}
         </div>
-        <OfferCountdown deadline={offer.deadline} offset={view.clockOffset} />
+        <OfferCountdown deadline={offer.deadline} offset={view.clockOffset} mine={mine} />
         <div className="mt-4 flex flex-wrap justify-center gap-3">
           {mine ? (
             <Button variant="secondary" onClick={() => client.cancelRematch()}>

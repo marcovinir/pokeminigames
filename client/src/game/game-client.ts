@@ -55,8 +55,11 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   "rematch-state": true,
   "rematch-room": true,
 };
-/** Estados de la oferta en los que la sala vieja sigue viva en el servidor. */
-const REMATCH_LIVE: ReadonlySet<string> = new Set(["open", "mine", "theirs"]);
+/**
+ * Estados de la oferta en los que hay que volver a la sala vieja al reconectar: mientras se decide sigue viva, y en
+ * `starting` es por donde llega `rematch-room` (o, si la sala nueva ya existe, el servidor redirige a ella).
+ */
+const REMATCH_LIVE: ReadonlySet<string> = new Set(["open", "mine", "theirs", "starting"]);
 const SERVER_EVENT_NAMES = Object.keys(SERVER_EVENTS) as ServerEventName[];
 
 /**

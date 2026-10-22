@@ -20,13 +20,14 @@ function setup(options: { record?: Promise<RematchRecord | null> | null; createR
   const broadcaster = new RecordingBroadcaster();
   const released: string[] = [];
   const createRoom = vi.fn(options.createRoom ?? (async () => ({ code: "NEW111" })));
+  const cancelRoom = vi.fn();
   const logger = { error: vi.fn() };
-  const coordinator = new RematchCoordinator({ clock: time, scheduler: time, broadcaster, release: (code) => released.push(code), createRoom, logger });
+  const coordinator = new RematchCoordinator({ clock: time, scheduler: time, broadcaster, release: (code) => released.push(code), createRoom, cancelRoom, logger });
   coordinator.open({ code: "OLD111", players, config, record: options.record ?? null });
   const states = (seat: Seat): RematchState[] => broadcaster.sent.filter((s) => s.to === seat && s.event.name === "rematch-state").map((s) => s.event.payload as RematchState);
   const last = (seat: Seat): RematchState => states(seat).at(-1)!;
   const rooms = (seat: Seat): string[] => broadcaster.sent.filter((s) => s.to === seat && s.event.name === "rematch-room").map((s) => (s.event.payload as { code: string }).code);
-  return { time, broadcaster, released, createRoom, logger, coordinator, states, last, rooms };
+  return { time, broadcaster, released, createRoom, cancelRoom, logger, coordinator, states, last, rooms };
 }
 
 describe("RematchCoordinator: abrir y pedir", () => {
@@ -59,6 +60,40 @@ describe("RematchCoordinator: abrir y pedir", () => {
     expect(rooms(2)).toEqual(["NEW111"]);
     expect(released).toEqual(["OLD111"]);
     expect(coordinator.has("OLD111")).toBe(false);
+    // Solo queda el aviso de redirección de la sala vieja (30 s): luego no queda nada.
+    expect(time.pendingCount).toBe(1);
+    time.advance(30_000);
+    expect(time.pendingCount).toBe(0);
+  });
+
+  it("tras crear la sala, forwardFor(código viejo) da el código nuevo a esas dos personas durante 30 s, y a nadie más", async () => {
+    const { time, coordinator } = setup();
+    coordinator.request("OLD111", 1);
+    coordinator.request("OLD111", 2);
+    await flush();
+    expect(coordinator.forwardFor("OLD111", "u1")).toBe("NEW111");
+    expect(coordinator.forwardFor(" old111 ", "u2")).toBe("NEW111");
+    expect(coordinator.forwardFor("OLD111", "u9")).toBeNull();
+    expect(coordinator.forwardFor("OTRA", "u1")).toBeNull();
+    time.advance(30_000);
+    expect(coordinator.forwardFor("OLD111", "u1")).toBeNull();
+  });
+
+  it("salir mientras se crea la sala: la sala nueva se cancela, nadie recibe rematch-room y el otro ve «se fue»", async () => {
+    let resolve!: (value: { code: string }) => void;
+    const pending = new Promise<{ code: string }>((r) => (resolve = r));
+    const { coordinator, cancelRoom, last, rooms, released, time } = setup({ createRoom: () => pending });
+    coordinator.request("OLD111", 1);
+    coordinator.request("OLD111", 2);
+    coordinator.leave("OLD111", 1);
+    resolve({ code: "NEW111" });
+    await flush();
+    expect(cancelRoom).toHaveBeenCalledWith("NEW111");
+    expect(rooms(1)).toEqual([]);
+    expect(rooms(2)).toEqual([]);
+    expect(last(2)).toMatchObject({ status: "closed", closedReason: "left" });
+    expect(released).toEqual(["OLD111"]);
+    expect(coordinator.forwardFor("OLD111", "u2")).toBeNull();
     expect(time.pendingCount).toBe(0);
   });
 
@@ -79,8 +114,7 @@ describe("RematchCoordinator: abrir y pedir", () => {
     coordinator.request("OLD111", 2);
     coordinator.request("OLD111", 2);
     coordinator.request("OLD111", 1);
-    coordinator.cancel("OLD111", 1); // en plena creación nada se cancela
-    coordinator.leave("OLD111", 2); // ni se sale
+    coordinator.cancel("OLD111", 1); // en plena creación ya no se cancela (salir sí: ver «salir mientras se crea la sala»)
     expect(createRoom).toHaveBeenCalledTimes(1);
     resolve({ code: "NEW111" });
     await flush();
@@ -189,7 +223,7 @@ describe("RematchCoordinator: reconexión", () => {
 });
 
 describe("RematchCoordinator: la sala nueva falla", () => {
-  it("ALREADY_IN_GAME de un asiento cierra con left para el otro; quien ya estaba en otra sala no recibe aviso", async () => {
+  it("ALREADY_IN_GAME de un asiento cierra con left para el otro; quien ya estaba en otra sala recibe unavailable (su pestaña vieja no se queda en «¡Revancha!»)", async () => {
     const { coordinator, last, states, released, time } = setup({
       createRoom: async () => {
         throw new AppError(409, "ALREADY_IN_GAME", "Ya estás en una partida activa", { seat: 2 });
@@ -199,7 +233,7 @@ describe("RematchCoordinator: la sala nueva falla", () => {
     coordinator.request("OLD111", 2);
     await flush();
     expect(last(1)).toMatchObject({ status: "closed", closedReason: "left" });
-    expect(states(2).at(-1)!.status).toBe("starting");
+    expect(states(2).at(-1)).toMatchObject({ status: "closed", closedReason: "unavailable" });
     expect(released).toEqual(["OLD111"]);
     expect(time.pendingCount).toBe(0);
   });

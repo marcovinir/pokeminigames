@@ -26,6 +26,23 @@ describe("revancha", () => {
     expect(initialGameView).toMatchObject({ rematchOffer: null, isRematchRoom: false, nextRoom: null });
   });
 
+  it.each(["open", "mine", "theirs", "starting"] as const)(
+    "con la oferta %s, un error de sala desaparecida la cierra como «ya no está disponible» (nadie se queda en una pantalla muerta)",
+    (status) => {
+      for (const code of ["ROOM_NOT_FOUND", "NOT_IN_ROOM", "ROOM_CLOSED"] as const) {
+        const view = play([[event.roomState({ phase: "finished" })], [event.rematchState({ status })], [event.error(code)]]);
+        expect(view.rematchOffer, code).toMatchObject({ status: "closed", closedReason: "unavailable", deadline: null });
+      }
+    },
+  );
+
+  it("sin oferta viva, un error de sala desaparecida no la toca", () => {
+    const closed = play([[event.roomState({ phase: "finished" })], [event.rematchState({ status: "closed", closedReason: "declined", deadline: null })], [event.error("ROOM_NOT_FOUND")]]);
+    expect(closed.rematchOffer).toMatchObject({ status: "closed", closedReason: "declined" });
+    expect(play([[event.roomState()], [event.error("ROOM_NOT_FOUND")]]).rematchOffer).toBeNull();
+    expect(play([[event.roomState({ phase: "finished" })], [event.rematchState({ status: "mine" })], [event.error("RATE_LIMITED")]]).rematchOffer?.status).toBe("mine");
+  });
+
   it("rematch-room guarda el código de la sala nueva y un room-state posterior lo conserva", () => {
     const view = play([[event.roomState({ phase: "finished" })], [event.rematchRoom("GAME02")]]);
     expect(view.nextRoom).toBe("GAME02");

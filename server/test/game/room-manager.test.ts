@@ -338,6 +338,16 @@ describe("RoomManager: la revancha", () => {
       expect(error).toMatchObject({ status: 409, code: "ALREADY_IN_GAME", details: { seat: 2 } });
     });
 
+    it("cancelRematchRoom cancela la sala de revancha (sin partida) y la saca del almacén", async () => {
+      const { manager, store } = setup();
+      const { code } = await manager.createRematchRoom({ players: { 1: ash, 2: misty }, config: oneRound });
+      const room = store.get(code)!;
+      manager.cancelRematchRoom(code);
+      expect(room.outcome).toEqual({ winnerSeat: null, reason: "cancelled" });
+      expect(store.get(code)).toBeUndefined();
+      expect(() => manager.cancelRematchRoom("NOEXISTE")).not.toThrow();
+    });
+
     it("la sala de revancha caduca a los 30 s si el segundo no entra y sale del almacén", async () => {
       const { manager, store, time } = setup();
       const { code } = await manager.createRematchRoom({ players: { 1: ash, 2: misty }, config: oneRound });
@@ -369,6 +379,15 @@ describe("RoomManager: la revancha", () => {
     expect(accounts.repository.headToHeadCalls).toEqual([{ userA: "u1", userB: "u2", recent: 5 }]);
     expect(accounts.broadcaster.payloads("rematch-state", 1).at(-1)).toMatchObject({ record: { mine: 1, theirs: 0, draws: 0, played: 1, recent: ["won"] } });
     expect(accounts.broadcaster.payloads("rematch-state", 2).at(-1)).toMatchObject({ record: { mine: 0, theirs: 1, played: 1, recent: ["lost"] } });
+
+    // Si el final de la partida no llegó a guardarse (played 0), no se manda un récord sin esa partida.
+    const unsaved = setup();
+    const unsavedRoom = await startedRoom(unsaved);
+    finishNormally(unsaved, unsavedRoom);
+    await unsavedRoom.idle();
+    await flush();
+    expect(unsaved.repository.headToHeadCalls).toHaveLength(1);
+    expect(unsaved.broadcaster.payloads("rematch-state", 1).every((state) => state.record === undefined)).toBe(true);
 
     const guests = setup();
     const guestRoom = await startedRoom(guests, inv, misty);

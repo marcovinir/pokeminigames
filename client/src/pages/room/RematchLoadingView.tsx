@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
 import { Badge } from "../../components/Badge";
@@ -6,6 +7,7 @@ import { Card } from "../../components/Card";
 import { Notice } from "../../components/Notice";
 import { rise } from "../../components/rise";
 import { REMATCH_TEXT, rematchEntering, rematchNoShow, rematchReady } from "../../i18n/es";
+import { focusWasLost } from "./RematchPanel";
 import { useRoom } from "./use-room";
 
 /**
@@ -18,10 +20,18 @@ export function RematchLoadingView() {
   const rival = opponent?.username ?? "Tu rival";
   const inNewRoom = view.isRematchRoom && view.phase === "waiting";
   const rivalReady = inNewRoom && opponent?.connected === true;
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  // Se llega aquí pulsando «Aceptar», que desaparece: el foco va al título en vez de perderse.
+  useEffect(() => {
+    if (focusWasLost()) titleRef.current?.focus();
+  }, []);
 
   return (
     <Card as="section" tone="raised" style={rise(0)} className="animate-rise mx-auto w-full max-w-lg p-6 text-center sm:p-8">
-      <h1 className="font-display text-3xl font-semibold">{REMATCH_TEXT.loadingTitle}</h1>
+      <h1 ref={titleRef} tabIndex={-1} className="font-display text-3xl font-semibold outline-none">
+        {REMATCH_TEXT.loadingTitle}
+      </h1>
       <div className="mt-6 flex items-center justify-center gap-5">
         <Avatar name={me?.username ?? "Tú"} size="lg" />
         <span aria-hidden="true" className="pokeball animate-rock" />
