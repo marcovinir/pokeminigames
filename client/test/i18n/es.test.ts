@@ -1,7 +1,9 @@
 import { GAME_END_REASONS, type GameResult, type RematchClosedReason, type RematchRecord } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import {
+  AVATAR_TEXT,
   REMATCH_TEXT,
+  avatarLabel,
   RESULT_LABELS,
   describeConfig,
   errorMessage,
@@ -120,5 +122,18 @@ describe("textos de la revancha", () => {
     expect(recordHeadline(record(1, 0), "misty")).toBe("Es su primera partida juntos");
     expect(recordHeadline(record(0, 1), "misty")).toBe("Es su primera partida juntos");
     expect(recordHeadline(record(0, 0, 1), "misty")).toBe("Es su primera partida juntos");
+  });
+});
+
+describe("textos de los avatares", () => {
+  it("son los de la spec", () => {
+    expect(AVATAR_TEXT).toEqual({
+      change: "Cambiar avatar",
+      title: "Elige tu avatar",
+      useInitials: "Usar mis iniciales",
+      close: "Cerrar",
+      saveError: "No se pudo guardar tu avatar. Inténtalo de nuevo.",
+    });
+    expect(avatarLabel("Gengar")).toBe("Avatar: Gengar");
   });
 });

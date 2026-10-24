@@ -201,3 +201,14 @@ export function recordHeadline(record: RematchRecord, rivalName: string): string
   const verdict = record.mine > record.theirs ? "vas ganando" : record.mine < record.theirs ? `va ganando ${rivalName}` : "van empatados";
   return `${record.played} partidas jugadas · ${verdict}`;
 }
+
+export const AVATAR_TEXT = {
+  change: "Cambiar avatar",
+  title: "Elige tu avatar",
+  useInitials: "Usar mis iniciales",
+  close: "Cerrar",
+  saveError: "No se pudo guardar tu avatar. Inténtalo de nuevo.",
+} as const;
+
+/** Lo que oye un lector de pantalla en el avatar del perfil. */
+export const avatarLabel = (pokemonName: string): string => `Avatar: ${pokemonName}`;

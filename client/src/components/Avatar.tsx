@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { artworkUrl } from "../catalog/artwork";
 export interface AvatarColor {
   background: string;
   color: string;
@@ -32,22 +34,58 @@ export function initials(name: string): string {
 
 const SIZES = { sm: 28, md: 36, lg: 56, xl: 88 } as const;
 
+/** Lado del arte respecto al círculo: el arte oficial trae su propio margen y así se ve entero, sin cortar la cabeza. */
+const ART_SCALE = 0.88;
+
 export interface AvatarProps {
   name: string;
   size?: keyof typeof SIZES;
+  /** Número de Pokédex del avatar elegido. Sin él, o si la imagen no carga, se ven las iniciales. */
+  avatarId?: number | null;
+  /** Nombre accesible («Avatar: Gengar»). Sin él es decorativo: el nombre de la persona ya está al lado. */
+  label?: string;
   className?: string;
 }
 
-/** Iniciales sobre un color propio. Es decorativo: el nombre ya está al lado como texto. */
-export function Avatar({ name, size = "md", className = "" }: AvatarProps) {
+type ImageState = "loading" | "loaded" | "failed";
+
+function AvatarCircle({ name, size = "md", avatarId, label, className = "" }: AvatarProps) {
+  const [image, setImage] = useState<ImageState>("loading");
   const px = SIZES[size];
+  const art = Math.round(px * ART_SCALE);
+  const pokemon = avatarId != null && Number.isInteger(avatarId) && avatarId > 0 ? avatarId : null;
+  const showArt = pokemon !== null && image !== "failed";
+  const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true };
+
   return (
     <span
-      aria-hidden="true"
+      {...a11y}
       style={{ ...avatarColor(name), width: px, height: px, fontSize: Math.round(px * 0.4) }}
-      className={`inline-flex shrink-0 select-none items-center justify-center rounded-pill font-display font-semibold ${className}`}
+      className={`inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-pill font-display font-semibold ${className}`}
     >
-      {initials(name)}
+      {showArt ? (
+        // Mientras carga solo se ve el círculo de color (sin iniciales que parpadeen); si falla, vuelven las iniciales.
+        <img
+          src={artworkUrl(pokemon)}
+          alt=""
+          width={art}
+          height={art}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImage("loaded")}
+          onError={() => setImage("failed")}
+          style={{ width: art, height: art }}
+          className={`object-contain transition-opacity duration-(--dur-base) ${image === "loaded" ? "opacity-100" : "opacity-0"}`}
+        />
+      ) : (
+        initials(name)
+      )}
     </span>
   );
+}
+
+/** El Pokémon elegido sobre el color propio de la persona, o sus iniciales si no eligió ninguno o la imagen falla. */
+export function Avatar(props: AvatarProps) {
+  // Con otro avatar se empieza de cero (una imagen que falló no condena a la siguiente).
+  return <AvatarCircle key={props.avatarId ?? "none"} {...props} />;
 }
