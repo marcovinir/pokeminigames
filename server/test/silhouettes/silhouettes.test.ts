@@ -45,7 +45,7 @@ describe("la ruta de las siluetas", () => {
     expect(response.status).toBe(200);
     expect(response.headers["content-type"]).toBe("image/png");
     expect(response.headers["cache-control"]).toBe("private, max-age=3600");
-    expect(fetchImpl).toHaveBeenCalledWith("https://arte.test/94.png");
+    expect(fetchImpl).toHaveBeenCalledWith("https://arte.test/94.png", expect.objectContaining({ signal: expect.any(AbortSignal) }));
     const png = PNG.sync.read(response.body as Buffer);
     for (let y = 0; y < 4; y++) {
       for (let x = 0; x < 4; x++) {
@@ -96,5 +96,21 @@ describe("el registro de siluetas", () => {
     expect(registry.lookup("a")).toBeUndefined();
     expect(registry.lookup("b")).toBe(2);
     expect(registry.lookup("c")).toBe(3);
+  });
+});
+
+describe("el arte que no responde", () => {
+  it("si el origen no contesta a tiempo da 502 (y la pantalla enseña su respaldo)", async () => {
+    // Como fetch de verdad: solo termina cuando se aborta con la señal.
+    const hanging = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(new Error("abortado")))));
+    const registry = createSilhouetteRegistry();
+    const renderer = createSilhouetteRenderer({ artUrl: "https://arte.test/{id}.png", fetchImpl: hanging as unknown as typeof fetch, timeoutMs: 50 });
+    const app = express();
+    app.use("/silhouettes", createSilhouettesRouter({ registry, renderer }));
+    app.use(errorHandler);
+    registry.register("tok-1", 94);
+    const response = await request(app).get("/silhouettes/tok-1");
+    expect(response.status).toBe(502);
+    expect(response.body.error.code).toBe("SILHOUETTE_UNAVAILABLE");
   });
 });

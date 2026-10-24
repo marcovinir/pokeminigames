@@ -12,6 +12,8 @@ export interface SilhouetteRendererOptions {
   artUrl: string;
   /** Cuántas siluetas se guardan hechas (por defecto 200). */
   cacheSize?: number;
+  /** Cuánto se espera al origen del arte (por defecto 5 s): colgado, la silueta falla y la pantalla enseña su respaldo. */
+  timeoutMs?: number;
   fetchImpl?: typeof fetch;
 }
 
@@ -28,13 +30,13 @@ export function blacken(art: Buffer): Buffer {
   return PNG.sync.write(png);
 }
 
-export function createSilhouetteRenderer({ artUrl, cacheSize = 200, fetchImpl = fetch }: SilhouetteRendererOptions): SilhouetteRenderer {
+export function createSilhouetteRenderer({ artUrl, cacheSize = 200, timeoutMs = 5000, fetchImpl = fetch }: SilhouetteRendererOptions): SilhouetteRenderer {
   const cache = new Map<number, Promise<Buffer>>();
 
   async function download(pokemonId: number): Promise<Buffer> {
     const url = artUrl.replaceAll("{id}", String(pokemonId));
     if (url.startsWith("file:")) return readFile(fileURLToPath(url));
-    const response = await fetchImpl(url);
+    const response = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok) throw new Error(`El arte de ${pokemonId} respondió ${response.status}`);
     return Buffer.from(await response.arrayBuffer());
   }
