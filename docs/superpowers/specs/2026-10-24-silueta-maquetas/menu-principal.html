@@ -1,0 +1,110 @@
+<style>
+  .phone { width: 330px; max-width: 100%; border: 1px solid rgba(127,127,127,.35); border-radius: 22px; padding: 14px; margin-top: 10px; background: #eef4ff; color: #0f172a; font-family: system-ui, sans-serif; }
+  .bar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+  .ball { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(#dc2626 50%, #fff 50%); border: 2px solid #111; vertical-align: middle; margin-right: 6px; }
+  .av { width: 22px; height: 22px; border-radius: 50%; background: #1d4ed8; display: inline-block; }
+  .h1 { font-size: 22px; font-weight: 800; margin: 2px 0 2px; }
+  .sub { font-size: 12px; opacity: .65; margin-bottom: 12px; }
+  .card { background: #fff; border-radius: 18px; padding: 14px; box-shadow: 0 4px 14px rgba(15,23,42,.10); margin-bottom: 12px; }
+  .art { height: 110px; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .sil { background: radial-gradient(circle at 50% 45%, #fde68a, #f59e0b); }
+  .typ { background: linear-gradient(135deg, #bfdbfe, #fecaca); }
+  .sil img { height: 96px; filter: brightness(0); }
+  .chip { padding: 5px 12px; border-radius: 999px; font-weight: 800; font-size: 13px; color: #fff; }
+  .name { font-size: 16px; font-weight: 800; margin-top: 10px; }
+  .desc { font-size: 12px; opacity: .7; margin-top: 2px; }
+  .btn { margin-top: 10px; display: inline-block; padding: 7px 16px; border-radius: 999px; background: #dc2626; color: #fff; font-weight: 800; font-size: 13px; }
+  .new { font-size: 10px; font-weight: 800; background: #fde047; color: #713f12; padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+  .row { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 16px; padding: 10px; box-shadow: 0 3px 10px rgba(15,23,42,.08); margin-bottom: 10px; }
+  .thumb { width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .thumb img { height: 56px; filter: brightness(0); }
+  .mini { font-size: 10px; padding: 3px 6px; }
+  .grow { flex: 1; min-width: 0; }
+  .go { font-size: 20px; opacity: .5; }
+  .soon { opacity: .45; border: 2px dashed rgba(15,23,42,.25); box-shadow: none; background: transparent; }
+</style>
+
+<h2>El menú principal: ¿cómo eliges el juego?</h2>
+<p class="subtitle">Es lo primero que ves al entrar (con cuenta o como invitado). Al tocar un juego vas a su lobby, el de siempre: crear sala o unirse con código. Las tres a 330 px (teléfono). Nombres de los juegos provisionales: «Doble tipo» y «¿Quién es ese Pokémon?».</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tarjetas grandes, una debajo de otra</h3>
+      <p>Cada juego con su dibujo, nombre, una frase y «Jugar». Muy visual; con muchos juegos habría que desplazarse.</p>
+      <div class="phone">
+        <div class="bar"><span><span class="ball"></span>PokeMiniGames</span><span class="av"></span></div>
+        <div class="h1">¿A qué jugamos?</div>
+        <div class="sub">Elige un minijuego para dos.</div>
+        <div class="card">
+          <div class="art typ"><span class="chip" style="background:#6d8bdc">volador</span><b>+</b><span class="chip" style="background:#e8742c">fuego</span></div>
+          <div class="name">Doble tipo</div>
+          <div class="desc">Nombra un Pokémon con los dos tipos. Gana quien sume más stats.</div>
+          <span class="btn">Jugar</span>
+        </div>
+        <div class="card">
+          <div class="art sil"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/94.png" alt=""></div>
+          <div class="name">¿Quién es ese Pokémon? <span class="new">NUEVO</span></div>
+          <div class="desc">Adivina la silueta. Cuanto más rápido, más puntos.</div>
+          <span class="btn">Jugar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Lista compacta</h3>
+      <p>Una fila por juego con su miniatura. Caben muchos juegos sin desplazarse; menos vistoso.</p>
+      <div class="phone">
+        <div class="bar"><span><span class="ball"></span>PokeMiniGames</span><span class="av"></span></div>
+        <div class="h1">¿A qué jugamos?</div>
+        <div class="sub">Elige un minijuego para dos.</div>
+        <div class="row">
+          <div class="thumb typ"><span class="chip mini" style="background:#6d8bdc">vol</span><span class="chip mini" style="background:#e8742c">fue</span></div>
+          <div class="grow"><div class="name" style="margin:0">Doble tipo</div><div class="desc">Nombra un Pokémon con los dos tipos.</div></div>
+          <span class="go">›</span>
+        </div>
+        <div class="row">
+          <div class="thumb sil"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/94.png" alt=""></div>
+          <div class="grow"><div class="name" style="margin:0">¿Quién es ese Pokémon? <span class="new">NUEVO</span></div><div class="desc">Adivina la silueta, rápido.</div></div>
+          <span class="go">›</span>
+        </div>
+        <div class="row soon">
+          <div class="thumb" style="background:rgba(15,23,42,.08)">?</div>
+          <div class="grow"><div class="name" style="margin:0">Próximamente</div><div class="desc">Más minijuegos en camino.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Tarjetas en rejilla (dos por fila en escritorio, una en teléfono) con «Unirse con código» arriba</h3>
+      <p>Como A, pero el código de sala se escribe ya en el menú: si te pasan un código no tienes que elegir juego primero.</p>
+      <div class="phone">
+        <div class="bar"><span><span class="ball"></span>PokeMiniGames</span><span class="av"></span></div>
+        <div class="h1">¿A qué jugamos?</div>
+        <div class="card" style="padding:10px;display:flex;gap:8px;align-items:center">
+          <div style="flex:1;border:2px solid #cbd5e1;border-radius:10px;padding:7px 10px;font-size:12px;opacity:.6">Código de sala</div>
+          <span class="btn" style="margin:0">Unirse</span>
+        </div>
+        <div class="card">
+          <div class="art typ" style="height:80px"><span class="chip" style="background:#6d8bdc">volador</span><b>+</b><span class="chip" style="background:#e8742c">fuego</span></div>
+          <div class="name">Doble tipo</div>
+          <div class="desc">Nombra un Pokémon con los dos tipos.</div>
+          <span class="btn">Jugar</span>
+        </div>
+        <div class="card">
+          <div class="art sil" style="height:80px"><img style="height:72px" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/94.png" alt=""></div>
+          <div class="name">¿Quién es ese Pokémon? <span class="new">NUEVO</span></div>
+          <div class="desc">Adivina la silueta, rápido.</div>
+          <span class="btn">Jugar</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
