@@ -84,7 +84,7 @@ Funciona bien si una persona entra, elige «¿Quién es ese Pokémon?» en el me
 - **Un juego, una configuración:** `RoomConfig` pasa a tener un discriminante `game` (por ejemplo `"doble_tipo" | "silueta"`). Una configuración sin `game` (salas y partidas guardadas de antes) **es «Doble tipo»**. La de la silueta lleva `rounds` (5, 10 o 15) y `generations` (lista de 1 a 9, sin repetir, al menos una). `POST /rooms` valida cada forma con zod.
 - **Motor por juego:** el motor actual (`server/src/game/engine/`) sigue siendo el de «Doble tipo». La silueta tiene **su propio reductor puro** con el mismo patrón (`reduce(state, event, now, deps)` → estado y efectos, temporizadores con el `Scheduler`, vista por asiento con `serverNow`). La sala (`GameRoom`), el gestor (`RoomManager`), la revancha y el tiempo real se generalizan lo justo para trabajar con **cualquiera de los dos motores**, elegido por `config.game`: una interfaz común (crear, reducir, vista y resumen final) y los efectos comunes (programar, emitir, enviar estado, guardar). Copiar `room.ts` por juego queda descartado.
 - **Eventos:** los propios de la silueta (inicio de ronda con el token de la silueta, respuesta recibida, resultado de la ronda y fin) se tipan en `shared/src/events.ts`. Los comunes (estado de sala, jugador unido, desconexiones, revancha) se reutilizan. El estado de sala (`room-state`) de la silueta es suyo: el cliente elige las pantallas por `config.game`.
-- **Persistencia y estadísticas:** **pendiente de decidir con Marco** (§10). Mientras no se decida, el diseño no da por supuesto que las tablas `games/rounds/round_picks` guarden la silueta.
+- **Persistencia y estadísticas (decisión de Marco, §10):** las partidas de la silueta **no se guardan** en esta versión, como las de un invitado: sin migración, la sala no usa el repositorio (ni fila al crearla, ni asientos, rondas o final) y no cuentan en perfil, historial ni estadísticas, que siguen siendo de «Doble tipo». En la revancha de la silueta **no se muestra récord**. La prueba de «configuración sin `game` = Doble tipo» aplica a lo que llega por la API y a las vistas: las partidas guardadas guardan su configuración en columnas, no como objeto.
 - **Cliente:**
   - Menú principal en `/`, lobbies en `/jugar/:juego`.
   - El formulario de crear sala, por juego.
@@ -115,9 +115,15 @@ Lo de `AGENTS.md` §7, más:
   - una medida a 375 px del menú y de la ronda.
 - **README:** el menú, el juego nuevo, sus reglas y la API y los eventos nuevos. Nuevas capturas del menú y de la silueta.
 
-## 10. Pendiente de Marco
+## 10. Decisiones de Marco tras la revisión de la spec
 
-- **¿Cuentan las partidas de la silueta?** Las opciones son: **(a)** no se guardan en esta primera versión (como las de un invitado), y el perfil, el historial y el récord de la revancha siguen siendo solo de «Doble tipo»; o **(b)** se guardan, y el historial y el perfil se separan por juego (por ejemplo, con pestañas), con un récord de revancha por juego.
+- **Las partidas de la silueta no se guardan por ahora.** Guardarlas y separar el perfil, el historial y el récord por juego queda como una issue aparte.
+- **Nivel anti-trampas: que no se filtre nada.** Ni el número, ni el nombre, ni la imagen a color llegan al navegador antes de la revelación. No se alteran las siluetas por ronda: alguien muy decidido podría compararlas con las 1025 siluetas públicas, y Marco lo acepta para un juego entre amigos. Así la caché de siluetas puede ser por Pokémon.
+
+Decisiones menores mías:
+- Los segundos que se muestran son los que mide el servidor, y los puntos salen de la fórmula de §5. La maqueta (+787 en 3,2 s) es solo ilustrativa: con la fórmula serían 808.
+- Antes de la revelación, el rival **no recibe tu respuesta**, porque si acertaste esa respuesta es el nombre. Como hoy, la confirmación de respuesta solo le llega a quien respondió. La prueba de §9 debe cubrir también este caso.
+- La silueta de la ronda siguiente se puede precargar durante la pausa, para que una descarga lenta no se coma los 15 s (la URL opaca no delata nada).
 
 ## 11. Lo que se deja al implementador
 
