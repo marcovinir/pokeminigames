@@ -9,10 +9,10 @@ import { seededRng, sequenceRng } from "../helpers/rng.js";
 import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
 
 const config: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
-const ash = { userId: "u1", username: "ash", isGuest: false };
-const misty = { userId: "u2", username: "misty", isGuest: false };
-const brock = { userId: "u3", username: "brock", isGuest: false };
-const inv = { userId: "guest_a", username: "inv", isGuest: true };
+const ash = { userId: "u1", username: "ash", isGuest: false, avatarId: null };
+const misty = { userId: "u2", username: "misty", isGuest: false, avatarId: null };
+const brock = { userId: "u3", username: "brock", isGuest: false, avatarId: null };
+const inv = { userId: "guest_a", username: "inv", isGuest: true, avatarId: null };
 
 function setup(generateCode?: () => string) {
   const logger = { error: vi.fn() };
@@ -206,8 +206,8 @@ describe("RoomManager con invitados", () => {
     const { manager, store, repository } = setup();
     const { code } = await manager.createRoom(ash, oneRound);
     for (const joiner of [
-      { userId: "u9", username: "ASH", isGuest: false },
-      { userId: "guest_b", username: "Ash", isGuest: true },
+      { userId: "u9", username: "ASH", isGuest: false, avatarId: null },
+      { userId: "guest_b", username: "Ash", isGuest: true, avatarId: null },
     ]) {
       expect(syncRejection(() => manager.joinRoom(joiner, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
     }
@@ -225,7 +225,7 @@ describe("RoomManager con invitados", () => {
   it("NAME_IN_USE también cuando el creador es el invitado y quien llega es una cuenta", async () => {
     const { manager } = setup();
     const { code } = await manager.createRoom(inv, oneRound);
-    expect(syncRejection(() => manager.joinRoom({ userId: "u9", username: "INV", isGuest: false }, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
+    expect(syncRejection(() => manager.joinRoom({ userId: "u9", username: "INV", isGuest: false, avatarId: null }, code))).toEqual({ status: 409, code: "NAME_IN_USE" });
   });
 
   it("el creador invitado puede volver a pedir unirse a su sala (idempotente) y no puede crear otra", async () => {
@@ -517,5 +517,29 @@ describe("RoomManager.getPublicInfo y connect", () => {
   it("el generador usa el azar inyectado de forma determinista", () => {
     const rng = sequenceRng([0, 1, 2, 3, 4, 5]);
     expect(generateRoomCode(rng)).toBe("ABCDEF");
+  });
+});
+
+describe("RoomManager: el avatar", () => {
+  const oneRound: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
+
+  it("createRoom y joinRoom pasan el avatar de cada uno al motor", async () => {
+    const { manager, store } = setup();
+    const { code } = await manager.createRoom({ ...ash, avatarId: 94 }, oneRound);
+    manager.joinRoom({ ...misty, avatarId: 25 }, code);
+    expect(store.get(code)!.view(1).players).toMatchObject([{ username: "ash", avatarId: 94 }, { username: "misty", avatarId: 25 }]);
+  });
+
+  it("la sala de una revancha copia el avatar de cada asiento", async () => {
+    const { manager, store } = setup();
+    const { code } = await manager.createRematchRoom({ players: { 1: { ...ash, avatarId: 94 }, 2: { ...misty, avatarId: 25 } }, config: oneRound });
+    expect(store.get(code)!.view(2).players).toMatchObject([{ username: "ash", avatarId: 94 }, { username: "misty", avatarId: 25 }]);
+  });
+
+  it("players() devuelve el avatar de cada asiento, null si no tiene", async () => {
+    const { manager, store } = setup();
+    const { code } = await manager.createRoom({ ...ash, avatarId: 94 }, oneRound);
+    manager.joinRoom(misty, code);
+    expect(store.get(code)!.players()).toEqual({ 1: { ...ash, avatarId: 94 }, 2: misty });
   });
 });

@@ -6,7 +6,7 @@ import { sequenceRng } from "../helpers/rng.js";
 import { FakeRepository, FakeTime, RecordingBroadcaster } from "./fakes.js";
 
 const ONE_ROUND: RoomConfig = { typeMode: "random", lengthMode: "custom", roundsLimit: 1, statsGoal: null };
-const creator = { userId: "u1", username: "ash", isGuest: false };
+const creator = { userId: "u1", username: "ash", isGuest: false, avatarId: null };
 
 function setup(config: RoomConfig = ONE_ROUND, rng: number[] = [0], opts: { gameId?: string | null; creator?: RoomUser; rematch?: boolean } = {}) {
   const time = new FakeTime();
@@ -143,11 +143,11 @@ describe("GameRoom", () => {
 
     it("players() devuelve usuario, nombre e isGuest por asiento", () => {
       const { room } = setup();
-      expect(room.players()).toEqual({ 1: { userId: "u1", username: "ash", isGuest: false } });
+      expect(room.players()).toEqual({ 1: { userId: "u1", username: "ash", isGuest: false, avatarId: null } });
       room.dispatch({ type: "PLAYER_JOINED", userId: "guest_a", username: "inv", guest: true });
       expect(room.players()).toEqual({
-        1: { userId: "u1", username: "ash", isGuest: false },
-        2: { userId: "guest_a", username: "inv", isGuest: true },
+        1: { userId: "u1", username: "ash", isGuest: false, avatarId: null },
+        2: { userId: "guest_a", username: "inv", isGuest: true, avatarId: null },
       });
     });
 
@@ -187,7 +187,7 @@ describe("GameRoom", () => {
   });
 
   describe("salas con un invitado: sin rastro en la base de datos", () => {
-    const guest: RoomUser = { userId: "guest_a", username: "inv", isGuest: true };
+    const guest: RoomUser = { userId: "guest_a", username: "inv", isGuest: true, avatarId: null };
 
     it("una sala con gameId null no se guarda: juega una partida entera y no escribe nada", async () => {
       const { room, time, repository } = setup(ONE_ROUND, [0], { gameId: null, creator: guest });

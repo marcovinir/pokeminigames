@@ -9,6 +9,8 @@ export interface RematchPlayer {
   userId: string;
   username: string;
   isGuest: boolean;
+  /** El avatar que tenía en la sala que acaba de terminar: la revancha lo copia. */
+  avatarId: number | null;
 }
 
 export interface RematchDeps {

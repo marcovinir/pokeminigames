@@ -23,6 +23,8 @@ export interface PlayerState {
   username: string;
   /** Es un invitado (sin cuenta): su partida no se guarda. Solo está, y vale `true`, en los invitados. */
   guest?: boolean;
+  /** Su avatar al entrar a la sala. Solo está si eligió uno. */
+  avatarId?: number;
   connected: boolean;
   totalStats: number;
   /** Ids de los Pokémon del equipo, en el orden en que se ganaron. */
@@ -77,7 +79,7 @@ export type TimerId =
   | { kind: "grace"; seat: Seat; graceEndsAt: number };
 
 export type GameEvent =
-  | { type: "PLAYER_JOINED"; userId: string; username: string; guest?: boolean }
+  | { type: "PLAYER_JOINED"; userId: string; username: string; guest?: boolean; avatarId?: number }
   | { type: "PLAYER_CONNECTED"; seat: Seat }
   | { type: "PLAYER_DISCONNECTED"; seat: Seat }
   | { type: "CHOOSE_TYPE"; seat: Seat; typeName: string }

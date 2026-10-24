@@ -26,11 +26,33 @@ export interface GameRoomPorts {
   persistRetryDelayMs?: number;
 }
 
-export interface RoomUser {
+/** Quién es una persona conectada: la cuenta o el invitado del token. */
+export interface PlayerIdentity {
   userId: string;
   username: string;
   /** Es un invitado (sin cuenta): sus partidas no se guardan. Siempre se dice: nada se trata como cuenta por omisión. */
   isGuest: boolean;
+}
+
+/** Quien se sienta en una sala: su identidad y el avatar que tenía al entrar (se lee de la base al crear o unirse). */
+export interface RoomUser extends PlayerIdentity {
+  /** Número de Pokédex del avatar; nulo = iniciales (siempre en un invitado). */
+  avatarId: number | null;
+}
+
+/** Lo que el motor sabe de quien ocupa un asiento: `guest` y `avatarId` solo cuando aplican. */
+function engineIdentity(user: RoomUser): { userId: string; username: string; guest?: boolean; avatarId?: number } {
+  return {
+    userId: user.userId,
+    username: user.username,
+    ...(user.isGuest ? { guest: true } : {}),
+    ...(user.avatarId !== null ? { avatarId: user.avatarId } : {}),
+  };
+}
+
+/** El evento que sienta a alguien en el asiento 2. */
+export function joinedEvent(user: RoomUser): GameEvent {
+  return { type: "PLAYER_JOINED", ...engineIdentity(user) };
 }
 
 /**
@@ -61,7 +83,7 @@ export class GameRoom {
     const { creator } = input;
     const { state, effects } = createGame(
       input.config,
-      { userId: creator.userId, username: creator.username, guest: creator.isGuest },
+      engineIdentity(creator),
       ports.clock.now(),
       { rematch: input.rematch },
     );
@@ -88,7 +110,9 @@ export class GameRoom {
     const players: Partial<Record<Seat, RoomUser>> = {};
     for (const seat of SEATS) {
       const player = this.state.players[seat];
-      if (player) players[seat] = { userId: player.userId, username: player.username, isGuest: player.guest === true };
+      if (player) {
+        players[seat] = { userId: player.userId, username: player.username, isGuest: player.guest === true, avatarId: player.avatarId ?? null };
+      }
     }
     return players;
   }

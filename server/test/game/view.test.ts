@@ -131,3 +131,24 @@ describe("vistas de la partida", () => {
     expect(ended).toEqual({ winnerSeat: 1, reason: "forfeit", teams: { 1: [], 2: [] }, totals: { 1: 0, 2: 0 } });
   });
 });
+
+describe("vistas: el avatar", () => {
+  it("cada asiento lleva su avatar en la vista de los dos", () => {
+    const h = new Harness({ config: RANDOM_3, creator: { userId: "u1", username: "ash", avatarId: 94 } });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty", avatarId: 25 });
+    for (const seat of [1, 2] as const) {
+      expect(buildRoomState(h.state, seat, "ABC234", h.catalog, h.now).players).toEqual([
+        { seat: 1, username: "ash", avatarId: 94, connected: false, totalStats: 0, teamSize: 0 },
+        { seat: 2, username: "misty", avatarId: 25, connected: false, totalStats: 0, teamSize: 0 },
+      ]);
+    }
+  });
+
+  it("sin avatar el campo no aparece (ni null ni undefined en el JSON)", () => {
+    const h = new Harness({ config: RANDOM_3 });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    const view = buildRoomState(h.state, 1, "ABC234", h.catalog, h.now);
+    for (const player of view.players) expect("avatarId" in player).toBe(false);
+    expect(JSON.stringify(view)).not.toContain("avatarId");
+  });
+});

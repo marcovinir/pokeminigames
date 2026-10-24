@@ -39,8 +39,25 @@ interface Ctx {
 
 const ABANDONED_REASONS = new Set(["cancelled", "expired", "abandoned"]);
 
-function newPlayer(seat: Seat, userId: string, username: string, guest?: boolean): PlayerState {
-  return { seat, userId, username, ...(guest ? { guest: true } : {}), connected: false, totalStats: 0, team: [] };
+/** Quién ocupa un asiento: `guest` y `avatarId` solo están cuando aplican. */
+interface PlayerIdentity {
+  userId: string;
+  username: string;
+  guest?: boolean;
+  avatarId?: number;
+}
+
+function newPlayer(seat: Seat, { userId, username, guest, avatarId }: PlayerIdentity): PlayerState {
+  return {
+    seat,
+    userId,
+    username,
+    ...(guest ? { guest: true } : {}),
+    ...(avatarId ? { avatarId } : {}),
+    connected: false,
+    totalStats: 0,
+    team: [],
+  };
 }
 
 function inGame(s: GameState): boolean {
@@ -71,7 +88,7 @@ function randomPlayablePair(c: Ctx): TypePair | null {
 /** Estado inicial de una sala recién creada: el creador ocupa el asiento 1. */
 export function createGame(
   config: RoomConfig,
-  creator: { userId: string; username: string; guest?: boolean },
+  creator: PlayerIdentity,
   now: number,
   /** `rematch`: la sala nace de una revancha y los dos ya están dentro; si el rival no entra caduca pronto. */
   options: { rematch?: boolean } = {},
@@ -79,7 +96,7 @@ export function createGame(
   const state: GameState = {
     phase: "waiting",
     config,
-    players: { 1: newPlayer(1, creator.userId, creator.username, creator.guest) },
+    players: { 1: newPlayer(1, creator) },
     round: null,
     roundsPlayed: 0,
     owners: new Map(),
@@ -105,7 +122,7 @@ export function reduce(prev: GameState, event: GameEvent, now: number, deps: Eng
   const c: Ctx = { s: structuredClone(prev), fx: [], now, deps };
   switch (event.type) {
     case "PLAYER_JOINED":
-      onJoined(c, event.userId, event.username, event.guest);
+      onJoined(c, event);
       break;
     case "PLAYER_CONNECTED":
       onConnected(c, event.seat);
@@ -131,11 +148,15 @@ export function reduce(prev: GameState, event: GameEvent, now: number, deps: Eng
 
 // --- Sala y conexiones -------------------------------------------------------------
 
-function onJoined(c: Ctx, userId: string, username: string, guest?: boolean): void {
+function onJoined(c: Ctx, joiner: PlayerIdentity): void {
   if (c.s.phase !== "waiting" || c.s.players[2]) return;
-  c.s.players[2] = newPlayer(2, userId, username, guest);
-  c.fx.push({ kind: "persist_seat_taken", userId });
-  emit(c, 1, { name: "player-joined", payload: { username, ...(guest ? { guest: true } : {}) } });
+  const player = newPlayer(2, joiner);
+  c.s.players[2] = player;
+  c.fx.push({ kind: "persist_seat_taken", userId: player.userId });
+  emit(c, 1, {
+    name: "player-joined",
+    payload: { username: player.username, ...(player.guest ? { guest: true } : {}), ...(player.avatarId ? { avatarId: player.avatarId } : {}) },
+  });
 }
 
 function onConnected(c: Ctx, seat: Seat): void {

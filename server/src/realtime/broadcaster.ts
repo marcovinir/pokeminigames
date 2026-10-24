@@ -6,10 +6,11 @@ import type {
 } from "@pokemon-minigames/shared";
 import type { Socket } from "socket.io";
 import type { Broadcaster } from "../game/ports.js";
-import type { RoomUser } from "../game/room.js";
+import type { PlayerIdentity } from "../game/room.js";
 
 export interface SocketData {
-  user: RoomUser;
+  /** Quién es (del token). El avatar no viaja aquí: se lee de la base al crear o unirse a una sala. */
+  user: PlayerIdentity;
 }
 
 export type GameSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;

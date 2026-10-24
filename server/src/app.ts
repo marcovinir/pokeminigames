@@ -70,7 +70,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
     res.json({ status: "ok" });
   });
   app.use("/auth", createAuthRouter({ env, authService, tokens, guests, limiters: limiters ?? undefined }));
-  app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens }));
+  app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens, readAvatar: (userId) => authService.avatarOf(userId) }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));
 

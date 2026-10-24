@@ -257,3 +257,22 @@ describe("motor: sala y conexiones", () => {
     expect(h.state).toEqual(snapshot);
   });
 });
+
+describe("motor: el avatar de cada jugador", () => {
+  it("el creador y quien se une llevan su avatar a la vista y a player-joined", () => {
+    const h = new Harness({ creator: { userId: "u1", username: "ash", avatarId: 94 } });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty", avatarId: 25 });
+    expect(h.state.players[1]).toMatchObject({ avatarId: 94 });
+    expect(h.state.players[2]).toMatchObject({ avatarId: 25 });
+    expect(h.payloads("player-joined", 1)).toEqual([{ username: "misty", avatarId: 25 }]);
+  });
+
+  it("sin avatar, ni el asiento ni player-joined llevan la clave", () => {
+    const h = new Harness();
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    expect("avatarId" in h.state.players[1]!).toBe(false);
+    expect("avatarId" in h.state.players[2]!).toBe(false);
+    expect(h.payloads("player-joined", 1)).toEqual([{ username: "misty" }]);
+    expect(JSON.stringify(h.payloads("player-joined", 1))).not.toContain("avatarId");
+  });
+});

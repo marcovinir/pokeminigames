@@ -30,7 +30,7 @@ export class Harness {
   readonly rng: ReturnType<typeof sequenceRng>;
   readonly catalog: PokemonCatalog;
 
-  constructor(opts: { config?: RoomConfig; rng?: number[]; catalog?: PokemonCatalog; creator?: { userId: string; username: string; guest?: boolean }; rematch?: boolean } = {}) {
+  constructor(opts: { config?: RoomConfig; rng?: number[]; catalog?: PokemonCatalog; creator?: { userId: string; username: string; guest?: boolean; avatarId?: number }; rematch?: boolean } = {}) {
     this.rng = sequenceRng(opts.rng ?? []);
     this.catalog = opts.catalog ?? fixtureCatalog();
     const created = createGame(opts.config ?? RANDOM_3, opts.creator ?? { userId: "u1", username: "ash" }, this.now, opts.rematch ? { rematch: true } : undefined);

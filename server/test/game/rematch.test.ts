@@ -7,8 +7,8 @@ import { FakeTime, RecordingBroadcaster } from "./fakes.js";
 const START = 1_000_000;
 const MINUTE = 60_000;
 const players: Record<Seat, RematchPlayer> = {
-  1: { userId: "u1", username: "ash", isGuest: false },
-  2: { userId: "u2", username: "misty", isGuest: false },
+  1: { userId: "u1", username: "ash", isGuest: false, avatarId: null },
+  2: { userId: "u2", username: "misty", isGuest: false, avatarId: null },
 };
 const config: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, typeHints: true };
 const record: RematchRecord = { mine: 3, theirs: 2, draws: 0, played: 5, recent: ["won", "lost", "won"] };

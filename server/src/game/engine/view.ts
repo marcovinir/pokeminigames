@@ -46,6 +46,7 @@ export function buildRoomState(
             seat: s,
             username: player.username,
             ...(player.guest ? { guest: true } : {}),
+            ...(player.avatarId ? { avatarId: player.avatarId } : {}),
             connected: player.connected,
             totalStats: player.totalStats,
             teamSize: player.team.length,

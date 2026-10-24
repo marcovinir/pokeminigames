@@ -5,7 +5,7 @@ import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, REMATCH_END_REASONS, REMATCH_RECE
 import { RematchCoordinator, type RematchPlayer } from "./rematch.js";
 import { recordFor } from "./rematch-record.js";
 import type { Rng } from "./rng.js";
-import { GameRoom, type GameRoomPorts, type RoomUser } from "./room.js";
+import { GameRoom, type GameRoomPorts, type PlayerIdentity, type RoomUser, joinedEvent } from "./room.js";
 import type { RoomStore } from "./room-store.js";
 
 export interface RoomManagerDeps extends GameRoomPorts {
@@ -117,7 +117,7 @@ export class RoomManager {
         const room = GameRoom.create(this.deps, { code, gameId, config, creator: players[1], rematch: true });
         // El segundo asiento se ocupa ya: si algún jugador es invitado la sala no se guarda y `persist_seat_taken` se ignora.
         const second = players[2];
-        room.dispatch({ type: "PLAYER_JOINED", userId: second.userId, username: second.username, ...(second.isGuest ? { guest: true } : {}) });
+        room.dispatch(joinedEvent(second));
         this.track(room);
         return { code };
       }
@@ -182,7 +182,7 @@ export class RoomManager {
 
     // Con un invitado la partida no deja rastro para nadie: se descarta ANTES de sentarlo, para que no se guarde su asiento.
     if (user.isGuest) room.markNotPersisted();
-    room.dispatch({ type: "PLAYER_JOINED", userId: user.userId, username: user.username, ...(user.isGuest ? { guest: true } : {}) });
+    room.dispatch(joinedEvent(user));
     return { code: room.code };
   }
 
@@ -204,7 +204,7 @@ export class RoomManager {
   }
 
   /** Para el socket: la sala y el asiento del usuario, si participa en ella. */
-  connect(user: RoomUser, code: string): { room: GameRoom; seat: Seat } {
+  connect(user: PlayerIdentity, code: string): { room: GameRoom; seat: Seat } {
     const room = this.findRoom(code);
     const seat = room.seatOf(user.userId);
     if (seat === undefined) throw new AppError(403, "NOT_IN_ROOM", "No participas en esa sala");
