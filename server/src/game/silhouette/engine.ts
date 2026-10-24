@@ -205,7 +205,10 @@ function onTimer(c: Ctx, timer: TimerId): void {
       if (s.phase === "round_active" && s.round?.number === timer.round) closeRound(c);
       break;
     case "result":
-      if (s.phase === "round_result" && s.round?.number === timer.round) beginRound(c, timer.round + 1);
+      if (s.phase === "round_result" && s.round?.number === timer.round) {
+        if (s.roundsPlayed >= s.config.rounds) finish(c, "completed");
+        else beginRound(c, timer.round + 1);
+      }
       break;
     case "grace": {
       const player = s.players[timer.seat];
@@ -295,12 +298,9 @@ function closeRound(c: Ctx): void {
       nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),
     },
   });
-  if (over) {
-    finish(c, "completed");
-  } else {
-    s.phase = "round_result";
-    schedule(c, c.now + seconds(RESULT_PAUSE_SECONDS), { kind: "result", round: round.number });
-  }
+  // También la última revelación tiene su pausa: el resumen llega después (con su temporizador `result`).
+  s.phase = "round_result";
+  schedule(c, c.now + seconds(RESULT_PAUSE_SECONDS), { kind: "result", round: round.number });
 }
 
 // --- Fin --------------------------------------------------------------------------------

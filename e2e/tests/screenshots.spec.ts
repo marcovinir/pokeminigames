@@ -30,8 +30,8 @@ async function chooseAvatar(page: Page, pokemon: string): Promise<void> {
   const dialog = page.getByRole("dialog", { name: "Elige tu avatar" });
   await dialog.getByRole("button", { name: pokemon }).click();
   await expect(dialog).toBeHidden();
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+  await page.goto("/jugar/doble-tipo");
+  await expect(page.getByRole("heading", { level: 1, name: "Doble tipo" })).toBeVisible();
 }
 
 /** Espera a que se carguen las tipografías y terminen las animaciones de entrada, y guarda la imagen. */
@@ -59,6 +59,10 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
 
     await register(ash);
     await register(misty);
+    await ash.page.goto("/");
+    await expect(ash.page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
+    await ash.page.waitForFunction(() => [...document.images].every((image) => image.complete));
+    await shoot(ash.page, "menu");
     await chooseAvatar(ash.page, "Pikachu");
     await chooseAvatar(misty.page, "Gengar");
     await shoot(ash.page, "lobby");
@@ -106,8 +110,8 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
     await shoot(ash.page, "perfil");
 
     // El otro tema: Pokédex (claro), elegido desde el menú de apariencia (el del perfil manda al iniciar sesión).
-    await ash.page.goto("/");
-    await expect(ash.page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+    await ash.page.goto("/jugar/doble-tipo");
+    await expect(ash.page.getByRole("heading", { level: 1, name: "Doble tipo" })).toBeVisible();
     await ash.page.getByRole("button", { name: "Apariencia" }).click();
     await ash.page.getByText("Pokédex", { exact: true }).click();
     await ash.page.getByText("Claro", { exact: true }).click();
@@ -116,6 +120,18 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
     await ash.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await expect(ash.page.locator("html")).toHaveAttribute("data-theme", "pokedex");
     await shoot(ash.page, "pokedex");
+
+    // «¿Quién es ese Pokémon?»: una ronda con la silueta (tema Pokédex claro, el que quedó elegido).
+    await ash.page.goto("/jugar/silueta");
+    await ash.page.getByLabel("Rondas").selectOption("5");
+    await ash.page.getByRole("button", { name: "Crear sala" }).click();
+    const silhouetteCode = ((await ash.page.getByLabel("Código de la sala").textContent()) ?? "").trim();
+    await misty.page.goto("/jugar/silueta");
+    await joinRoom(misty.page, silhouetteCode);
+    const silhouette = ash.page.getByRole("img", { name: "Silueta de un Pokémon" });
+    await expect(silhouette).toBeVisible({ timeout: 30_000 });
+    await ash.page.waitForFunction(() => [...document.images].every((image) => image.complete));
+    await shoot(ash.page, "silueta");
   } finally {
     await ash.context.close();
     await misty.context.close();

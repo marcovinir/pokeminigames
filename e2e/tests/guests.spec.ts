@@ -97,14 +97,14 @@ test("las etiquetas: la cuenta ve «Invitado» junto al rival, y el invitado no 
     await expect(header.getByRole("button", { name: "Apariencia" })).toBeVisible();
     await guest.page.goto("/perfil");
     await expect(guest.page).toHaveURL(/\/$/);
-    await expect(guest.page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+    await expect(guest.page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
     await guest.page.goto(`/jugador/${ash.name}`);
     await expect(guest.page).toHaveURL(/\/$/);
 
     // Un invitado puede abrir /registro (así se pasa a tener cuenta) sin que lo echen al lobby.
     await guest.page.goto("/registro");
     await expect(guest.page.getByRole("heading", { name: "Crear cuenta" })).toBeVisible();
-    await guest.page.goto("/");
+    await guest.page.goto("/jugar/doble-tipo");
 
     // La sala de espera del invitado lo marca; cuando la cuenta se une, ve «Invitado» en la cuenta atrás y en el panel del rival.
     await register(ash);

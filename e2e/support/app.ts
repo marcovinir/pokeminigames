@@ -78,6 +78,15 @@ export interface Player {
  * proxy: `TRUST_PROXY=1`) y los límites de peticiones son por IP; cada persona manda una IP distinta en `X-Forwarded-For`
  * para que las pruebas no compartan límites.
  */
+const MENU_CARD: Record<"doble_tipo" | "silueta", string> = { doble_tipo: "Doble tipo", silueta: "¿Quién es ese Pokémon?" };
+
+/** Desde el menú principal (donde se llega al entrar), al lobby de ese juego. */
+export async function enterLobby(page: Page, game: "doble_tipo" | "silueta"): Promise<void> {
+  await expect(page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
+  await page.getByRole("link", { name: `Jugar ${MENU_CARD[game]}` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: MENU_CARD[game] })).toBeVisible();
+}
+
 export async function newPlayer(browser: Browser, label: string): Promise<Player> {
   const name = `${label}_${randomInt(10_000, 99_999)}`;
   const ip = `10.${randomInt(1, 255)}.${randomInt(1, 255)}.${randomInt(1, 255)}`;
@@ -93,7 +102,7 @@ export async function register({ page, name, email }: Player): Promise<void> {
   await page.getByLabel("Nombre de usuario").fill(name);
   await page.getByLabel("Contraseña").fill(PASSWORD);
   await page.getByRole("button", { name: "Crear cuenta" }).click();
-  await expect(page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+  await enterLobby(page, "doble_tipo");
 }
 
 export async function logIn(page: Page, email: string, password: string): Promise<void> {
@@ -109,7 +118,7 @@ export async function guestLogin(page: Page, name: string): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("Nombre", { exact: true }).fill(name);
   await page.getByRole("button", { name: "Entrar como invitado" }).click();
-  await expect(page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+  await enterLobby(page, "doble_tipo");
 }
 
 /** Una persona nueva que ya entró como invitada (su nombre es el de `newPlayer`, que cumple la regla de 3 a 30 caracteres). */

@@ -24,7 +24,7 @@ test("tras varias contraseñas erróneas el servidor responde 429 y el mensaje d
     try {
       const otherPage = await other.newPage();
       await logIn(otherPage, owner.email, PASSWORD);
-      await expect(otherPage.getByRole("heading", { name: "Lobby" })).toBeVisible();
+      await expect(otherPage.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
     } finally {
       await other.close();
     }

@@ -140,6 +140,7 @@ describe("silueta: rondas", () => {
     const lastResult = h.last("silhouette-round-result")!;
     expect(lastResult.reveal.round).toBe(5);
     expect(lastResult.nextRoundAt).toBeNull();
+    h.advance(6000);
     const ended = h.last("game-ended")!;
     expect(ended).toMatchObject({ winnerSeat: 1, reason: "completed", totals: { 1: 1000, 2: 0 }, teams: { 1: [], 2: [] } });
     expect(ended.silhouette?.reveals.map((r) => r.pokemon.id)).toEqual([1, 2, 3, 4, 5]);
@@ -172,5 +173,20 @@ describe("silueta: rondas", () => {
     const h = new SilhouetteHarness({ rematch: true });
     expect(h.state.rematch).toBe(true);
     expect(h.pending).toEqual([{ at: START_TIME + 30_000, timer: { kind: "expire" } }]);
+  });
+});
+
+describe("silueta: la última revelación", () => {
+  it("también se ve su pausa antes del resumen", () => {
+    const h = new SilhouetteHarness();
+    h.startGame();
+    for (let round = 1; round <= 4; round++) h.advance(15_000 + 6000);
+    h.advance(15_000);
+    expect(h.last("silhouette-round-result")?.reveal.round).toBe(5);
+    expect(h.state.phase).toBe("round_result");
+    expect(h.payloads("game-ended")).toEqual([]);
+    h.advance(6000);
+    expect(h.state.phase).toBe("finished");
+    expect(h.payloads("game-ended")).toHaveLength(1);
   });
 });

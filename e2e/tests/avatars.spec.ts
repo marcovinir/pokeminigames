@@ -44,9 +44,9 @@ test("elegir un avatar, que el rival lo vea en la sala y en su historial, y quit
   await expect(avatarImg(ash.page.locator("header").first(), 94)).toBeVisible();
 
   // misty crea y ash se une: misty ve a ash con su Gengar (en la sala de espera o ya en la cuenta atrás).
-  await misty.page.goto("/");
+  await misty.page.goto("/jugar/doble-tipo");
   const code = await createOneRoundRoom(misty.page);
-  await ash.page.goto("/");
+  await ash.page.goto("/jugar/doble-tipo");
   await joinRoom(ash.page, code);
   await expect(avatarImg(misty.page, 94).first()).toBeVisible();
 

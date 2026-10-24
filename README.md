@@ -1,6 +1,6 @@
 # PokeMiniGames
 
-Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga ambos. Gana quien acumule más stats base. El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/).
+Colección de minijuegos de Pokémon para 2 jugadores en tiempo real. **Doble tipo:** en cada ronda se enfrenta un par de tipos y cada jugador tiene 15 s para nombrar un Pokémon que tenga ambos; gana quien acumule más stats base. **¿Quién es ese Pokémon?:** los dos ven la misma silueta y tienen un solo intento; cuanto antes aciertes, más puntos. El diseño completo está en [`docs/superpowers/specs/`](docs/superpowers/specs/).
 
 **Estado:** etapa 8 (pulido de la partida) completa sobre el juego de las etapas 1 a 7: servidor, cliente web, estadísticas, perfil, el rediseño visual de la etapa 6 (temas incluidos). Listo para desplegarse gratis en Render y Neon: la guía está en [`docs/despliegue.md`](docs/despliegue.md).
 
@@ -11,6 +11,8 @@ Juego web de 2 jugadores en tiempo real: en cada ronda se enfrenta un par de tip
 Tema Clásico oscuro, en un navegador de 1280 × 720 (las genera la prueba `e2e/tests/screenshots.spec.ts`).
 
 ![Pantalla de acceso con el lema, cómo se juega, una tarjeta de ejemplo y el formulario](docs/img/login.jpg)
+
+![Menú principal: «¿A qué jugamos?» con las tarjetas de Doble tipo y de ¿Quién es ese Pokémon?](docs/img/menu.jpg)
 
 ![Lobby con las tarjetas para crear una sala y para unirse con un código](docs/img/lobby.jpg)
 
@@ -23,6 +25,8 @@ Tema Clásico oscuro, en un navegador de 1280 × 720 (las genera la prueba `e2e/
 ![Perfil con las fichas de estadísticas, el anillo de victorias y los Pokémon más ganados](docs/img/perfil.jpg)
 
 ![El tema Pokédex en claro: encabezado rojo con luces, bordes marcados y letra monoespaciada](docs/img/pokedex.jpg)
+
+![«¿Quién es ese Pokémon?»: la silueta negra sobre rayos amarillos, el cronómetro y el campo de respuesta](docs/img/silueta.jpg)
 
 ## Estructura
 
@@ -100,6 +104,19 @@ En `/login`, bajo el formulario, «¿Sin cuenta? Juega como invitado» pide solo
 - **Se nota.** Donde aparece el nombre de un invitado (sala de espera, cuenta atrás, panel del rival y barra «Marcador», resultado de la ronda y resumen final) lleva la etiqueta «Invitado», y su encabezado muestra «Invitado» y «Crear cuenta» en lugar de «Mi perfil». En una sala no puede haber dos jugadores con el mismo nombre (sin distinguir mayúsculas): quien se une con uno repetido recibe `409 NAME_IN_USE`. El resumen no ofrece «Ver perfil de …» si alguno de los dos es invitado, y `/perfil` y `/jugador/:username` llevan a un invitado al lobby.
 - **Límite.** Hasta 20 sesiones de invitado por hora y por IP (429 `RATE_LIMITED`).
 
+## Menú y juegos
+
+Al entrar se llega al **menú principal** («¿A qué jugamos?»), con una tarjeta por juego. «Jugar» lleva a su lobby: `/jugar/doble-tipo` o `/jugar/silueta` (crear sala con las opciones de ese juego, unirse con código y la sala activa). Un código de sala lleva a la sala de su juego desde cualquier lobby, y «Volver al lobby» del resumen vuelve al lobby del juego de esa sala.
+
+## «¿Quién es ese Pokémon?»
+
+- **Opciones:** 5, **10** o 15 rondas, y las generaciones de las que salen los Pokémon (de la 1.ª, Kanto, a la 9.ª, Paldea; por defecto solo Kanto; al menos una).
+- **Ronda:** el servidor sortea un Pokémon sin repetir y los dos ven su **silueta** sobre rayos amarillos, con 15 s. **Un solo intento**: el campo sugiere nombres (sin imagen ni tipos, solo de las generaciones elegidas) y, al enviar, «Respondiste en 3,2 s».
+- **Puntos:** acertar al instante da 1000 y en el último segundo 100, en línea recta (`round(1000 − 900 × t / 15000)`, con el tiempo que mide el servidor); fallar o no responder, 0. Gana quien sume más; puede haber empate.
+- **Revelación:** «¡Es Gengar!» a todo color, con lo que respondió cada uno, en cuántos segundos y sus puntos. El resumen final lista los Pokémon de la partida y quién acertó cada uno. Revancha, avatares e invitados, como en «Doble tipo».
+- **Sin trampas:** antes de la revelación ni los eventos ni el estado de la sala llevan el número, el nombre o el arte del Pokémon (ni la respuesta del rival). La silueta la pinta de negro el servidor y la sirve en `/silhouettes/:token`, con un token aleatorio que no dice nada.
+- **Por ahora no se guarda:** las partidas de silueta no cuentan en el perfil, el historial ni las estadísticas, y su revancha no muestra récord.
+
 ## Revancha
 
 Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si las dos personas aceptan, el servidor abre una **sala nueva** con los mismos jugadores en los mismos asientos y **la misma configuración** (entera: también «Pistas de tipos» y cualquier opción futura), las dos pasan solas a ella por una pantalla corta, «¡Revancha!», y empieza la cuenta atrás de siempre. Ya no hay «Jugar de nuevo»; para jugar con otra persona, «Volver al lobby».
@@ -146,10 +163,11 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `GET /auth/me` | Usuario actual |
 | `PUT /auth/me/preferences` | Guarda el tema: `{ theme: "clasico" \| "pokedex", themeMode: "auto" \| "claro" \| "oscuro" }` |
 | `PUT /auth/me/avatar` | Guarda el avatar: `{ avatarId }`, el número de Pokédex de uno de los 24 de `shared/src/avatars.ts` o `null` para volver a las iniciales; devuelve `{ avatarId }`. Cualquier otro valor: `400 VALIDATION_ERROR` |
-| `POST /rooms` | Crea una sala: `{ typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`; devuelve `{ code }`. `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
+| `POST /rooms` | Crea una sala de «Doble tipo»: `{ game?: "doble_tipo", typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`, o de silueta: `{ game: "silueta", rounds?: 5 \| 10 \| 15, generations?: number[] }` (por defecto 10 y `[1]`); devuelve `{ code }`. Sin `game` es «Doble tipo». `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
+| `GET /silhouettes/:token` | Pública. La silueta (PNG negro sobre transparente) de la ronda de ese token; `404 SILHOUETTE_NOT_FOUND` si no existe, `502 SILHOUETTE_UNAVAILABLE` si no se pudo obtener el arte. El servidor saca el arte de `SILHOUETTE_ART_URL` (plantilla con `{id}`; por defecto, el arte oficial de PokeAPI) |
 | `GET /pokemon/facts` | Público. Los datos curiosos de la pantalla de espera de la revancha: `{ facts }`, cada uno estructurado (`kind` y sus datos, p. ej. el Pokémon con más defensa base o cuántos Pokémon hay de un tipo); el cliente los redacta en español |
 | `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado; con `?types=1` cada elemento lleva además `types` (el cliente solo lo pide en salas con «Pistas de tipos») |
 | `GET /stats` | Tus estadísticas: `{ username, avatarId, stats }` |
@@ -180,5 +198,8 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `game-ended` | Ganador, motivo, equipos y totales |
 | `opponent-disconnected`, `opponent-reconnected` | Caída y vuelta del rival |
 | `rematch-state` | Tras una partida terminada con normalidad: el estado de la oferta (`open`, `mine`, `theirs`, `starting` o `closed` con su `closedReason`), su `deadline` con `serverNow` y, entre dos cuentas, el `record` |
+| `silhouette-round-started` | Silueta: empieza una ronda: `{ round, totalRounds, deadline, silhouetteUrl, serverNow }` (nunca dice qué Pokémon es) |
+| `silhouette-answer-received` | Silueta: solo a quien respondió, `{ ms }` |
+| `silhouette-round-result` | Silueta: la revelación (`reveal` con el Pokémon y la respuesta, el acierto, los ms y los puntos de cada uno), `totals` y `nextRoundAt` |
 | `rematch-room` | Los dos aceptaron: `{ code }` de la sala nueva (que trae `rematch: true` en su `room-state`) |
 | `error` | `{ code, message }` |

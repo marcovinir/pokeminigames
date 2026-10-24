@@ -20,7 +20,7 @@ test("el tema guardado en el perfil se aplica en un navegador nuevo tras iniciar
     await page.goto("/login");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "clasico");
     await logIn(page, first.email, PASSWORD);
-    await expect(page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "pokedex");
     await expect(page.locator("html")).toHaveAttribute("data-mode", "oscuro");
     await page.getByRole("button", { name: "Apariencia" }).click();
