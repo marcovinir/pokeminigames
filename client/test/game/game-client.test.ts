@@ -72,7 +72,7 @@ describe("eventos del servidor", () => {
     expect(store.getState().view).toMatchObject({ phase: "waiting", code: "ABC234", clockOffset: -1000 });
   });
 
-  it("entrega los catorce eventos del servidor", () => {
+  it("entrega los diecisiete eventos del servidor", () => {
     const { client, store, socket } = setup();
     client.join("ABC234");
     const received: string[] = [];
@@ -83,6 +83,7 @@ describe("eventos del servidor", () => {
       event.typeReceived(1), event.roundStarted(1, SERVER_NOW + 15_000), event.answerReceived(1), event.roundResult(),
       event.gameEnded(), event.opponentDisconnected(SERVER_NOW + 30_000), event.opponentReconnected(), event.error("RATE_LIMITED"),
       event.rematchState(), event.rematchRoom("ABC999"),
+      event.silhouetteRoundStarted(), event.silhouetteAnswerReceived(1200), event.silhouetteRoundResult(),
     ];
     for (const e of all) socket().trigger(e.name, e.payload);
     expect(received).toEqual(all.map((e) => e.name));

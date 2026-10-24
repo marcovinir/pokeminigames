@@ -38,6 +38,8 @@ export interface AutocompleteProps {
   names: PokemonName[];
   /** Muestra los tipos de cada sugerencia (la opción «Pistas de tipos» de la sala). Sin ella nunca salen, aunque la lista los traiga. */
   showTypes?: boolean;
+  /** Imagen y número de cada sugerencia (por defecto, sí). En la silueta van solo los nombres: la imagen delataría la respuesta. */
+  showSprites?: boolean;
   onSubmit(text: string): void;
   /** Ya se envió la respuesta de esta ronda: el campo queda bloqueado. */
   submitted?: boolean;
@@ -50,7 +52,7 @@ export interface AutocompleteProps {
  * Campo de respuesta con lista de sugerencias (patrón combobox accesible). Enter envía lo
  * escrito, o la sugerencia resaltada con las flechas. Solo sugiere: no corrige nada por su cuenta.
  */
-export function Autocomplete({ names, showTypes = false, onSubmit, submitted = false, disabled = false, autoFocus = false }: AutocompleteProps) {
+export function Autocomplete({ names, showTypes = false, showSprites = true, onSubmit, submitted = false, disabled = false, autoFocus = false }: AutocompleteProps) {
   const [text, setText] = useState("");
   // Se bloquea en el acto al enviar: la confirmación del servidor tarda y un doble Enter enviaría dos veces.
   const [sent, setSent] = useState(false);
@@ -167,10 +169,14 @@ export function Autocomplete({ names, showTypes = false, onSubmit, submitted = f
               }}
               className={`flex min-h-11 cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
             >
-              <ArtImage id={name.id} spriteUrl={spriteUrl(name.id)} size={40} variant="sprite" eager />
-              <span aria-hidden="true" className={`w-11 shrink-0 font-num text-xs tabular-nums ${i === active ? "" : "text-muted"}`}>
-                {pokedexNumber(name.id)}
-              </span>
+              {showSprites ? (
+                <>
+                  <ArtImage id={name.id} spriteUrl={spriteUrl(name.id)} size={40} variant="sprite" eager />
+                  <span aria-hidden="true" className={`w-11 shrink-0 font-num text-xs tabular-nums ${i === active ? "" : "text-muted"}`}>
+                    {pokedexNumber(name.id)}
+                  </span>
+                </>
+              ) : null}
               <span className="min-w-0 flex-1">
                 {name.es}
                 {name.en !== name.es ? <span className={i === active ? "ml-2" : "ml-2 text-muted"}>{name.en}</span> : null}

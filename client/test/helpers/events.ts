@@ -1,4 +1,5 @@
 import type {
+  SilhouetteReveal,
   GameEndedPayload,
   PokemonView,
   RematchState,
@@ -76,7 +77,26 @@ export function gameEnded(overrides: Partial<GameEndedPayload> = {}): GameEndedP
 }
 
 /** Atajos para armar eventos del servidor completos. */
+/** Una revelación de silueta: por defecto, el n.º 94 en la ronda 1, acertado por el asiento 1 en 3,2 s. */
+export function silhouetteReveal(overrides: Partial<SilhouetteReveal> = {}): SilhouetteReveal {
+  return {
+    round: 1,
+    pokemon: pokemon(94),
+    answers: { 1: { text: "Gengar", correct: true, ms: 3200, points: 808 }, 2: { text: null, correct: false, ms: null, points: 0 } },
+    ...overrides,
+  };
+}
+
 export const event = {
+  silhouetteRoundStarted: (round = 1, deadline = SERVER_NOW + 15_000, silhouetteUrl = "/silhouettes/tok1"): ServerEvent => ({
+    name: "silhouette-round-started",
+    payload: { serverNow: SERVER_NOW, round, totalRounds: 10, deadline, silhouetteUrl },
+  }),
+  silhouetteAnswerReceived: (ms: number): ServerEvent => ({ name: "silhouette-answer-received", payload: { ms } }),
+  silhouetteRoundResult: (reveal: SilhouetteReveal = silhouetteReveal(), totals: Record<1 | 2, number> = { 1: 808, 2: 0 }, nextRoundAt: number | null = SERVER_NOW + 6000): ServerEvent => ({
+    name: "silhouette-round-result",
+    payload: { serverNow: SERVER_NOW, reveal, totals, nextRoundAt },
+  }),
   roomState: (overrides?: Partial<RoomStateView>): ServerEvent => ({ name: "room-state", payload: roomState(overrides) }),
   rematchState: (overrides: Partial<RematchState> = {}): ServerEvent => ({
     name: "rematch-state",

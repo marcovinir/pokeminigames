@@ -1,7 +1,7 @@
 import type { ServerEvent } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import { type GameView, applyServerEvent, initialGameView } from "../../src/game/apply-event";
-import { SERVER_NOW, event, pokemon } from "../helpers/events";
+import { SERVER_NOW, event, silhouetteReveal, pokemon } from "../helpers/events";
 
 /** Aplica los eventos en orden, cada uno "recibido" en el navegador a la hora indicada. */
 function play(events: [ServerEvent, number?][], start: GameView = initialGameView): GameView {
@@ -362,5 +362,47 @@ describe("el avatar del rival", () => {
     const second = applyServerEvent(first, event.playerJoined("gary"), SERVER_NOW);
     expect(second.players[1]).toMatchObject({ username: "gary" });
     expect("avatarId" in second.players[1]!).toBe(false);
+  });
+});
+
+describe("la silueta en la vista", () => {
+  const SILHOUETTE = { game: "silueta" as const, rounds: 10 as const, generations: [1] };
+  const inRoom = () =>
+    play([[event.roomState({ phase: "starting", config: SILHOUETTE, silhouette: { totalRounds: 10, round: null, reveals: [] } })]]);
+
+  it("room-state con silhouette la copia a la vista; sin ella queda en null", () => {
+    expect(inRoom().silhouette).toEqual({ totalRounds: 10, round: null, reveals: [], lastReveal: null, nextRoundAt: null });
+    expect(play([[event.roomState()]]).silhouette).toBeNull();
+  });
+
+  it("room-state en plena ronda recupera la ronda y la última revelación", () => {
+    const reveal = silhouetteReveal();
+    const view = play([[event.roomState({
+      phase: "round_active",
+      config: SILHOUETTE,
+      silhouette: { totalRounds: 10, round: { number: 2, deadline: SERVER_NOW + 9000, silhouetteUrl: "/silhouettes/tok2", answered: true, answeredMs: 2100 }, reveals: [reveal] },
+    })]]);
+    expect(view.silhouette).toMatchObject({ round: { number: 2, answered: true, answeredMs: 2100 }, reveals: [reveal], lastReveal: reveal });
+  });
+
+  it("silhouette-round-started abre la ronda", () => {
+    const view = applyServerEvent(inRoom(), event.silhouetteRoundStarted(1, SERVER_NOW + 15_000, "/silhouettes/tok1"), SERVER_NOW);
+    expect(view.phase).toBe("round_active");
+    expect(view.silhouette?.round).toEqual({ number: 1, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok1", answered: false, answeredMs: null });
+  });
+
+  it("silhouette-answer-received marca que respondí y en cuánto", () => {
+    const open = applyServerEvent(inRoom(), event.silhouetteRoundStarted(), SERVER_NOW);
+    expect(applyServerEvent(open, event.silhouetteAnswerReceived(3200), SERVER_NOW).silhouette?.round).toMatchObject({ answered: true, answeredMs: 3200 });
+  });
+
+  it("silhouette-round-result añade la revelación, actualiza los puntos y pasa al resultado", () => {
+    const open = applyServerEvent(inRoom(), event.silhouetteRoundStarted(), SERVER_NOW);
+    const reveal = silhouetteReveal();
+    const view = applyServerEvent(open, event.silhouetteRoundResult(reveal, { 1: 808, 2: 0 }, SERVER_NOW + 6000), SERVER_NOW);
+    expect(view.phase).toBe("round_result");
+    expect(view.silhouette).toMatchObject({ round: null, reveals: [reveal], lastReveal: reveal, nextRoundAt: SERVER_NOW + 6000 });
+    expect(view.players.map((p) => p.totalStats)).toEqual([808, 0]);
+    expect(view.roundsPlayed).toBe(1);
   });
 });

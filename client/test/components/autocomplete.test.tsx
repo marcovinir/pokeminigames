@@ -262,3 +262,12 @@ describe("filas de sugerencia (etapa 8)", () => {
     expect(first!).toHaveTextContent("Charizard");
   });
 });
+
+describe("Autocomplete sin imágenes (la silueta)", () => {
+  it("con showSprites={false} las sugerencias solo llevan el nombre", async () => {
+    const { container } = render(<Autocomplete names={NAMES} onSubmit={vi.fn()} showSprites={false} />);
+    await userEvent.type(screen.getByRole("combobox"), "a");
+    expect(screen.getAllByRole("option").length).toBeGreaterThan(0);
+    expect(container.querySelector("img")).toBeNull();
+  });
+});

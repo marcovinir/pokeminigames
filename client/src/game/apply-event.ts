@@ -9,6 +9,9 @@ import type {
   RoundResultPayload,
   Seat,
   ServerEvent,
+  SilhouetteReveal,
+  SilhouetteRoundView,
+  SilhouetteStateView,
   TypeName,
 } from "@pokemon-minigames/shared";
 import { clockOffset } from "./clock";
@@ -23,6 +26,30 @@ export interface RoundView {
   typeChosen: boolean;
   /** El par elegido no era válido y el servidor sorteó otro. */
   typesNotice?: "pair_replaced";
+}
+
+/** Lo propio de una partida de silueta. */
+export interface SilhouetteView {
+  totalRounds: number;
+  /** La ronda abierta (nunca dice qué Pokémon es). */
+  round: SilhouetteRoundView | null;
+  reveals: SilhouetteReveal[];
+  /** La revelación de la última ronda cerrada (la que se ve en la pausa). */
+  lastReveal: SilhouetteReveal | null;
+  /** Cuándo empieza la ronda siguiente (null en la última o si no se sabe). */
+  nextRoundAt: number | null;
+}
+
+function silhouetteFrom(state: SilhouetteStateView, previous: SilhouetteView | null): SilhouetteView {
+  const lastReveal = state.reveals.at(-1) ?? null;
+  return {
+    totalRounds: state.totalRounds,
+    round: state.round ? { ...state.round } : null,
+    reveals: state.reveals,
+    lastReveal,
+    // Si se reconecta durante la pausa del resultado, la hora de la ronda siguiente que ya se conocía sigue valiendo.
+    nextRoundAt: previous?.lastReveal?.round === lastReveal?.round ? (previous?.nextRoundAt ?? null) : null,
+  };
 }
 
 /** Todo lo que la interfaz sabe de la partida; se reconstruye a partir de los eventos del servidor. */
@@ -48,6 +75,8 @@ export interface GameView {
   isRematchRoom: boolean;
   /** El código de la sala nueva cuando los dos aceptaron: hay que entrar a ella. */
   nextRoom: string | null;
+  /** Solo en las salas de silueta; en «Doble tipo», null. */
+  silhouette: SilhouetteView | null;
   /** Hora del servidor menos hora del navegador. */
   clockOffset: number;
   lastError: { code: ErrorCode; message: string } | null;
@@ -70,6 +99,7 @@ export const initialGameView: GameView = {
   rematchOffer: null,
   isRematchRoom: false,
   nextRoom: null,
+  silhouette: null,
   clockOffset: 0,
   lastError: null,
 };
@@ -114,6 +144,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         // Si se reconecta durante la pausa del resultado, el último resultado todavía sirve.
         lastResult: view.lastResult?.round === state.roundsPlayed ? view.lastResult : null,
         opponentGraceEndsAt: state.opponentGraceEndsAt,
+        silhouette: state.silhouette ? silhouetteFrom(state.silhouette, view.silhouette) : null,
         ended: null,
         clockOffset: clockOffset(state.serverNow, receivedAt),
         lastError: null,
@@ -240,10 +271,34 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     case "rematch-room":
       return { ...view, nextRoom: event.payload.code };
 
-    // Provisional: la Tarea 6 los maneja de verdad (el switch es exhaustivo).
-    case "silhouette-round-started":
-    case "silhouette-answer-received":
-    case "silhouette-round-result":
-      return view;
+    case "silhouette-round-started": {
+      const { round, totalRounds, deadline, silhouetteUrl, serverNow } = event.payload;
+      const base = view.silhouette ?? { totalRounds, round: null, reveals: [], lastReveal: null, nextRoundAt: null };
+      return {
+        ...view,
+        phase: "round_active",
+        silhouette: { ...base, totalRounds, round: { number: round, deadline, silhouetteUrl, answered: false, answeredMs: null }, nextRoundAt: null },
+        clockOffset: clockOffset(serverNow, receivedAt),
+      };
+    }
+
+    case "silhouette-answer-received": {
+      const silhouette = view.silhouette;
+      if (!silhouette?.round) return view;
+      return { ...view, silhouette: { ...silhouette, round: { ...silhouette.round, answered: true, answeredMs: event.payload.ms } } };
+    }
+
+    case "silhouette-round-result": {
+      const { reveal, totals, nextRoundAt, serverNow } = event.payload;
+      const silhouette = view.silhouette ?? { totalRounds: reveal.round, round: null, reveals: [], lastReveal: null, nextRoundAt: null };
+      return {
+        ...view,
+        phase: "round_result",
+        roundsPlayed: reveal.round,
+        players: view.players.map((p) => ({ ...p, totalStats: totals[p.seat] })),
+        silhouette: { ...silhouette, round: null, reveals: [...silhouette.reveals.filter((r) => r.round !== reveal.round), reveal], lastReveal: reveal, nextRoundAt },
+        clockOffset: clockOffset(serverNow, receivedAt),
+      };
+    }
   }
 }
