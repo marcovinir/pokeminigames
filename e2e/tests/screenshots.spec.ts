@@ -23,6 +23,17 @@ async function useTheme(context: BrowserContext, theme: "clasico" | "pokedex", m
   );
 }
 
+/** Elige el avatar desde el perfil y vuelve al lobby. */
+async function chooseAvatar(page: Page, pokemon: string): Promise<void> {
+  await page.goto("/perfil");
+  await page.getByRole("button", { name: "Cambiar avatar" }).click();
+  const dialog = page.getByRole("dialog", { name: "Elige tu avatar" });
+  await dialog.getByRole("button", { name: pokemon }).click();
+  await expect(dialog).toBeHidden();
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Lobby" })).toBeVisible();
+}
+
 /** Espera a que se carguen las tipografías y terminen las animaciones de entrada, y guarda la imagen. */
 async function shoot(page: Page, name: string): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
@@ -48,6 +59,8 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
 
     await register(ash);
     await register(misty);
+    await chooseAvatar(ash.page, "Pikachu");
+    await chooseAvatar(misty.page, "Gengar");
     await shoot(ash.page, "lobby");
 
     // Una partida de 3 rondas: Ash acierta siempre y Misty responde algo que no existe.

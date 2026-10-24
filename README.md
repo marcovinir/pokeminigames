@@ -93,7 +93,7 @@ Registrarse pide correo, nombre de usuario y contraseña y abre la sesión en el
 
 ## Modo invitado
 
-En `/login`, bajo el formulario, «¿Sin cuenta? Juega como invitado» pide solo un nombre (de 3 a 30 letras, números o guion bajo) y entra al lobby. Un invitado juega **igual que una cuenta**: crea salas, se une con un código y, si recarga la página en plena partida, vuelve a su asiento. Lo que **no** tiene: perfil, historial, estadísticas, preferencias guardadas ni avatar. Su tema se queda en el navegador.
+En `/login`, bajo el formulario, «¿Sin cuenta? Juega como invitado» pide solo un nombre (de 3 a 30 letras, números o guion bajo) y entra al lobby. Un invitado juega **igual que una cuenta**: crea salas, se une con un código y, si recarga la página en plena partida, vuelve a su asiento. Lo que **no** tiene: perfil, historial, estadísticas, preferencias guardadas ni avatar (se ve con sus iniciales). Su tema se queda en el navegador.
 
 - **No guarda nada.** Un invitado no existe en la base de datos (su id es `guest_` + 16 bytes aleatorios) y **una partida en la que juega un invitado no deja ninguna fila** (ni `games`, ni `game_players`, ni rondas ni respuestas) y no cuenta para las estadísticas de la cuenta rival. Si una cuenta creó la sala y se une un invitado, la partida que ya estaba guardada en espera se descarta en ese momento; una vez descartada, la sala no vuelve a guardarse aunque el invitado se vaya antes de empezar.
 - **Sesión.** La cookie `guest_session` (HttpOnly, solo viaja a `/auth`) dura 24 horas y se renueva cada vez que se recupera la sesión; es un JWT firmado, sin nada en el servidor. Iniciar sesión o registrarse la borra: la cuenta sustituye al invitado. Salir borra todas las cookies de sesión. Quien se registra después empieza de cero.
@@ -108,6 +108,14 @@ Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si l
 - **Cuándo no hay.** Si la partida terminó por abandono, desconexión, cancelación o caducidad no se ofrece. Si se cierra sin revancha, quien se queda ve por qué: «… ya no quiere la revancha.» (canceló o rechazó), «… se fue.» (volvió al lobby, cerró la pestaña o no volvió en 10 s), «Se acabó el tiempo.», «La revancha ya no está disponible.» o «No se pudo crear la sala.».
 - **Mientras se espera.** Arriba, el **récord** entre las dos cuentas (todas las partidas completadas entre ellas, con las últimas 5 como G/P/E; en la primera, «Es su primera partida juntos»); debajo, el plazo y un **dato curioso** de Pokémon que cambia cada 6 s, calculado del catálogo (nunca hay cifras escritas a mano).
 - **Invitados.** La revancha funciona igual con invitados, pero sin récord, y la sala nueva tampoco se guarda (una partida con un invitado no deja filas). Entre dos cuentas cada revancha es una partida más en las estadísticas.
+
+## Avatares
+
+En **Mi perfil**, «Cambiar avatar» abre una ventana con **24 Pokémon populares** (Pikachu, los tres iniciales de Kanto, Gengar, Eevee, Lucario, Greninja, Mimikyu…; la lista está en [`shared/src/avatars.ts`](shared/src/avatars.ts)). Tocar uno lo guarda en la cuenta y se ve al instante; «Usar mis iniciales» lo quita. El avatar es el **arte oficial** del Pokémon dentro del círculo, sobre el mismo color que tenían las iniciales, y aparece en todo el juego: el encabezado, la sala de espera, la cuenta atrás, el panel del rival, el récord y la pantalla de la revancha, los perfiles y el historial.
+
+- **En una sala** se ve el avatar que cada uno tenía al entrar (cambiarlo a mitad de partida se nota en la siguiente sala; la revancha copia el de la anterior). El historial y el perfil de otra persona muestran el que tiene hoy.
+- **Sin avatar**, si la imagen no carga, o para un **invitado**: las iniciales de siempre. Un fallo de la base al leer el avatar nunca impide crear una sala ni unirse.
+- **Otra pestaña u otro dispositivo** lo ven al recargar.
 
 ## Pulido de la partida
 
@@ -130,24 +138,25 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | Método y ruta | Descripción |
 |---|---|
 | `GET /health` | Estado del servidor |
-| `POST /auth/register` | Crea la cuenta; devuelve `user` (con su `preferences` de tema, nulas al principio) y `accessToken` y fija la cookie de refresco |
+| `POST /auth/register` | Crea la cuenta; devuelve `user` (con su `preferences` de tema, nulas al principio, y su `avatarId`, nulo = iniciales) y `accessToken` y fija la cookie de refresco |
 | `POST /auth/login` | Inicia sesión; devuelve lo mismo que el registro |
 | `POST /auth/guest` | Entra como invitado: `{ username }` (3 a 30 letras, números o guion bajo); devuelve `user` (`{ id, username, guest: true }`, sin correo) y `accessToken`, y fija la cookie `guest_session` de 24 h. No escribe nada en la base de datos. 20 por hora y por IP |
 | `POST /auth/refresh` | Renueva la sesión con la cookie de cuenta (rota el refresh token) o, si no hay, con la de invitado (misma identidad, cookie renovada). Con las dos manda la de cuenta; una cookie de cuenta caducada no esconde una de invitado válida |
 | `POST /auth/logout` | Cierra la sesión y borra las cookies (de cuenta y de invitado) |
 | `GET /auth/me` | Usuario actual |
 | `PUT /auth/me/preferences` | Guarda el tema: `{ theme: "clasico" \| "pokedex", themeMode: "auto" \| "claro" \| "oscuro" }` |
+| `PUT /auth/me/avatar` | Guarda el avatar: `{ avatarId }`, el número de Pokédex de uno de los 24 de `shared/src/avatars.ts` o `null` para volver a las iniciales; devuelve `{ avatarId }`. Cualquier otro valor: `400 VALIDATION_ERROR` |
 | `POST /rooms` | Crea una sala: `{ typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`; devuelve `{ code }`. `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
 | `GET /pokemon/facts` | Público. Los datos curiosos de la pantalla de espera de la revancha: `{ facts }`, cada uno estructurado (`kind` y sus datos, p. ej. el Pokémon con más defensa base o cuántos Pokémon hay de un tipo); el cliente los redacta en español |
 | `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado; con `?types=1` cada elemento lleva además `types` (el cliente solo lo pide en salas con «Pistas de tipos») |
-| `GET /stats` | Tus estadísticas: `{ username, stats }` |
-| `GET /stats/history?limit=&before=` | Tus partidas completadas, de la más reciente a la más antigua (`limit` de 1 a 50, por defecto 20); `before` es el `nextCursor` de la página anterior. Devuelve `{ games, nextCursor }` |
-| `GET /users/:username/stats` | Las estadísticas de otra persona (nunca su correo ni su historial); `404 USER_NOT_FOUND` si no existe |
+| `GET /stats` | Tus estadísticas: `{ username, avatarId, stats }` |
+| `GET /stats/history?limit=&before=` | Tus partidas completadas, de la más reciente a la más antigua (`limit` de 1 a 50, por defecto 20); `before` es el `nextCursor` de la página anterior. Devuelve `{ games, nextCursor }`; cada partida trae al rival como `{ username, avatarId }` (su avatar de hoy) |
+| `GET /users/:username/stats` | Las estadísticas de otra persona con su avatar (`{ username, avatarId, stats }`; nunca su correo ni su historial); `404 USER_NOT_FOUND` si no existe |
 
-Las rutas de `/auth/me`, `/rooms`, `/stats` y `/users` exigen `Authorization: Bearer <accessToken>`. `/rooms` y Socket.io aceptan el token de una cuenta **o de un invitado**; `/auth/me`, `/auth/me/preferences`, `/stats`, `/stats/history` y `/users/:username/stats` solo el de una cuenta (a un invitado le responden `403 ACCOUNT_REQUIRED`). Los errores tienen la forma `{ "error": { "code", "message", "details"? } }`.
+Las rutas de `/auth/me`, `/rooms`, `/stats` y `/users` exigen `Authorization: Bearer <accessToken>`. `/rooms` y Socket.io aceptan el token de una cuenta **o de un invitado**; `/auth/me`, `/auth/me/preferences`, `/auth/me/avatar`, `/stats`, `/stats/history` y `/users/:username/stats` solo el de una cuenta (a un invitado le responden `403 ACCOUNT_REQUIRED`). Los errores tienen la forma `{ "error": { "code", "message", "details"? } }`.
 
 ## Tiempo real (Socket.io)
 
@@ -164,8 +173,8 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 
 | Servidor → cliente | Cuándo |
 |---|---|
-| `room-state` | Al entrar o reconectar: estado completo de la partida, con tu equipo y el del rival (solo lo ya revelado) |
-| `player-joined`, `game-starting`, `choose-types`, `round-started` | Avance de la partida |
+| `room-state` | Al entrar o reconectar: estado completo de la partida, con tu equipo y el del rival (solo lo ya revelado). Cada jugador lleva `avatarId` solo si eligió uno |
+| `player-joined`, `game-starting`, `choose-types`, `round-started` | Avance de la partida (`player-joined` trae el nombre del rival y, si los tiene, `guest` y `avatarId`) |
 | `type-received`, `answer-received` | Confirman la recepción, sin decir si acertaste |
 | `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` y, si acertaron 0 o 1 jugadores, un `example`: un Pokémon libre de ese par que servía |
 | `game-ended` | Ganador, motivo, equipos y totales |
