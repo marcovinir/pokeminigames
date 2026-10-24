@@ -7,6 +7,11 @@ const envSchema = z
     DATABASE_URL: z.string({ error: "es obligatoria" }).min(1, "es obligatoria"),
     JWT_ACCESS_SECRET: z.string({ error: "es obligatoria" }).min(32, "debe tener al menos 32 caracteres"),
     ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+    // De dónde saca el servidor el arte para pintar las siluetas ({id} = número de Pokédex). La E2E usa un archivo local.
+    SILHOUETTE_ART_URL: z
+      .string()
+      .min(1)
+      .default("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png"),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
     BCRYPT_COST: z.coerce.number().int().min(4).max(15).default(12),
     // Con un solo origen (producción) no hay CORS que configurar; en desarrollo el valor por defecto es Vite.

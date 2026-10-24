@@ -18,6 +18,10 @@ import { DEFAULT_RATE_LIMITS, type RateLimitConfig } from "./http/limits.js";
 import { createOriginCheck } from "./http/origin-check.js";
 import { createKeyedLimiter, rateLimitMiddleware } from "./http/rate-limit.js";
 import { createRoomsRouter } from "./rooms/rooms.routes.js";
+import type { SilhouetteRegistry } from "./game/ports.js";
+import { createSilhouetteRegistry } from "./silhouettes/registry.js";
+import { createSilhouetteRenderer } from "./silhouettes/renderer.js";
+import { createSilhouettesRouter } from "./silhouettes/silhouettes.routes.js";
 import { createStatsRouter } from "./stats/stats.routes.js";
 import { StatsService } from "./stats/stats.service.js";
 
@@ -32,9 +36,20 @@ export interface AppDeps {
   rateLimits?: RateLimitConfig | "off";
   /** Directorio del cliente construido; si existe con su index.html, el servidor lo sirve (un solo origen). */
   clientDist?: string;
+  /** El registro de siluetas que comparte con las salas (sin él, uno vacío). */
+  silhouettes?: SilhouetteRegistry;
 }
 
-export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimits = DEFAULT_RATE_LIMITS, clientDist }: AppDeps): Express {
+export function createApp({
+  env,
+  prisma,
+  tokens,
+  roomManager,
+  catalog,
+  rateLimits = DEFAULT_RATE_LIMITS,
+  clientDist,
+  silhouettes = createSilhouetteRegistry(),
+}: AppDeps): Express {
   const limits = rateLimits === "off" ? null : rateLimits;
   const limiters = limits && {
     loginFailures: createKeyedLimiter({ ...limits.loginFailures, now: limits.now }),
@@ -72,6 +87,7 @@ export function createApp({ env, prisma, tokens, roomManager, catalog, rateLimit
   app.use("/auth", createAuthRouter({ env, authService, tokens, guests, limiters: limiters ?? undefined }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens, readAvatar: (userId) => authService.avatarOf(userId) }));
   app.use("/pokemon", createCatalogRouter({ catalog }));
+  app.use("/silhouettes", createSilhouettesRouter({ registry: silhouettes, renderer: createSilhouetteRenderer({ artUrl: env.SILHOUETTE_ART_URL }) }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));
 
   if (clientDist) {

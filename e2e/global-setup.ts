@@ -1,7 +1,7 @@
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import pg from "pg";
 import { E2E_DATABASE, adminDatabaseUrl } from "./support/db";
 
@@ -67,6 +67,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       COOKIE_SECURE: "true",
       COOKIE_SAME_SITE: "lax",
       TRUST_PROXY: "1",
+      // Las siluetas salen siempre de la misma imagen local: la E2E no depende de PokeAPI.
+      SILHOUETTE_ART_URL: pathToFileURL(join(root, "e2e", "fixtures", "pokemon-art.png")).href,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

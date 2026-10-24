@@ -11,6 +11,7 @@ import { systemClock, timerScheduler } from "./game/ports.js";
 import { cryptoRng } from "./game/rng.js";
 import { RoomManager } from "./game/room-manager.js";
 import { InMemoryRoomStore } from "./game/room-store.js";
+import { createSilhouetteRegistry } from "./silhouettes/registry.js";
 import { SocketBroadcaster } from "./realtime/broadcaster.js";
 import { attachRealtime } from "./realtime/server.js";
 import { createShutdown } from "./shutdown.js";
@@ -37,6 +38,7 @@ const tokens = createTokenService({
   accessTtlSeconds: env.ACCESS_TOKEN_TTL_SECONDS,
 });
 const broadcaster = new SocketBroadcaster();
+const silhouettes = createSilhouetteRegistry();
 const roomManager = new RoomManager({
   clock: systemClock,
   scheduler: timerScheduler,
@@ -46,10 +48,11 @@ const roomManager = new RoomManager({
   rng: cryptoRng,
   store: new InMemoryRoomStore(),
   logger: console,
+  silhouettes,
 });
 
 // El cliente construido vive en client/dist, a la misma distancia desde server/src y desde el servidor empaquetado (server/dist).
-const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: rateLimitsFor(env.NODE_ENV), clientDist: join(import.meta.dirname, "../../client/dist") });
+const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: rateLimitsFor(env.NODE_ENV), clientDist: join(import.meta.dirname, "../../client/dist"), silhouettes });
 const server = createServer(app);
 const io = attachRealtime(server, { env, tokens, manager: roomManager, broadcaster, logger: console });
 

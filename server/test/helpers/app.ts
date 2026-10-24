@@ -8,6 +8,7 @@ import { createPrismaGameRepository } from "../../src/game/prisma-game-repositor
 import { type Rng, cryptoRng } from "../../src/game/rng.js";
 import { RoomManager } from "../../src/game/room-manager.js";
 import { InMemoryRoomStore } from "../../src/game/room-store.js";
+import { createSilhouetteRegistry } from "../../src/silhouettes/registry.js";
 import { SocketBroadcaster } from "../../src/realtime/broadcaster.js";
 import { FakeTime } from "../game/fakes.js";
 import { fixtureCatalog } from "./fixtures.js";
@@ -34,6 +35,7 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
   const time = new FakeTime();
   const broadcaster = new SocketBroadcaster();
   const store = new InMemoryRoomStore();
+  const silhouettes = createSilhouetteRegistry();
   const catalog = options.catalog ?? fixtureCatalog();
   const roomManager = new RoomManager({
     clock: time,
@@ -45,9 +47,10 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
     generateCode: options.generateCode,
     store,
     persistRetryDelayMs: 0,
+    silhouettes,
   });
-  const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off" });
-  return { app, env, tokens, time, broadcaster, store, roomManager, catalog };
+  const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off", silhouettes });
+  return { app, env, tokens, time, broadcaster, store, roomManager, catalog, silhouettes };
 }
 
 export function buildTestApp(overrides: Record<string, string> = {}): Express {
