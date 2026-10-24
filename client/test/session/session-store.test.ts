@@ -135,3 +135,30 @@ describe("sesión", () => {
     });
   });
 });
+
+describe("sesión: el avatar", () => {
+  it("saveAvatar guarda y actualiza el usuario de la sesión", async () => {
+    const { store, endpoints } = setup();
+    await store.getState().login({ email: "ash@example.com", password: "pikachu-123" });
+    await store.getState().saveAvatar(94);
+    expect(endpoints.auth.saveAvatar).toHaveBeenCalledWith(94);
+    expect(store.getState().user).toEqual({ ...ASH, avatarId: 94 });
+    await store.getState().saveAvatar(null);
+    expect(store.getState().user).toEqual({ ...ASH, avatarId: null });
+  });
+
+  it("si falla, lanza y no cambia nada", async () => {
+    const { store, endpoints } = setup();
+    await store.getState().login({ email: "ash@example.com", password: "pikachu-123" });
+    vi.mocked(endpoints.auth.saveAvatar).mockRejectedValueOnce(new ApiError(0, "NETWORK"));
+    await expect(store.getState().saveAvatar(94)).rejects.toMatchObject({ code: "NETWORK" });
+    expect(store.getState().user).toEqual(ASH);
+  });
+
+  it("a un invitado no se le pone avatar", async () => {
+    const { store } = setup();
+    await store.getState().loginAsGuest("inv_1");
+    await store.getState().saveAvatar(94);
+    expect(store.getState().user).toEqual({ ...GUEST, username: "inv_1" });
+  });
+});

@@ -198,3 +198,23 @@ describe("endpoint del catálogo", () => {
     expect(lastCall(fetchMock).url).toBe("/pokemon/names?types=1");
   });
 });
+
+describe("endpoint del avatar", () => {
+  it("saveAvatar manda PUT /auth/me/avatar con { avatarId } y devuelve lo guardado", async () => {
+    const { api, endpoints, fetchMock } = setup(() => json(200, { avatarId: 94 }));
+    api.setToken("tok");
+    await expect(endpoints.auth.saveAvatar(94)).resolves.toBe(94);
+    expect(lastCall(fetchMock)).toEqual({ url: "/auth/me/avatar", method: "PUT", body: { avatarId: 94 } });
+  });
+
+  it("quitarlo manda avatarId: null", async () => {
+    const { endpoints, fetchMock } = setup(() => json(200, { avatarId: null }));
+    await expect(endpoints.auth.saveAvatar(null)).resolves.toBeNull();
+    expect(lastCall(fetchMock)).toMatchObject({ body: { avatarId: null } });
+  });
+
+  it("si el servidor lo rechaza, el error llega a quien llamó", async () => {
+    const { endpoints } = setup(() => json(400, { error: { code: "VALIDATION_ERROR", message: "x" } }));
+    await expect(endpoints.auth.saveAvatar(906)).rejects.toMatchObject({ status: 400 });
+  });
+});

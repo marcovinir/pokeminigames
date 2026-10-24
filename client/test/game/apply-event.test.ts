@@ -346,3 +346,21 @@ describe("equipo del rival (etapa 8)", () => {
     expect(view.lastResult?.example?.id).toBe(25);
   });
 });
+
+describe("el avatar del rival", () => {
+  const seat1 = { seat: 1 as const, username: "ash", connected: true, totalStats: 0, teamSize: 0 };
+
+  it("player-joined trae el avatar del rival a la vista", () => {
+    const alone = play([[event.roomState({ players: [seat1] })]]);
+    const joined = applyServerEvent(alone, event.playerJoined("misty", false, 25), SERVER_NOW);
+    expect(joined.players[1]).toMatchObject({ seat: 2, username: "misty", avatarId: 25 });
+  });
+
+  it("un rival nuevo sin avatar no hereda el del anterior", () => {
+    const alone = play([[event.roomState({ players: [seat1] })]]);
+    const first = applyServerEvent(alone, event.playerJoined("misty", false, 25), SERVER_NOW);
+    const second = applyServerEvent(first, event.playerJoined("gary"), SERVER_NOW);
+    expect(second.players[1]).toMatchObject({ username: "gary" });
+    expect("avatarId" in second.players[1]!).toBe(false);
+  });
+});

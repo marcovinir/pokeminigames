@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { artworkUrl } from "../catalog/artwork";
+
 export interface AvatarColor {
   background: string;
   color: string;

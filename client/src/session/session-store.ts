@@ -1,6 +1,6 @@
 import { type StoreApi, createStore } from "zustand";
 import type { Credentials, Endpoints, Registration } from "../api/endpoints";
-import type { SessionUser } from "../api/types";
+import { type SessionUser, isGuest } from "../api/types";
 
 export type SessionStatus = "loading" | "authenticated" | "anonymous";
 
@@ -14,6 +14,8 @@ export interface SessionState {
   /** Entra como invitado, solo con un nombre: juega igual que una cuenta pero no guarda nada. */
   loginAsGuest(username: string): Promise<void>;
   logout(): Promise<void>;
+  /** Guarda el avatar de la cuenta y lo pone en la sesión; si falla, lanza y no cambia nada. */
+  saveAvatar(avatarId: number | null): Promise<void>;
   /** La sesión se perdió (no se pudo renovar): hay que volver a iniciar sesión. */
   expire(): void;
 }
@@ -21,7 +23,7 @@ export interface SessionState {
 export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState> {
   let booting: Promise<void> | null = null;
 
-  return createStore<SessionState>((set) => ({
+  return createStore<SessionState>((set, get) => ({
     status: "loading",
     user: null,
 
@@ -54,6 +56,13 @@ export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState>
       } finally {
         set({ status: "anonymous", user: null });
       }
+    },
+
+    async saveAvatar(avatarId) {
+      const saved = await endpoints.auth.saveAvatar(avatarId);
+      const { user } = get();
+      // Un invitado no tiene avatar (ni puede guardarlo): su sesión no se toca.
+      if (user && !isGuest(user)) set({ user: { ...user, avatarId: saved } });
     },
 
     expire() {

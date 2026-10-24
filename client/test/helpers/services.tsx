@@ -18,6 +18,7 @@ export const ASH: AuthUser = {
   username: "ash",
   createdAt: "2026-01-01T00:00:00.000Z",
   preferences: null,
+  avatarId: null,
 };
 
 /** Una persona que entró como invitada: sin cuenta, sin correo, sin estadísticas. */
@@ -77,6 +78,7 @@ export function fakeServices(): FakeServices {
       refresh: vi.fn(async () => null),
       logout: vi.fn(async () => {}),
       savePreferences: vi.fn(async () => {}),
+      saveAvatar: vi.fn(async (avatarId: number | null) => avatarId),
     },
     rooms: {
       create: vi.fn(async () => ({ code: "ABC234" })),

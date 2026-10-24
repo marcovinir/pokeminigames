@@ -37,6 +37,8 @@ export interface Endpoints {
     logout(): Promise<void>;
     /** Guarda el tema y el modo en el perfil. */
     savePreferences(preferences: ThemePreferences): Promise<void>;
+    /** Guarda el avatar (uno de los 24, o `null` para volver a las iniciales); devuelve lo guardado. */
+    saveAvatar(avatarId: number | null): Promise<number | null>;
   };
   rooms: {
     create(config: CreateRoomRequest): Promise<CreateRoomResponse>;
@@ -84,6 +86,10 @@ export function createEndpoints(api: ApiClient): Endpoints {
       },
       async savePreferences(preferences) {
         await api.request<unknown>("PUT", "/auth/me/preferences", { body: preferences });
+      },
+      async saveAvatar(avatarId) {
+        const saved = await api.request<{ avatarId: number | null }>("PUT", "/auth/me/avatar", { body: { avatarId } });
+        return saved.avatarId;
       },
     },
     rooms: {

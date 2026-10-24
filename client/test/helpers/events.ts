@@ -83,9 +83,9 @@ export const event = {
     payload: { serverNow: SERVER_NOW, status: "open", deadline: SERVER_NOW + 300_000, ...overrides },
   }),
   rematchRoom: (code: string): ServerEvent => ({ name: "rematch-room", payload: { code } }),
-  playerJoined: (username: string, guest?: boolean): ServerEvent => ({
+  playerJoined: (username: string, guest?: boolean, avatarId?: number): ServerEvent => ({
     name: "player-joined",
-    payload: { username, ...(guest ? { guest: true } : {}) },
+    payload: { username, ...(guest ? { guest: true } : {}), ...(avatarId ? { avatarId } : {}) },
   }),
   gameStarting: (startsAt: number, serverNow = SERVER_NOW): ServerEvent => ({
     name: "game-starting",

@@ -7,6 +7,8 @@ export interface AuthUser {
   createdAt: string;
   /** Nulo mientras la persona no haya guardado una preferencia de tema. */
   preferences: ThemePreferences | null;
+  /** Número de Pokédex de su avatar; nulo = iniciales. */
+  avatarId: number | null;
 }
 
 /** Quien entró como invitado: sin cuenta, sin correo y sin estadísticas; su partida no se guarda. */
