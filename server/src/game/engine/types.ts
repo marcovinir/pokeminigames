@@ -108,6 +108,8 @@ export type Effect =
   /** El orquestador construye el estado completo de ese jugador y se lo envía. */
   | { kind: "send_state"; to: Seat }
   | { kind: "persist_seat_taken"; userId: string }
+  /** La silueta de una ronda: el token opaco de su URL y el Pokémon que dibuja (solo para el servidor). */
+  | { kind: "register_silhouette"; token: string; pokemonId: number }
   | { kind: "persist_seat_freed" }
   | { kind: "persist_started" }
   | { kind: "persist_round"; record: RoundRecord }
