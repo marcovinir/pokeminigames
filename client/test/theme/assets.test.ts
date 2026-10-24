@@ -81,10 +81,12 @@ describe("movimiento", () => {
 describe("foco y bordes de los campos", () => {
   const css = read("src/index.css");
 
-  it("el aro de foco usa el color del tema y, dentro del encabezado, el de su texto (el del tema puede ser el del fondo)", () => {
+  it("el aro de foco usa el color del tema y, dentro del encabezado de la aplicación, el de su texto (el del tema puede ser el del fondo)", () => {
     expect(css).toMatch(/--color-ring:\s*var\(--ring\)/);
     expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--ring\)/);
-    expect(css).toMatch(/header :focus-visible\s*\{[^}]*outline-color:\s*var\(--header-fg\)/);
+    // Solo el encabezado de color de la aplicación: un <header> de una página (el del perfil) lleva el aro del tema.
+    expect(css).toMatch(/\[data-app-header\] :focus-visible\s*\{[^}]*outline-color:\s*var\(--header-fg\)/);
+    expect(css).not.toMatch(/(^|[\s,}])header :focus-visible/m);
   });
 
   it("los campos tienen su propia clase de borde con el color de contraste", () => {
