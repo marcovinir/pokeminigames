@@ -163,8 +163,9 @@ body::before {
   outline-offset: 2px;
 }
 
-/* En el encabezado de color el aro del tema puede ser del mismo tono que el fondo (Pokédex claro): se usa el color de su texto. */
-header :focus-visible {
+/* En el encabezado de color de la aplicación el aro del tema puede ser del mismo tono que el fondo (Pokédex claro): se usa el
+   color de su texto. Solo ese encabezado: un <header> de una página (el del perfil) va sobre el fondo normal y lleva el aro del tema. */
+[data-app-header] :focus-visible {
   outline-color: var(--header-fg);
 }
 

@@ -40,7 +40,7 @@ export function Header() {
   const guest = isGuest(user);
 
   return (
-    <header className="sticky top-0 z-20 h-(--header-h) border-b-(length:--frame) border-line bg-header text-header-fg">
+    <header data-app-header className="sticky top-0 z-20 h-(--header-h) border-b-(length:--frame) border-line bg-header text-header-fg">
       {/* `relative`: el panel del menú de apariencia se ancla a este contenedor y no a su botón, que con sesión queda a media fila. */}
       <div className="relative mx-auto flex h-full max-w-5xl items-center gap-2 px-4 sm:gap-3">
         {/* Luces de adorno: solo en el tema Pokédex (el encabezado rojo tipo consola). */}

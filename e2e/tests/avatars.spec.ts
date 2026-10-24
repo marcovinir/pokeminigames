@@ -85,3 +85,34 @@ test("a 375 px la ventana y el perfil caben, con un nombre de 30 letras", async 
   const { scroll, client } = await player.page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect.soft(scroll, `la página se desplaza en horizontal (${scroll} px de contenido en ${client} px)`).toBeLessThanOrEqual(client);
 });
+
+test("el aro de foco de «Cambiar avatar» se ve en Pokédex claro (es el del tema, no el del encabezado de color)", async ({ browser }) => {
+  const player = await newPlayer(browser, "foco");
+  await player.context.addInitScript(() => localStorage.setItem("pokemon-minigames:theme", JSON.stringify({ theme: "pokedex", mode: "claro" })));
+  await register(player);
+  await player.page.goto("/perfil");
+  const button = player.page.getByRole("button", { name: "Cambiar avatar" });
+  await expect(button).toBeVisible();
+  for (let i = 0; i < 30 && !(await button.evaluate((el) => el === document.activeElement)); i++) await player.page.keyboard.press("Tab");
+  await expect(button).toBeFocused();
+  const { outline, ring } = await button.evaluate((el) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--ring)";
+    document.body.append(probe);
+    const ringColor = getComputedStyle(probe).color;
+    probe.remove();
+    return { outline: getComputedStyle(el).outlineColor, ring: ringColor };
+  });
+  expect(outline).toBe(ring);
+});
+
+test("en un teléfono en horizontal la ventana se desplaza: se ven el título y «Cerrar»", async ({ browser }) => {
+  const player = await newPlayer(browser, "apaisado");
+  await register(player);
+  await player.page.setViewportSize({ width: 740, height: 320 });
+  const dialog = await openPicker(player.page);
+  await expect(dialog.getByRole("heading", { name: "Elige tu avatar" })).toBeInViewport();
+  await dialog.getByRole("button", { name: "Cerrar" }).click({ timeout: 5_000 });
+  await expect(dialog).toBeHidden();
+});
+
