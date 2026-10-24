@@ -131,14 +131,16 @@ model PokemonName {
 }
 
 model User {
-  id           String     @id @default(uuid()) @db.Uuid
-  email        String     @unique
-  username     String
-  passwordHash String     @map("password_hash")
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  id              String     @id @default(uuid()) @db.Uuid
+  email           String     @unique
+  username        String
+  passwordHash    String     @map("password_hash")
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   // Preferencia de tema: los dos nulos o los dos con valor (lo exige una restricción).
-  theme        ThemeName?
-  themeMode    ThemeMode? @map("theme_mode")
+  theme           ThemeName?
+  themeMode       ThemeMode? @map("theme_mode")
+  // Avatar: número de Pokédex de uno de los 24 de shared/src/avatars.ts (lo valida el servidor). Nulo = iniciales.
+  avatarPokemonId Int?       @map("avatar_pokemon_id") @db.SmallInt
 
   refreshTokens RefreshToken[]
   gamePlayers   GamePlayer[]

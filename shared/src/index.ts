@@ -1,3 +1,4 @@
+export * from "./avatars.js";
 export * from "./errors.js";
 export * from "./events.js";
 export * from "./normalize.js";

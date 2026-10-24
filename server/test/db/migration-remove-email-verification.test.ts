@@ -19,10 +19,11 @@ const sqlOf = (name: string): string => readFileSync(join(migrationsDir, name, "
  * el clúster y tras las suites completas tardaba lo bastante como para agotar el tiempo de la prueba.
  */
 describe("la migración que retira la verificación del correo", () => {
-  const last = migrations.at(-1)!;
-  const previous = migrations.slice(0, -1);
+  // Ya no es la última (después vino la del avatar): se busca por nombre y se aplican solo las anteriores a ella.
+  const last = migrations.find((name) => /remove_email_verification$/.test(name)) ?? "";
+  const previous = migrations.slice(0, migrations.indexOf(last));
 
-  it("es la última y se llama como lo que hace", () => {
+  it("existe y se llama como lo que hace", () => {
     expect(last).toMatch(/remove_email_verification$/);
   });
 
