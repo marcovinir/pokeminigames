@@ -1,0 +1,58 @@
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+  .poke { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: 14px; border: 2px solid transparent; background: rgba(127,127,127,.08); cursor: pointer; }
+  .poke.selected { border-color: #dc2626; background: rgba(220,38,38,.10); }
+  .poke img { width: 72px; height: 72px; object-fit: contain; }
+  .poke span { font-size: 13px; font-weight: 600; text-align: center; }
+  .poke small { font-size: 11px; opacity: .65; }
+  .bench .poke { opacity: .8; }
+  .note { font-size: 13px; opacity: .75; margin: 6px 0 14px; }
+</style>
+
+<h2>Los 24 avatares (aprobados por Marco: Arcanine en lugar de Sprigatito)</h2>
+<p class="subtitle">Populares de las generaciones 1 a 8, con tipos variados. <strong>Toca los que quieras cambiar</strong> (se marcan en rojo) y dime por cuál en el chat.</p>
+
+<div class="section">
+  <h3>Los 24</h3>
+  <div class="grid" data-multiselect>
+    <div class="poke" data-choice="25" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png" alt=""><span>Pikachu</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="6" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png" alt=""><span>Charizard</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="1" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png" alt=""><span>Bulbasaur</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="7" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png" alt=""><span>Squirtle</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="94" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/94.png" alt=""><span>Gengar</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="133" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png" alt=""><span>Eevee</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="143" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/143.png" alt=""><span>Snorlax</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="150" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/150.png" alt=""><span>Mewtwo</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="149" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/149.png" alt=""><span>Dragonite</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="130" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/130.png" alt=""><span>Gyarados</span><small>Gen 1</small></div>
+    <div class="poke" data-choice="197" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/197.png" alt=""><span>Umbreon</span><small>Gen 2</small></div>
+    <div class="poke" data-choice="249" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/249.png" alt=""><span>Lugia</span><small>Gen 2</small></div>
+    <div class="poke" data-choice="248" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/248.png" alt=""><span>Tyranitar</span><small>Gen 2</small></div>
+    <div class="poke" data-choice="257" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/257.png" alt=""><span>Blaziken</span><small>Gen 3</small></div>
+    <div class="poke" data-choice="282" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/282.png" alt=""><span>Gardevoir</span><small>Gen 3</small></div>
+    <div class="poke" data-choice="384" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/384.png" alt=""><span>Rayquaza</span><small>Gen 3</small></div>
+    <div class="poke" data-choice="448" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/448.png" alt=""><span>Lucario</span><small>Gen 4</small></div>
+    <div class="poke" data-choice="445" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/445.png" alt=""><span>Garchomp</span><small>Gen 4</small></div>
+    <div class="poke" data-choice="571" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/571.png" alt=""><span>Zoroark</span><small>Gen 5</small></div>
+    <div class="poke" data-choice="658" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/658.png" alt=""><span>Greninja</span><small>Gen 6</small></div>
+    <div class="poke" data-choice="700" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/700.png" alt=""><span>Sylveon</span><small>Gen 6</small></div>
+    <div class="poke" data-choice="778" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/778.png" alt=""><span>Mimikyu</span><small>Gen 7</small></div>
+    <div class="poke" data-choice="887" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/887.png" alt=""><span>Dragapult</span><small>Gen 8</small></div>
+    <div class="poke" data-choice="59" onclick="toggleSelect(this)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/59.png" alt=""><span>Arcanine</span><small>Gen 1</small></div>
+  </div>
+</div>
+
+<div class="section bench">
+  <h3>En la banca (populares que se quedaron fuera)</h3>
+  <p class="note">Si quieres meter alguno de estos, dime a cuál de arriba reemplaza.</p>
+  <div class="grid">
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/151.png" alt=""><span>Mew</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/906.png" alt=""><span>Sprigatito</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/359.png" alt=""><span>Absol</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/131.png" alt=""><span>Lapras</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/54.png" alt=""><span>Psyduck</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/39.png" alt=""><span>Jigglypuff</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/155.png" alt=""><span>Cyndaquil</span></div>
+    <div class="poke"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/132.png" alt=""><span>Ditto</span></div>
+  </div>
+</div>
