@@ -1,17 +1,13 @@
-import { type RoomConfig, type RoomStateView, type Seat, asDobleTipo } from "@pokemon-minigames/shared";
+import { randomBytes } from "node:crypto";
+import type { RoomConfig, RoomStateView, Seat } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../catalog/pokemon-catalog.js";
-import { createGame, reduce } from "./engine/engine.js";
-import {
-  type Effect,
-  type GameEvent,
-  type GameOutcome,
-  type GameState,
-  type RoundRecord,
-  SEATS,
-} from "./engine/types.js";
-import { buildGameEnded, buildRoomState } from "./engine/view.js";
-import type { Broadcaster, Clock, GameRepository, Scheduler } from "./ports.js";
+import { type Effect, type GameEvent, type GameOutcome, type RoundRecord, SEATS } from "./engine/types.js";
+import { type EngineState, type GameEngine, type SeatOccupant, engineFor } from "./game-engine.js";
+import type { Broadcaster, Clock, GameRepository, Scheduler, SilhouetteRegistry } from "./ports.js";
 import type { Rng } from "./rng.js";
+
+/** 16 bytes aleatorios en base64url: el token de la URL de una silueta (no sale del número del Pokémon). */
+export const randomSilhouetteToken = (): string => randomBytes(16).toString("base64url");
 
 export interface GameRoomPorts {
   clock: Clock;
@@ -24,6 +20,10 @@ export interface GameRoomPorts {
   /** Intentos para guardar en la base de datos antes de rendirse (por defecto 3). */
   persistAttempts?: number;
   persistRetryDelayMs?: number;
+  /** Dónde se apunta qué Pokémon dibuja cada silueta (lo lee la ruta de las siluetas). */
+  silhouettes?: SilhouetteRegistry;
+  /** Generador de tokens de silueta (por defecto, `randomSilhouetteToken`). */
+  newToken?: () => string;
 }
 
 /** Quién es una persona conectada: la cuenta o el invitado del token. */
@@ -41,7 +41,7 @@ export interface RoomUser extends PlayerIdentity {
 }
 
 /** Lo que el motor sabe de quien ocupa un asiento: `guest` y `avatarId` solo cuando aplican. */
-function engineIdentity(user: RoomUser): { userId: string; username: string; guest?: boolean; avatarId?: number } {
+function engineIdentity(user: RoomUser): SeatOccupant {
   return {
     userId: user.userId,
     username: user.username,
@@ -60,7 +60,8 @@ export function joinedEvent(user: RoomUser): GameEvent {
  * motor puro y ejecuta los efectos que este devuelve.
  */
 export class GameRoom {
-  private state: GameState;
+  private state: EngineState;
+  private readonly engine: GameEngine;
   private readonly timers = new Set<() => void>();
   private persistChain: Promise<void> = Promise.resolve();
   private readonly finishListeners: Array<() => void> = [];
@@ -71,9 +72,10 @@ export class GameRoom {
     readonly code: string,
     /** La fila de `games` de esta sala; `null` si no se guarda (la juega un invitado). */
     private gameId: string | null,
-    state: GameState,
+    state: EngineState,
   ) {
     this.state = state;
+    this.engine = engineFor(state.config);
   }
 
   static create(
@@ -81,21 +83,15 @@ export class GameRoom {
     input: { code: string; gameId: string | null; config: RoomConfig; creator: RoomUser; rematch?: boolean },
   ): GameRoom {
     const { creator } = input;
-    // Hasta que la sala sepa usar el motor de la silueta (Tarea 4), solo admite «Doble tipo».
-    const config = asDobleTipo(input.config);
-    if (!config) throw new Error("Esta sala solo sabe jugar a «Doble tipo»");
-    const { state, effects } = createGame(
-      config,
-      engineIdentity(creator),
-      ports.clock.now(),
-      { rematch: input.rematch },
-    );
+    const { state, effects } = engineFor(input.config).create(input.config, engineIdentity(creator), ports.clock.now(), {
+      rematch: input.rematch,
+    });
     const room = new GameRoom(ports, input.code, input.gameId, state);
     room.execute(effects);
     return room;
   }
 
-  get phase(): GameState["phase"] {
+  get phase(): EngineState["phase"] {
     return this.state.phase;
   }
 
@@ -128,7 +124,7 @@ export class GameRoom {
     if (this.state.phase !== "finished") return;
     const { broadcaster, catalog } = this.ports;
     broadcaster.toSeat(this.code, seat, { name: "room-state", payload: this.view(seat) });
-    broadcaster.toSeat(this.code, seat, { name: "game-ended", payload: buildGameEnded(this.state, catalog) });
+    broadcaster.toSeat(this.code, seat, { name: "game-ended", payload: this.engine.gameEnded(this.state, catalog) });
   }
 
   /** ¿Se guarda esta partida en la base de datos? Deja de guardarse en cuanto entra un invitado, y ya no vuelve. */
@@ -164,7 +160,7 @@ export class GameRoom {
   }
 
   view(seat: Seat): RoomStateView {
-    return buildRoomState(this.state, seat, this.code, this.ports.catalog, this.ports.clock.now());
+    return this.engine.roomState(this.state, seat, this.code, this.ports.catalog, this.ports.clock.now());
   }
 
   /** Se llama una sola vez, cuando la partida termina por cualquier motivo. */
@@ -178,9 +174,10 @@ export class GameRoom {
   }
 
   dispatch(event: GameEvent): void {
-    const result = reduce(this.state, event, this.ports.clock.now(), {
+    const result = this.engine.reduce(this.state, event, this.ports.clock.now(), {
       catalog: this.ports.catalog,
       rng: this.ports.rng,
+      newToken: this.ports.newToken ?? randomSilhouetteToken,
     });
     this.state = result.state;
     this.execute(result.effects);
@@ -211,6 +208,9 @@ export class GameRoom {
           break;
         case "send_state":
           broadcaster.toSeat(this.code, effect.to, { name: "room-state", payload: this.view(effect.to) });
+          break;
+        case "register_silhouette":
+          this.ports.silhouettes?.register(effect.token, effect.pokemonId);
           break;
         case "persist_seat_taken":
           this.persist("unir al segundo jugador", (gameId) => repository.addSecondPlayer(gameId, effect.userId));

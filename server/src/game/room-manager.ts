@@ -52,8 +52,9 @@ export class RoomManager {
   }
 
   async createRoom(user: RoomUser, roomConfig: RoomConfig): Promise<{ code: string }> {
-    const config = asDobleTipo(roomConfig);
-    if (!config) throw new AppError(400, "VALIDATION_ERROR", "«¿Quién es ese Pokémon?» todavía no está disponible");
+    const config = roomConfig;
+    // Solo se guardan las partidas de «Doble tipo» entre cuentas (la silueta no cuenta en estadísticas por ahora).
+    const saved = asDobleTipo(config);
     if (this.deps.store.findByUser(user.userId) || this.pendingCreates.has(user.userId)) {
       throw alreadyInGame();
     }
@@ -65,9 +66,9 @@ export class RoomManager {
 
         // Un invitado no tiene fila en `users`: su sala no se guarda (y su código solo debe ser único entre las salas vivas).
         let gameId: string | null = null;
-        if (!user.isGuest) {
+        if (!user.isGuest && saved) {
           try {
-            gameId = await this.deps.repository.createGame({ roomCode: code, config, creatorUserId: user.userId });
+            gameId = await this.deps.repository.createGame({ roomCode: code, config: saved, creatorUserId: user.userId });
           } catch (error) {
             // El código ya se usó en una partida anterior (la base de datos lo exige único).
             if (isUniqueViolation(error)) continue;
@@ -91,9 +92,8 @@ export class RoomManager {
    * con el asiento de esa persona.
    */
   async createRematchRoom(input: { players: Record<Seat, RematchPlayer>; config: RoomConfig }): Promise<{ code: string }> {
-    const { players } = input;
-    const config = asDobleTipo(input.config);
-    if (!config) throw new AppError(400, "VALIDATION_ERROR", "«¿Quién es ese Pokémon?» todavía no está disponible");
+    const { players, config } = input;
+    const saved = asDobleTipo(config);
     for (const seat of [1, 2] as const) {
       const { userId } = players[seat];
       if (this.deps.store.findByUser(userId) || this.pendingCreates.has(userId)) {
@@ -103,7 +103,7 @@ export class RoomManager {
     const ids = [players[1].userId, players[2].userId];
     for (const id of ids) this.pendingCreates.add(id);
     try {
-      const persisted = !players[1].isGuest && !players[2].isGuest;
+      const persisted = saved !== null && !players[1].isGuest && !players[2].isGuest;
       for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
         const code = this.deps.generateCode?.() ?? generateRoomCode(this.deps.rng);
         if (this.deps.store.get(code)) continue;
@@ -111,7 +111,7 @@ export class RoomManager {
         let gameId: string | null = null;
         if (persisted) {
           try {
-            gameId = await this.deps.repository.createGame({ roomCode: code, config, creatorUserId: players[1].userId });
+            gameId = await this.deps.repository.createGame({ roomCode: code, config: saved!, creatorUserId: players[1].userId });
           } catch (error) {
             if (isUniqueViolation(error)) continue;
             throw error;

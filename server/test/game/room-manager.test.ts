@@ -543,3 +543,31 @@ describe("RoomManager: el avatar", () => {
     expect(store.get(code)!.players()).toEqual({ 1: { ...ash, avatarId: 94 }, 2: misty });
   });
 });
+
+describe("RoomManager: la silueta", () => {
+  const silhouette = { game: "silueta" as const, rounds: 5 as const, generations: [1] };
+
+  it("una sala de silueta no se guarda, ni entre dos cuentas", async () => {
+    const { manager, store, repository, time } = setup();
+    const { code } = await manager.createRoom(ash, silhouette);
+    manager.joinRoom(misty, code);
+    const room = store.get(code)!;
+    expect(room.persisted).toBe(false);
+    room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    room.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    time.advance(5000);
+    for (let round = 1; round <= 5; round++) time.advance(15_000 + 6000);
+    await room.idle();
+    expect(room.phase).toBe("finished");
+    expect(repository.calls).toEqual([]);
+  });
+
+  it("la revancha de una silueta copia su configuración y no pide récord", async () => {
+    const { manager, store, repository } = setup();
+    const { code } = await manager.createRematchRoom({ players: { 1: ash, 2: misty }, config: silhouette });
+    expect(store.get(code)!.config).toEqual(silhouette);
+    expect(store.get(code)!.persisted).toBe(false);
+    expect(repository.calls).toEqual([]);
+    expect(repository.headToHeadCalls).toEqual([]);
+  });
+});

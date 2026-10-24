@@ -33,6 +33,12 @@ export interface HeadToHead {
   recent: ("a" | "b" | "draw")[];
 }
 
+/** Qué Pokémon dibuja cada silueta: el token opaco de su URL → número de Pokédex (solo en el servidor). */
+export interface SilhouetteRegistry {
+  register(token: string, pokemonId: number): void;
+  lookup(token: string): number | undefined;
+}
+
 export interface GameRepository {
   /** Crea la partida en `waiting` con el creador en el asiento 1 y devuelve su id. */
   createGame(input: { roomCode: string; config: DobleTipoConfig; creatorUserId: string }): Promise<string>;

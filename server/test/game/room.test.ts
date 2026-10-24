@@ -316,3 +316,28 @@ describe("GameRoom", () => {
     expect(broadcaster.sent).toHaveLength(sentBefore);
   });
 });
+
+describe("GameRoom con la silueta", () => {
+  it("el efecto register_silhouette llega al registro y la sala juega con el motor de la silueta", () => {
+    const time = new FakeTime();
+    const broadcaster = new RecordingBroadcaster();
+    const registered: [string, number][] = [];
+    const room = GameRoom.create(
+      {
+        clock: time,
+        scheduler: time,
+        broadcaster,
+        repository: new FakeRepository(),
+        catalog: fixtureCatalog(),
+        rng: sequenceRng([0]),
+        silhouettes: { register: (token, pokemonId) => registered.push([token, pokemonId]), lookup: () => undefined },
+        newToken: () => "tok-a",
+      },
+      { code: "SIL234", gameId: null, config: { game: "silueta", rounds: 5, generations: [1] }, creator },
+    );
+    startGame(room, time);
+    expect(registered).toEqual([["tok-a", 1]]);
+    expect(room.view(1).silhouette?.round?.silhouetteUrl).toBe("/silhouettes/tok-a");
+    expect(room.view(1).config).toEqual({ game: "silueta", rounds: 5, generations: [1] });
+  });
+});
