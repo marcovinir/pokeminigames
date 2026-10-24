@@ -3,7 +3,7 @@ import { ApiClient, ApiError } from "../../src/api/client";
 import type { AuthSession } from "../../src/api/types";
 
 const session = (token: string): AuthSession => ({
-  user: { id: "u1", email: "ash@example.com", username: "ash", createdAt: "2026-01-01T00:00:00.000Z", preferences: null },
+  user: { id: "u1", email: "ash@example.com", username: "ash", createdAt: "2026-01-01T00:00:00.000Z", preferences: null, avatarId: null },
   accessToken: token,
 });
 
