@@ -1,5 +1,5 @@
 import { AVATAR_POKEMON } from "@pokemon-minigames/shared";
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "../../components/Avatar";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
@@ -29,6 +29,8 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -55,29 +57,37 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
     }
   }
 
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      onClose();
-      return;
+  // Las teclas se escuchan en todo el documento: tras un clic en el título, en un hueco o en el fondo, el foco cae en la
+  // página (fuera de la ventana) y un manejador puesto en la ventana ya no las recibiría.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      // Si el foco está fuera de la ventana, Tab lo trae al primero y Mayús+Tab al último.
+      const inside = focusable.includes(document.activeElement as HTMLElement);
+      if (event.shiftKey && (!inside || document.activeElement === first)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (!inside || document.activeElement === last)) {
+        event.preventDefault();
+        first.focus();
+      }
     }
-    if (event.key !== "Tab") return;
-    const focusable = [...(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
-    const first = focusable[0];
-    const last = focusable.at(-1);
-    if (!first || !last) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     // El fondo cubre la página: no se puede tocar nada de detrás mientras la ventana está abierta.
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onKeyDown={onKeyDown}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <Card
         role="dialog"
         aria-modal="true"

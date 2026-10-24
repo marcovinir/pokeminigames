@@ -144,4 +144,22 @@ describe("la ventana «Elige tu avatar»", () => {
     await user.tab({ shift: true });
     expect(close).toHaveFocus();
   });
+
+  it("tras un clic fuera de los botones (el foco cae en la página), Escape sigue cerrando", async () => {
+    const { user } = await openPicker();
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement).toBe(document.body);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("tras un clic fuera de los botones, Tab y Mayús+Tab vuelven a la ventana", async () => {
+    const { user } = await openPicker({ ...ASH, avatarId: 94 });
+    (document.activeElement as HTMLElement).blur();
+    await user.tab();
+    expect(pokemonButton("Pikachu")).toHaveFocus();
+    (document.activeElement as HTMLElement).blur();
+    await user.tab({ shift: true });
+    expect(within(dialog()).getByRole("button", { name: "Cerrar" })).toHaveFocus();
+  });
 });
