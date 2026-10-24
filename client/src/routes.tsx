@@ -3,7 +3,8 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { isGuest } from "./api/types";
 import { useSession } from "./services";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
-import { LobbyPage } from "./pages/Lobby";
+import { LobbyRoute } from "./pages/Lobby";
+import { MainMenu } from "./pages/MainMenu";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { RoomPage } from "./pages/room/RoomPage";
 
@@ -43,7 +44,8 @@ export function AppRoutes() {
         <Route path="/registro" element={<RegisterPage />} />
       </Route>
       <Route element={<RequireAuth />}>
-        <Route path="/" element={<LobbyPage />} />
+        <Route path="/" element={<MainMenu />} />
+        <Route path="/jugar/:juego" element={<LobbyRoute />} />
         <Route path="/sala/:code" element={<RoomPage />} />
         <Route element={<RequireAccount />}>
           <Route path="/perfil" element={<ProfilePage />} />

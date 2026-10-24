@@ -1,3 +1,5 @@
+import { gameOf } from "@pokemon-minigames/shared";
+import { lobbyPath } from "../lobby-path";
 import { asDobleTipo } from "@pokemon-minigames/shared";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -93,7 +95,7 @@ export function WaitingView() {
           variant="ghost"
           onClick={() => {
             client.leave();
-            navigate("/");
+            navigate(lobbyPath(gameOf(view.config ?? {})));
           }}
         >
           {opponent ? "Salir de la sala" : "Cancelar sala"}

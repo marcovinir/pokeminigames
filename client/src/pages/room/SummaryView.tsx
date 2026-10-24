@@ -1,3 +1,5 @@
+import { gameOf } from "@pokemon-minigames/shared";
+import { lobbyPath } from "../lobby-path";
 import type { GameEndedPayload, PokemonView, Seat } from "@pokemon-minigames/shared";
 import { useNavigate } from "react-router";
 import { isGuest } from "../../api/types";
@@ -111,7 +113,7 @@ export function SummaryView() {
           variant="ghost"
           onClick={() => {
             client.leave();
-            navigate("/");
+            navigate(lobbyPath(gameOf(view.config ?? {})));
           }}
         >
           Volver al lobby

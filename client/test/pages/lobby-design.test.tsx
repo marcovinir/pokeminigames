@@ -11,10 +11,10 @@ function renderSignedIn() {
 }
 
 describe("lobby (etapa 6)", () => {
-  it("saluda a la persona por su nombre y conserva el título «Lobby»", () => {
+  it("saluda a la persona por su nombre y lleva como título el nombre del juego", () => {
     renderSignedIn();
     expect(screen.getByText(`Hola, ${ASH.username}`)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1, name: "Lobby" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Doble tipo" })).toBeInTheDocument();
   });
 
   it("sin sesión (no debería pasar) no saluda a nadie", () => {

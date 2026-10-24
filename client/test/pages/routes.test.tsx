@@ -38,18 +38,18 @@ describe("rutas del perfil", () => {
 });
 
 describe("rutas para un invitado", () => {
-  it("un invitado en /perfil o /jugador/misty termina en el lobby (no tiene perfil ni estadísticas)", async () => {
+  it("un invitado en /perfil o /jugador/misty termina en el menú (no tiene perfil ni estadísticas)", async () => {
     for (const route of ["/perfil", "/jugador/misty"]) {
       const { unmount } = renderApp(route, (s) => signIn(s, GUEST));
-      expect(await screen.findByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { name: "¿A qué jugamos?" })).toBeInTheDocument();
       expect(screen.getByTestId("location")).toHaveTextContent("/");
       unmount();
     }
   });
 
-  it("un invitado puede ver el lobby y una sala", async () => {
+  it("un invitado puede ver el menú y una sala", async () => {
     const { unmount } = renderApp("/", (s) => signIn(s, GUEST));
-    expect(screen.getByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "¿A qué jugamos?" })).toBeInTheDocument();
     unmount();
     renderApp("/sala/ABC234", (s) => signIn(s, GUEST));
     expect(screen.getByTestId("location")).toHaveTextContent("/sala/ABC234");
@@ -93,27 +93,27 @@ describe("guardas de ruta", () => {
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/sala/ABC234"));
   });
 
-  it("con sesión, /login y /registro llevan al lobby", async () => {
+  it("con sesión, /login y /registro llevan al menú", async () => {
     renderApp("/login", (services) => signIn(services));
-    expect(await screen.findByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "¿A qué jugamos?" })).toBeInTheDocument();
     expect(screen.getByTestId("location")).toHaveTextContent("/");
   });
 
-  it("con sesión se ve el lobby", () => {
+  it("con sesión se ve el menú", () => {
     renderApp("/", (services) => signIn(services));
-    expect(screen.getByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "¿A qué jugamos?" })).toBeInTheDocument();
   });
 
-  it("una ruta desconocida lleva al lobby (y de ahí a /login si no hay sesión)", async () => {
+  it("una ruta desconocida lleva al menú (y de ahí a /login si no hay sesión)", async () => {
     const { services } = renderApp("/no-existe", (s) => signIn(s));
-    expect(await screen.findByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "¿A qué jugamos?" })).toBeInTheDocument();
     services.session.getState().expire();
     expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
   });
 
-  it("si la sesión caduca mientras se está en el lobby, lleva a /login", async () => {
+  it("si la sesión caduca mientras se está en el menú, lleva a /login", async () => {
     const { services } = renderApp("/", (s) => signIn(s));
-    expect(screen.getByRole("heading", { name: "Lobby" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "¿A qué jugamos?" })).toBeInTheDocument();
     services.session.getState().expire();
     expect(await screen.findByRole("heading", { name: "Iniciar sesión" })).toBeInTheDocument();
   });

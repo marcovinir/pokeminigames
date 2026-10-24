@@ -247,6 +247,11 @@ body::before {
     animation: rock 1.1s ease-in-out infinite;
   }
   /* La Poké Ball de la pantalla «¡Revancha!»: colores fijos porque es la de siempre y es decorativa (sin texto). */
+  /* Los rayos amarillos de «¿Quién es ese Pokémon?» (decorativos, con colores fijos como la Poké Ball). */
+  .silhouette-rays {
+    background: repeating-conic-gradient(#fde047 0deg 10deg, #facc15 10deg 20deg);
+  }
+
   .pokeball {
     position: relative;
     display: inline-block;

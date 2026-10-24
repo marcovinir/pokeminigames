@@ -1,3 +1,5 @@
+import { gameOf } from "@pokemon-minigames/shared";
+import { lobbyPath } from "../lobby-path";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
@@ -54,7 +56,7 @@ export function RematchLoadingView() {
 
 /** La sala de la revancha caducó sin que el rival entrara: no hubo partida, así que no hay veredicto que enseñar. */
 export function RematchNoShow() {
-  const { opponent, client } = useRoom();
+  const { view, opponent, client } = useRoom();
   const navigate = useNavigate();
   return (
     <section className="mx-auto max-w-md text-center">
@@ -64,7 +66,7 @@ export function RematchNoShow() {
           variant="primary"
           onClick={() => {
             client.leave();
-            navigate("/");
+            navigate(lobbyPath(gameOf(view.config ?? {})));
           }}
         >
           {REMATCH_TEXT.backToLobby}

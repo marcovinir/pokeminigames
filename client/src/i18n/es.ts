@@ -1,4 +1,5 @@
 import type {
+  GameKind,
   BaseStats,
   ErrorCode,
   GameEndReason,
@@ -214,3 +215,26 @@ export const AVATAR_TEXT = {
 
 /** Lo que oye un lector de pantalla en el avatar del perfil. */
 export const avatarLabel = (pokemonName: string): string => `Avatar: ${pokemonName}`;
+
+export const MENU_TEXT = {
+  title: "¿A qué jugamos?",
+  subtitle: "Elige un minijuego para dos.",
+  play: "Jugar",
+  newBadge: "NUEVO",
+  backToMenu: "Volver al menú",
+} as const;
+
+/** Las tarjetas del menú: nombre, frase y si es nuevo. */
+export const GAME_CARDS: Record<GameKind, { name: string; description: string; isNew: boolean }> = {
+  doble_tipo: { name: "Doble tipo", description: "Nombra un Pokémon con los dos tipos. Gana quien sume más stats.", isNew: false },
+  silueta: { name: "¿Quién es ese Pokémon?", description: "Adivina la silueta. Cuanto más rápido, más puntos.", isNew: true },
+};
+
+export const SILHOUETTE_TEXT = {
+  rounds: "Rondas",
+  generations: "Generaciones",
+  noGeneration: "Elige al menos una generación",
+} as const;
+
+/** «1.ª (Kanto)». */
+export const generationLabel = (n: number, region: string): string => `${n}.ª (${region})`;

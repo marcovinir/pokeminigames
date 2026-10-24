@@ -1,6 +1,17 @@
-import { type RoomConfig, type TypeMode, asDobleTipo } from "@pokemon-minigames/shared";
+import {
+  GENERATIONS,
+  type GameKind,
+  type RoomConfig,
+  SILHOUETTE_DEFAULT_GENERATIONS,
+  SILHOUETTE_DEFAULT_ROUNDS,
+  SILHOUETTE_ROUNDS,
+  type SilhouetteRounds,
+  type TypeMode,
+  asDobleTipo,
+  gameFromSlug,
+} from "@pokemon-minigames/shared";
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 import { ApiError } from "../api/client";
 import type { CurrentRoom } from "../api/endpoints";
 import { Button } from "../components/Button";
@@ -8,7 +19,7 @@ import { Card } from "../components/Card";
 import { Notice } from "../components/Notice";
 import { rise } from "../components/rise";
 import { TextField } from "../components/TextField";
-import { errorMessage } from "../i18n/es";
+import { GAME_CARDS, MENU_TEXT, SILHOUETTE_TEXT, errorMessage, generationLabel } from "../i18n/es";
 import { useServices, useSession } from "../services";
 import {
   type CreateRoomForm,
@@ -240,6 +251,92 @@ function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
   );
 }
 
+/** Crear una sala de «¿Quién es ese Pokémon?»: rondas y generaciones (por defecto 10 y Kanto). */
+function CreateSilhouetteRoomCard() {
+  const { endpoints } = useServices();
+  const navigate = useNavigate();
+  const [rounds, setRounds] = useState<SilhouetteRounds>(SILHOUETTE_DEFAULT_ROUNDS);
+  const [generations, setGenerations] = useState<number[]>([...SILHOUETTE_DEFAULT_GENERATIONS]);
+  const [generationsError, setGenerationsError] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const errorId = useId();
+
+  function toggle(n: number): void {
+    setGenerationsError(false);
+    setGenerations((current) => (current.includes(n) ? current.filter((g) => g !== n) : [...current, n].sort((a, b) => a - b)));
+  }
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (submitting) return;
+    if (generations.length === 0) {
+      setGenerationsError(true);
+      return;
+    }
+    setFormError(null);
+    setSubmitting(true);
+    try {
+      const { code } = await endpoints.rooms.create({ game: "silueta", rounds, generations });
+      navigate(`/sala/${code}`);
+    } catch (error) {
+      setFormError(shownError(error));
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card as="section" style={rise(1)} className="animate-rise p-6">
+      <CardTitle icon={<PlusIcon />}>Crear sala</CardTitle>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        {formError ? <Notice tone="danger">{formError}</Notice> : null}
+        <div>
+          <label htmlFor="silhouette-rounds" className="mb-1.5 block text-sm font-semibold">
+            {SILHOUETTE_TEXT.rounds}
+          </label>
+          <div className="relative">
+            <select
+              id="silhouette-rounds"
+              value={rounds}
+              onChange={(event) => setRounds(Number(event.target.value) as SilhouetteRounds)}
+              className="framed-field w-full appearance-none rounded-ui bg-surface px-4 py-3 pr-10 text-fg"
+            >
+              {SILHOUETTE_ROUNDS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <ChevronIcon />
+          </div>
+        </div>
+        <fieldset aria-describedby={generationsError ? errorId : undefined}>
+          <legend className="mb-1.5 text-sm font-semibold">{SILHOUETTE_TEXT.generations}</legend>
+          <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+            {GENERATIONS.map((g) => (
+              <label key={g.n} className="block cursor-pointer">
+                <input type="checkbox" checked={generations.includes(g.n)} onChange={() => toggle(g.n)} className="peer sr-only" />
+                <span className="framed-field flex items-center gap-2 rounded-ui bg-surface px-3 py-2 text-sm transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ring peer-checked:[&_[data-check]]:opacity-100">
+                  <span className="min-w-0 flex-1">{generationLabel(g.n, g.region)}</span>
+                  <CheckIcon />
+                </span>
+              </label>
+            ))}
+          </div>
+          {generationsError ? (
+            <p id={errorId} role="alert" className="mt-2 text-sm font-semibold text-danger">
+              {SILHOUETTE_TEXT.noGeneration}
+            </p>
+          ) : null}
+        </fieldset>
+        <Button type="submit" variant="primary" size="lg" loading={submitting}>
+          Crear sala
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
 function JoinRoomCard() {
   const { endpoints } = useServices();
   const navigate = useNavigate();
@@ -295,21 +392,32 @@ function JoinRoomCard() {
   );
 }
 
-export function LobbyPage() {
+/** El lobby de un juego: crear su sala o unirse con un código (de cualquier juego). */
+export function LobbyPage({ game = "doble_tipo" }: { game?: GameKind }) {
   const state = useLocation().state as { config?: RoomConfig } | null;
   const user = useSession((s) => s.user);
 
   return (
     <div className="flex flex-col gap-6">
       <div style={rise(0)} className="animate-rise">
-        {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
-        <h1 className="font-display text-3xl font-semibold">Lobby</h1>
+        <Link to="/" className="text-sm font-semibold text-muted underline-offset-4 hover:underline">
+          {MENU_TEXT.backToMenu}
+        </Link>
+        {user ? <p className="mt-2 text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
+        <h1 className="font-display text-3xl font-semibold">{GAME_CARDS[game].name}</h1>
       </div>
       <ResumeBanner />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <CreateRoomCard initial={state?.config} />
+        {game === "silueta" ? <CreateSilhouetteRoomCard /> : <CreateRoomCard initial={state?.config} />}
         <JoinRoomCard />
       </div>
     </div>
   );
+}
+
+/** `/jugar/:juego`: el lobby de ese juego; un juego que no existe vuelve al menú. */
+export function LobbyRoute() {
+  const game = gameFromSlug(useParams().juego ?? "");
+  if (!game) return <Navigate to="/" replace />;
+  return <LobbyPage key={game} game={game} />;
 }

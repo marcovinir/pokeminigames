@@ -32,7 +32,7 @@ describe("entrada de cada pantalla", () => {
     const services = fakeServices();
     signIn(services, ASH);
     renderWithServices(<LobbyPage />, { services });
-    expect(rise(screen.getByRole("heading", { level: 1, name: "Lobby" }).parentElement)).toEqual({ animated: true, index: "0" });
+    expect(rise(screen.getByRole("heading", { level: 1, name: "Doble tipo" }).parentElement)).toEqual({ animated: true, index: "0" });
     expect(rise(screen.getByRole("heading", { level: 2, name: "Crear sala" }).closest("section"))).toEqual({ animated: true, index: "1" });
     expect(rise(screen.getByRole("heading", { level: 2, name: "Unirse a una sala" }).closest("section"))).toEqual({ animated: true, index: "2" });
   });

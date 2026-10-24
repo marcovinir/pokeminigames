@@ -8,7 +8,7 @@ import { Button } from "../../components/Button";
 import { LogoMark } from "../../components/Logo";
 import { Notice } from "../../components/Notice";
 import { rise } from "../../components/rise";
-import { AVATAR_TEXT, avatarLabel, errorMessage } from "../../i18n/es";
+import { AVATAR_TEXT, MENU_TEXT, avatarLabel, errorMessage } from "../../i18n/es";
 import { useServices, useSession } from "../../services";
 import { AvatarPicker } from "./AvatarPicker";
 import { HistoryList } from "./HistoryList";
@@ -90,7 +90,7 @@ export function ProfilePage() {
       <StatsView stats={stats} own={own} />
       {own ? <HistoryList /> : null}
       <div>
-        <Button onClick={() => navigate("/")}>Volver al lobby</Button>
+        <Button onClick={() => navigate("/")}>{MENU_TEXT.backToMenu}</Button>
       </div>
     </div>
   );
