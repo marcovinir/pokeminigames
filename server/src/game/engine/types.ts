@@ -3,7 +3,7 @@ import type {
   GameEndReason,
   GamePhase,
   PickResult,
-  RoomConfig,
+  DobleTipoConfig,
   Seat,
   ServerEvent,
   TypeName,
@@ -52,7 +52,7 @@ export interface GameOutcome {
 
 export interface GameState {
   phase: GamePhase;
-  config: RoomConfig;
+  config: DobleTipoConfig;
   players: Partial<Record<Seat, PlayerState>>;
   round: RoundState | null;
   /** Rondas ya cerradas. */

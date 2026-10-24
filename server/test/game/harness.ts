@@ -1,12 +1,12 @@
-import type { ErrorCode, RoomConfig, Seat, ServerEvent, ServerEventName } from "@pokemon-minigames/shared";
+import type { ErrorCode, DobleTipoConfig, Seat, ServerEvent, ServerEventName } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
 import { createGame, reduce } from "../../src/game/engine/engine.js";
 import type { Effect, GameEvent, GameState, TimerId } from "../../src/game/engine/types.js";
 import { fixtureCatalog } from "../helpers/fixtures.js";
 import { sequenceRng } from "../helpers/rng.js";
 
-export const RANDOM_3: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
-export const CHOSEN_3: RoomConfig = { typeMode: "chosen", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
+export const RANDOM_3: DobleTipoConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
+export const CHOSEN_3: DobleTipoConfig = { typeMode: "chosen", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
 export const START_TIME = 1_000_000;
 
 type Payload<N extends ServerEventName> = Extract<ServerEvent, { name: N }>["payload"];
@@ -30,7 +30,7 @@ export class Harness {
   readonly rng: ReturnType<typeof sequenceRng>;
   readonly catalog: PokemonCatalog;
 
-  constructor(opts: { config?: RoomConfig; rng?: number[]; catalog?: PokemonCatalog; creator?: { userId: string; username: string; guest?: boolean; avatarId?: number }; rematch?: boolean } = {}) {
+  constructor(opts: { config?: DobleTipoConfig; rng?: number[]; catalog?: PokemonCatalog; creator?: { userId: string; username: string; guest?: boolean; avatarId?: number }; rematch?: boolean } = {}) {
     this.rng = sequenceRng(opts.rng ?? []);
     this.catalog = opts.catalog ?? fixtureCatalog();
     const created = createGame(opts.config ?? RANDOM_3, opts.creator ?? { userId: "u1", username: "ash" }, this.now, opts.rematch ? { rematch: true } : undefined);

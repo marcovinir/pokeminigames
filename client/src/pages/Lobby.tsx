@@ -1,4 +1,4 @@
-import type { RoomConfig, TypeMode } from "@pokemon-minigames/shared";
+import { type RoomConfig, type TypeMode, asDobleTipo } from "@pokemon-minigames/shared";
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ApiError } from "../api/client";
@@ -109,7 +109,7 @@ const TYPE_MODE_OPTIONS: { value: TypeMode; label: string; hint: string }[] = [
 function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
   const { endpoints } = useServices();
   const navigate = useNavigate();
-  const [form, setForm] = useState<CreateRoomForm>(initial ? formFromConfig(initial) : DEFAULT_FORM);
+  const [form, setForm] = useState<CreateRoomForm>(asDobleTipo(initial ?? null) ? formFromConfig(asDobleTipo(initial ?? null)!) : DEFAULT_FORM);
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

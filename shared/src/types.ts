@@ -56,7 +56,9 @@ export const GAME_END_REASONS = [
 ] as const;
 export type GameEndReason = (typeof GAME_END_REASONS)[number];
 
-export interface RoomConfig {
+/** La configuración de una sala de «Doble tipo». Sin `game` (salas y clientes de antes) también lo es. */
+export interface DobleTipoConfig {
+  game?: "doble_tipo";
   typeMode: TypeMode;
   lengthMode: LengthMode;
   /** Rondas fijas (3 o 5) o máximo de rondas del modo personalizado; nulo si el fin es por meta de stats. */
@@ -69,6 +71,17 @@ export interface RoomConfig {
    */
   typeHints?: boolean;
 }
+
+/** La configuración de una sala de «¿Quién es ese Pokémon?». */
+export interface SilhouetteConfig {
+  game: "silueta";
+  rounds: 5 | 10 | 15;
+  /** Generaciones de las que salen los Pokémon (1 a 9), sin repetir y en orden. */
+  generations: number[];
+}
+
+/** La configuración de cualquier sala: el juego se sabe con `gameOf(config)`. */
+export type RoomConfig = DobleTipoConfig | SilhouetteConfig;
 
 export interface PokemonView {
   id: number;

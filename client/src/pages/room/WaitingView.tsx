@@ -1,3 +1,4 @@
+import { asDobleTipo } from "@pokemon-minigames/shared";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
@@ -37,6 +38,7 @@ function CopyCodeButton({ code }: { code: string }) {
 
 export function WaitingView() {
   const { view, client, opponent } = useRoom();
+  const dobleTipo = asDobleTipo(view.config);
   const navigate = useNavigate();
   const code = view.code ?? "";
 
@@ -57,10 +59,10 @@ export function WaitingView() {
       </p>
       <CopyCodeButton code={code} />
 
-      {view.config ? (
+      {dobleTipo ? (
         <p aria-label="Configuración de la sala" className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
-          <span>{describeConfig(view.config)}</span>
-          {view.config.typeHints ? <Badge tone="info">Pistas de tipos</Badge> : null}
+          <span>{describeConfig(dobleTipo)}</span>
+          {dobleTipo.typeHints ? <Badge tone="info">Pistas de tipos</Badge> : null}
         </p>
       ) : null}
 

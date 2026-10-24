@@ -1,10 +1,10 @@
-import type { RoomConfig } from "@pokemon-minigames/shared";
+import type { DobleTipoConfig } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
 import { fixtureCatalogPokemon } from "../helpers/fixtures.js";
 import { Harness, RANDOM_3 } from "./harness.js";
 
-const custom = (overrides: Partial<RoomConfig>): RoomConfig => ({
+const custom = (overrides: Partial<DobleTipoConfig>): DobleTipoConfig => ({
   typeMode: "random",
   lengthMode: "custom",
   roundsLimit: null,

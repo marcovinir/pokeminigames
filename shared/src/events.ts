@@ -1,5 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
+import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
   GamePhase,
@@ -39,6 +40,8 @@ export interface RoomStateView {
   startsAt: number | null;
   /** Solo está (y vale `true`) en las salas que nacen de una revancha. Ausente = sala normal. */
   rematch?: true;
+  /** Solo en las salas de silueta: su ronda y sus revelaciones. En ellas `round` es nulo y `totalStats` son puntos. */
+  silhouette?: SilhouetteStateView;
   /** Hasta cuándo puede volver el rival si está desconectado. */
   opponentGraceEndsAt: number | null;
   round: {
@@ -82,6 +85,8 @@ export interface GameEndedPayload {
   reason: GameEndReason;
   teams: Record<Seat, PokemonView[]>;
   totals: Record<Seat, number>;
+  /** Solo en la silueta: todas las revelaciones de la partida. En ella `teams` va vacío y `totals` son puntos. */
+  silhouette?: { reveals: SilhouetteReveal[] };
 }
 
 export interface RoundStartedPayload {
@@ -122,6 +127,9 @@ export interface ServerToClientEvents {
   "rematch-state": (payload: RematchState) => void;
   /** Los dos aceptaron: la sala de la revancha ya existe, hay que entrar a ella. */
   "rematch-room": (payload: { code: string }) => void;
+  "silhouette-round-started": (payload: { serverNow: number; round: number; totalRounds: number; deadline: number; silhouetteUrl: string }) => void;
+  "silhouette-answer-received": (payload: { ms: number }) => void;
+  "silhouette-round-result": (payload: { serverNow: number; reveal: SilhouetteReveal; totals: Record<Seat, number>; nextRoundAt: number | null }) => void;
 }
 
 export type ServerEventName = keyof ServerToClientEvents;

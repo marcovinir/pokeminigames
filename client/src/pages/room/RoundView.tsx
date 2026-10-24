@@ -1,3 +1,4 @@
+import { asDobleTipo } from "@pokemon-minigames/shared";
 import { Autocomplete } from "../../components/Autocomplete";
 import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
@@ -39,7 +40,7 @@ export function RoundView() {
   const round = view.round;
   if (!round || !round.pair) return null;
 
-  const config = view.config;
+  const config = asDobleTipo(view.config);
   const goal =
     config?.roundsLimit != null
       ? `Ronda ${round.number} de ${config.roundsLimit}`

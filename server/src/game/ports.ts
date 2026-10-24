@@ -1,4 +1,4 @@
-import type { GameEndReason, RoomConfig, Seat, ServerEvent } from "@pokemon-minigames/shared";
+import type { GameEndReason, DobleTipoConfig, Seat, ServerEvent } from "@pokemon-minigames/shared";
 import type { RoundRecord } from "./engine/types.js";
 
 /** Reloj inyectable: en las pruebas se controla a mano. */
@@ -35,7 +35,7 @@ export interface HeadToHead {
 
 export interface GameRepository {
   /** Crea la partida en `waiting` con el creador en el asiento 1 y devuelve su id. */
-  createGame(input: { roomCode: string; config: RoomConfig; creatorUserId: string }): Promise<string>;
+  createGame(input: { roomCode: string; config: DobleTipoConfig; creatorUserId: string }): Promise<string>;
   addSecondPlayer(gameId: string, userId: string): Promise<void>;
   removeSecondPlayer(gameId: string): Promise<void>;
   markStarted(gameId: string): Promise<void>;

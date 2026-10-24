@@ -1,4 +1,4 @@
-import type { RoomConfig, RoomStateView, Seat } from "@pokemon-minigames/shared";
+import { type RoomConfig, type RoomStateView, type Seat, asDobleTipo } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../catalog/pokemon-catalog.js";
 import { createGame, reduce } from "./engine/engine.js";
 import {
@@ -81,8 +81,11 @@ export class GameRoom {
     input: { code: string; gameId: string | null; config: RoomConfig; creator: RoomUser; rematch?: boolean },
   ): GameRoom {
     const { creator } = input;
+    // Hasta que la sala sepa usar el motor de la silueta (Tarea 4), solo admite «Doble tipo».
+    const config = asDobleTipo(input.config);
+    if (!config) throw new Error("Esta sala solo sabe jugar a «Doble tipo»");
     const { state, effects } = createGame(
-      input.config,
+      config,
       engineIdentity(creator),
       ports.clock.now(),
       { rematch: input.rematch },

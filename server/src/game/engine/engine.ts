@@ -1,4 +1,4 @@
-import { type ErrorCode, type RoomConfig, type RoundPlayerResult, type Seat, type ServerEvent, TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
+import { type ErrorCode, type DobleTipoConfig, type RoundPlayerResult, type Seat, type ServerEvent, TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
 import { PokemonCatalog, type TypePair } from "../../catalog/pokemon-catalog.js";
 import {
   MIN_POOL_PER_PAIR,
@@ -87,7 +87,7 @@ function randomPlayablePair(c: Ctx): TypePair | null {
 
 /** Estado inicial de una sala recién creada: el creador ocupa el asiento 1. */
 export function createGame(
-  config: RoomConfig,
+  config: DobleTipoConfig,
   creator: PlayerIdentity,
   now: number,
   /** `rematch`: la sala nace de una revancha y los dos ya están dentro; si el rival no entra caduca pronto. */

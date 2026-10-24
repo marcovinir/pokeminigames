@@ -239,5 +239,11 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
 
     case "rematch-room":
       return { ...view, nextRoom: event.payload.code };
+
+    // Provisional: la Tarea 6 los maneja de verdad (el switch es exhaustivo).
+    case "silhouette-round-started":
+    case "silhouette-answer-received":
+    case "silhouette-round-result":
+      return view;
   }
 }

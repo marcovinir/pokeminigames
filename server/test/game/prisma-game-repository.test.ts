@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { RoomConfig } from "@pokemon-minigames/shared";
+import type { DobleTipoConfig } from "@pokemon-minigames/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedCatalog } from "../../src/catalog/seed.js";
 import type { RoundRecord } from "../../src/game/engine/types.js";
@@ -8,7 +8,7 @@ import { fixtureSnapshot } from "../helpers/fixtures.js";
 import { prisma, resetCatalog, resetDatabase } from "../helpers/db.js";
 
 const repository = createPrismaGameRepository(prisma);
-const config: RoomConfig = { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 1500 };
+const config: DobleTipoConfig = { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 1500 };
 
 let ash: string;
 let misty: string;

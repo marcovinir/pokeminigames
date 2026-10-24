@@ -6,7 +6,7 @@ import type {
   PickResult,
   RematchClosedReason,
   RematchRecord,
-  RoomConfig,
+  DobleTipoConfig,
   TypeName,
 } from "@pokemon-minigames/shared";
 
@@ -55,6 +55,8 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   ALREADY_ANSWERED: "Ya enviaste tu respuesta en esta ronda.",
   ALREADY_CHOSEN: "Ya elegiste tu tipo en esta ronda.",
   INVALID_TYPE: "Ese tipo no existe.",
+  SILHOUETTE_NOT_FOUND: "Esa silueta no existe.",
+  SILHOUETTE_UNAVAILABLE: "No se pudo cargar la silueta.",
   RATE_LIMITED: "Vas muy rápido. Espera un momento.",
   NETWORK: "No se pudo conectar con el servidor. Revisa tu conexión.",
 };
@@ -124,7 +126,7 @@ export function historyReason(reason: GameEndReason | null, result: GameResult):
 }
 
 /** "Tipos aleatorios · 3 rondas", "Tipos elegidos · hasta 7 rondas", "Tipos aleatorios · meta de 2500 puntos". */
-export function describeConfig(config: RoomConfig): string {
+export function describeConfig(config: DobleTipoConfig): string {
   const types = config.typeMode === "random" ? "Tipos aleatorios" : "Tipos elegidos";
   const length =
     config.statsGoal !== null

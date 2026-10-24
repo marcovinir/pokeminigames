@@ -1,5 +1,7 @@
 export * from "./avatars.js";
 export * from "./errors.js";
+export * from "./games.js";
+export * from "./silhouette.js";
 export * from "./events.js";
 export * from "./normalize.js";
 export * from "./preferences.js";

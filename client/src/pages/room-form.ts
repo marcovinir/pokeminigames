@@ -1,4 +1,4 @@
-import type { CreateRoomRequest, RoomConfig, TypeMode } from "@pokemon-minigames/shared";
+import type { CreateDobleTipoRoomRequest, DobleTipoConfig, TypeMode } from "@pokemon-minigames/shared";
 import {
   CUSTOM_ROUNDS_MAX,
   CUSTOM_ROUNDS_MIN,
@@ -33,7 +33,7 @@ export const LENGTH_LABELS: Record<LengthKind, string> = {
 };
 
 /** El formulario de una sala que ya se jugó, para "Jugar de nuevo" con la misma configuración. */
-export function formFromConfig(config: RoomConfig): CreateRoomForm {
+export function formFromConfig(config: DobleTipoConfig): CreateRoomForm {
   const base = {
     typeMode: config.typeMode,
     customRounds: DEFAULT_FORM.customRounds,
@@ -54,7 +54,7 @@ function wholeNumber(text: string): number | null {
 }
 
 export type BuiltRequest =
-  | { ok: true; request: CreateRoomRequest }
+  | { ok: true; request: CreateDobleTipoRoomRequest }
   | { ok: false; field: "customRounds" | "statsGoal"; error: string };
 
 /** Convierte el formulario en la petición al servidor, con los mismos límites que él valida. */

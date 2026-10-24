@@ -54,6 +54,9 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   error: true,
   "rematch-state": true,
   "rematch-room": true,
+  "silhouette-round-started": true,
+  "silhouette-answer-received": true,
+  "silhouette-round-result": true,
 };
 /**
  * Estados de la oferta en los que hay que volver a la sala vieja al reconectar: mientras se decide sigue viva, y en

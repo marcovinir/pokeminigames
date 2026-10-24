@@ -1,4 +1,4 @@
-import type { GameEndReason, RoomConfig } from "@pokemon-minigames/shared";
+import type { GameEndReason, DobleTipoConfig } from "@pokemon-minigames/shared";
 import { prisma } from "./db.js";
 
 export interface SeedPlayer {
@@ -17,10 +17,10 @@ export interface SeedGame {
   winner?: 0 | 1 | null;
   status?: "completed" | "abandoned" | "in_progress" | "waiting";
   reason?: GameEndReason | null;
-  config?: RoomConfig;
+  config?: DobleTipoConfig;
 }
 
-const DEFAULT_CONFIG: RoomConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
+const DEFAULT_CONFIG: DobleTipoConfig = { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null };
 
 /**
  * Siembra una partida ya guardada en la base de datos, con sus dos jugadores y una ronda por cada

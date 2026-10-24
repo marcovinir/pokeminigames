@@ -1,4 +1,12 @@
-import type { RoomConfig } from "@pokemon-minigames/shared";
+import {
+  type DobleTipoConfig,
+  GENERATIONS,
+  type RoomConfig,
+  SILHOUETTE_DEFAULT_GENERATIONS,
+  SILHOUETTE_DEFAULT_ROUNDS,
+  SILHOUETTE_ROUNDS,
+  type SilhouetteConfig,
+} from "@pokemon-minigames/shared";
 import { z } from "zod";
 import {
   CUSTOM_ROUNDS_MAX,
@@ -8,9 +16,10 @@ import {
   FIXED_ROUNDS_OPTIONS,
 } from "../game/constants.js";
 
-/** Cuerpo de `POST /rooms`. Las mismas reglas que el CHECK de la tabla `games`, con sus rangos. */
-export const createRoomSchema = z
-  .object({
+/** Cuerpo de `POST /rooms` para «Doble tipo». Las mismas reglas que el CHECK de la tabla `games`, con sus rangos. */
+const dobleTipoSchema = z
+  .strictObject({
+    game: z.literal("doble_tipo").optional(),
     typeMode: z.enum(["random", "chosen"]),
     lengthMode: z.enum(["fixed_rounds", "custom"]),
     roundsLimit: z.number().int().optional(),
@@ -42,7 +51,7 @@ export const createRoomSchema = z
     }
   })
   .transform(
-    (value): RoomConfig => ({
+    (value): DobleTipoConfig => ({
       typeMode: value.typeMode,
       lengthMode: value.lengthMode,
       roundsLimit: value.roundsLimit ?? null,
@@ -50,3 +59,29 @@ export const createRoomSchema = z
       typeHints: value.typeHints ?? false,
     }),
   );
+
+/** Cuerpo de `POST /rooms` para la silueta: sin rondas, 10; sin generaciones, Kanto. */
+const silhouetteSchema = z
+  .strictObject({
+    game: z.literal("silueta"),
+    rounds: z.union(SILHOUETTE_ROUNDS.map((n) => z.literal(n))).default(SILHOUETTE_DEFAULT_ROUNDS),
+    generations: z
+      .array(z.number().int().min(1).max(GENERATIONS.length))
+      .min(1, "Elige al menos una generación")
+      .refine((list) => new Set(list).size === list.length, "Cada generación va una sola vez")
+      .default([...SILHOUETTE_DEFAULT_GENERATIONS]),
+  })
+  .transform((value): SilhouetteConfig => ({ game: "silueta", rounds: value.rounds, generations: [...value.generations].sort((a, b) => a - b) }));
+
+/** Cuerpo de `POST /rooms`: el juego lo dice `game` (sin él es «Doble tipo», como antes de que hubiera varios). */
+export const createRoomSchema = z.unknown().pipe(
+  z.custom<unknown>().transform((value, ctx): RoomConfig => {
+    const game = typeof value === "object" && value !== null ? (value as { game?: unknown }).game : undefined;
+    const schema = game === "silueta" ? silhouetteSchema : dobleTipoSchema;
+    const result = schema.safeParse(value);
+    if (result.success) return result.data;
+    for (const issue of result.error.issues) ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
+    return z.NEVER;
+  }),
+);
+

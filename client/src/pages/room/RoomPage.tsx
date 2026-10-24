@@ -1,3 +1,4 @@
+import { asDobleTipo } from "@pokemon-minigames/shared";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button";
@@ -104,7 +105,7 @@ export function RoomPage() {
   const phase = useGame((s) => s.view.phase);
   const ended = useGame((s) => s.view.ended);
   const view = useGame((s) => s.view);
-  const typeHints = useGame((s) => s.view.config?.typeHints === true);
+  const typeHints = useGame((s) => asDobleTipo(s.view.config)?.typeHints === true);
   const nextRoom = useGame((s) => s.view.nextRoom);
 
   useEffect(() => {

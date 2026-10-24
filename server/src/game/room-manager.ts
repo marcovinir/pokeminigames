@@ -1,4 +1,4 @@
-import type { GamePhase, PublicRoomInfo, RoomConfig, Seat } from "@pokemon-minigames/shared";
+import { type GamePhase, type PublicRoomInfo, type RoomConfig, type Seat, asDobleTipo } from "@pokemon-minigames/shared";
 import { Prisma } from "../generated/prisma/client.js";
 import { AppError } from "../http/errors.js";
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, REMATCH_END_REASONS, REMATCH_RECENT_GAMES } from "./constants.js";
@@ -51,7 +51,9 @@ export class RoomManager {
     });
   }
 
-  async createRoom(user: RoomUser, config: RoomConfig): Promise<{ code: string }> {
+  async createRoom(user: RoomUser, roomConfig: RoomConfig): Promise<{ code: string }> {
+    const config = asDobleTipo(roomConfig);
+    if (!config) throw new AppError(400, "VALIDATION_ERROR", "«¿Quién es ese Pokémon?» todavía no está disponible");
     if (this.deps.store.findByUser(user.userId) || this.pendingCreates.has(user.userId)) {
       throw alreadyInGame();
     }
@@ -89,7 +91,9 @@ export class RoomManager {
    * con el asiento de esa persona.
    */
   async createRematchRoom(input: { players: Record<Seat, RematchPlayer>; config: RoomConfig }): Promise<{ code: string }> {
-    const { players, config } = input;
+    const { players } = input;
+    const config = asDobleTipo(input.config);
+    if (!config) throw new AppError(400, "VALIDATION_ERROR", "«¿Quién es ese Pokémon?» todavía no está disponible");
     for (const seat of [1, 2] as const) {
       const { userId } = players[seat];
       if (this.deps.store.findByUser(userId) || this.pendingCreates.has(userId)) {

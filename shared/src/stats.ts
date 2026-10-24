@@ -1,4 +1,4 @@
-import type { GameEndReason, PokemonView, RoomConfig } from "./types.js";
+import type { GameEndReason, PokemonView, DobleTipoConfig } from "./types.js";
 
 /** Cómo terminó una partida para quien la mira. */
 export type GameResult = "won" | "drawn" | "lost";
@@ -49,7 +49,7 @@ export interface HistoryEntry {
   opponent: { username: string; avatarId: number | null };
   myScore: number | null;
   opponentScore: number | null;
-  config: RoomConfig;
+  config: DobleTipoConfig;
 }
 
 /** Respuesta de `GET /stats/history`. */

@@ -1,4 +1,4 @@
-import type { RoomConfig } from "@pokemon-minigames/shared";
+import type { DobleTipoConfig } from "@pokemon-minigames/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -67,7 +67,7 @@ describe("buildRequest", () => {
 });
 
 describe("formFromConfig", () => {
-  const config = (overrides: Partial<RoomConfig>): RoomConfig => ({
+  const config = (overrides: Partial<DobleTipoConfig>): DobleTipoConfig => ({
     typeMode: "random",
     lengthMode: "fixed_rounds",
     roundsLimit: 3,
@@ -83,7 +83,7 @@ describe("formFromConfig", () => {
   });
 
   it("convertir y volver a convertir da la misma petición", () => {
-    const original: RoomConfig = { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 2200 };
+    const original: DobleTipoConfig = { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 2200 };
     const built = buildRequest(formFromConfig(original));
     expect(built).toEqual({ ok: true, request: { typeMode: "chosen", lengthMode: "custom", statsGoal: 2200 } });
   });
@@ -245,7 +245,7 @@ describe("lobby: volver a tu partida", () => {
 });
 
 describe("formulario con pistas de tipos (etapa 8)", () => {
-  const config = (overrides: Partial<RoomConfig> = {}): RoomConfig => ({
+  const config = (overrides: Partial<DobleTipoConfig> = {}): DobleTipoConfig => ({
     typeMode: "random",
     lengthMode: "fixed_rounds",
     roundsLimit: 3,

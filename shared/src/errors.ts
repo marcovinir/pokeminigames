@@ -26,6 +26,9 @@ export const ERROR_CODES = [
   "ALREADY_CHOSEN",
   "INVALID_TYPE",
   "RATE_LIMITED",
+  // Silueta
+  "SILHOUETTE_NOT_FOUND",
+  "SILHOUETTE_UNAVAILABLE",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
