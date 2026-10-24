@@ -80,10 +80,18 @@ export interface Player {
  */
 const MENU_CARD: Record<"doble_tipo" | "silueta", string> = { doble_tipo: "Doble tipo", silueta: "¿Quién es ese Pokémon?" };
 
-/** Desde el menú principal (donde se llega al entrar), al lobby de ese juego. */
+const LOBBY_PATH: Record<"doble_tipo" | "silueta", string> = { doble_tipo: "/jugar/doble-tipo", silueta: "/jugar/silueta" };
+
+/**
+ * Al lobby de ese juego desde el menú principal (donde se llega al entrar). Si ya se está en ese lobby (al volver a entrar
+ * la app devuelve a donde se estaba), se queda.
+ */
 export async function enterLobby(page: Page, game: "doble_tipo" | "silueta"): Promise<void> {
-  await expect(page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
-  await page.getByRole("link", { name: `Jugar ${MENU_CARD[game]}` }).click();
+  await page.waitForURL((url) => url.pathname === "/" || url.pathname === LOBBY_PATH[game]);
+  if (new URL(page.url()).pathname === "/") {
+    await expect(page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
+    await page.getByRole("link", { name: `Jugar ${MENU_CARD[game]}` }).click();
+  }
   await expect(page.getByRole("heading", { level: 1, name: MENU_CARD[game] })).toBeVisible();
 }
 
