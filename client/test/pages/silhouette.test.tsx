@@ -96,3 +96,16 @@ describe("la sala de espera y el resumen de la silueta", () => {
     expect(screen.queryByText("No ganó ningún Pokémon.")).not.toBeInTheDocument();
   });
 });
+
+describe("la revelación: marcador y siguiente ronda", () => {
+  it("enseña el marcador ya actualizado y cuánto falta para la siguiente ronda", () => {
+    renderRoom([inRound(), event.silhouetteRoundResult(gengar(), { 1: 808, 2: 0 }, SERVER_NOW + 6000)]);
+    expect(screen.getByLabelText("Marcador")).toHaveTextContent("Tú 808 · misty 0");
+    expect(screen.getByText(/^Siguiente ronda en \d+ s$/)).toBeInTheDocument();
+  });
+
+  it("en la última ronda avisa de que llega el resultado final", () => {
+    renderRoom([inRound(), event.silhouetteRoundResult(gengar(), { 1: 808, 2: 0 }, null)]);
+    expect(screen.getByText("Calculando el resultado final…")).toBeInTheDocument();
+  });
+});

@@ -3,7 +3,9 @@ import { ArtImage } from "../../components/ArtImage";
 import { Avatar } from "../../components/Avatar";
 import { Card } from "../../components/Card";
 import { rise } from "../../components/rise";
+import { secondsLeft, useCountdown } from "../../game/clock";
 import { SILHOUETTE_SCREEN, silhouetteReveal, silhouetteRoundOf, silhouetteSeconds } from "../../i18n/es";
+import { SilhouetteScoreboard } from "./SilhouetteRoundView";
 import { useRoom } from "./use-room";
 
 function AnswerRow({ player, label, answer }: { player: RoomPlayerView | null; label: string; answer: SilhouetteAnswer }) {
@@ -35,12 +37,15 @@ function AnswerRow({ player, label, answer }: { player: RoomPlayerView | null; l
 export function SilhouetteRevealView() {
   const { view, me, opponent } = useRoom();
   const reveal = view.silhouette?.lastReveal;
+  const nextRoundAt = view.silhouette?.nextRoundAt ?? null;
+  const untilNext = useCountdown(nextRoundAt, view.clockOffset);
   if (!reveal || view.mySeat === null) return null;
   const mySeat = view.mySeat;
   const rivalSeat = mySeat === 1 ? 2 : 1;
 
   return (
     <section className="mx-auto flex w-full max-w-xl flex-col gap-4">
+      <SilhouetteScoreboard />
       <Card tone="raised" style={rise(0)} className="animate-rise flex flex-col items-center gap-4 p-6 text-center">
         <p className="font-display text-sm font-semibold text-muted">{silhouetteRoundOf(reveal.round, view.silhouette!.totalRounds)}</p>
         <div className="silhouette-rays flex size-56 items-center justify-center overflow-hidden rounded-full sm:size-64">
@@ -51,6 +56,7 @@ export function SilhouetteRevealView() {
           <AnswerRow player={me} label={SILHOUETTE_SCREEN.you} answer={reveal.answers[mySeat]} />
           <AnswerRow player={opponent} label={opponent?.username ?? "Tu rival"} answer={reveal.answers[rivalSeat]} />
         </ul>
+        <p className="text-sm text-muted">{nextRoundAt === null ? "Calculando el resultado final…" : `Siguiente ronda en ${secondsLeft(untilNext)} s`}</p>
       </Card>
     </section>
   );

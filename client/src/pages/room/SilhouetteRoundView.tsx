@@ -36,9 +36,22 @@ function SilhouetteImage({ src }: { src: string }) {
   );
 }
 
+/** El marcador de la silueta (pegado bajo el encabezado): los puntos de los dos. Lo comparten la ronda y la revelación. */
+export function SilhouetteScoreboard() {
+  const { me, opponent } = useRoom();
+  return (
+    <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card">
+      {SILHOUETTE_SCREEN.you} <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
+      {opponent?.username ?? "Rival"}
+      {opponent?.guest ? <GuestTag className="mx-1 align-middle" /> : " "}
+      <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
+    </p>
+  );
+}
+
 /** Una ronda de «¿Quién es ese Pokémon?»: la silueta, el reloj y un solo intento. */
 export function SilhouetteRoundView() {
-  const { view, client, me, opponent } = useRoom();
+  const { view, client } = useRoom();
   const allNames = useNames((s) => s.names);
   const round = view.silhouette?.round;
   if (!round || !view.config || !isSilhouetteConfig(view.config)) return null;
@@ -46,12 +59,7 @@ export function SilhouetteRoundView() {
 
   return (
     <section className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card">
-        {SILHOUETTE_SCREEN.you} <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
-        {opponent?.username ?? "Rival"}
-        {opponent?.guest ? <GuestTag className="mx-1 align-middle" /> : " "}
-        <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
-      </p>
+      <SilhouetteScoreboard />
 
       <Card data-arena tone="raised" style={rise(0)} className="animate-rise relative z-5 flex min-w-0 flex-col gap-5 p-6 text-center">
         <p className="font-display text-sm font-semibold text-muted">{silhouetteRoundOf(round.number, view.silhouette!.totalRounds)}</p>
