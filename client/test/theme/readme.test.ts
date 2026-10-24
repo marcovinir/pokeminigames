@@ -17,15 +17,17 @@ describe("README (etapa 6)", () => {
     expect(readme).not.toMatch(/Pokémon Minigames/);
   });
 
-  it("muestra las pantallas principales: acceso, lobby, ronda, resultado, resumen, perfil y el tema Pokédex", () => {
+  it("muestra las pantallas principales: acceso, menú, lobby, ronda, resultado, resumen, perfil, el tema Pokédex y la silueta", () => {
     expect(images.map((image) => image.path.split("/").pop())).toEqual([
       "login.jpg",
+      "menu.jpg",
       "lobby.jpg",
       "ronda.jpg",
       "resultado.jpg",
       "resumen.jpg",
       "perfil.jpg",
       "pokedex.jpg",
+      "silueta.jpg",
     ]);
   });
 
