@@ -1,12 +1,14 @@
+import { avatarPokemonName } from "@pokemon-minigames/shared";
 import { useNavigate, useParams } from "react-router";
 import { ApiError } from "../../api/client";
+import { isGuest } from "../../api/types";
 import { Avatar } from "../../components/Avatar";
 import { Button } from "../../components/Button";
 import { LogoMark } from "../../components/Logo";
 import { Notice } from "../../components/Notice";
 import { rise } from "../../components/rise";
-import { errorMessage } from "../../i18n/es";
-import { useServices } from "../../services";
+import { avatarLabel, errorMessage } from "../../i18n/es";
+import { useServices, useSession } from "../../services";
 import { HistoryList } from "./HistoryList";
 import { StatsView } from "./StatsView";
 import { useLoad } from "./use-load";
@@ -19,6 +21,7 @@ export function ProfilePage() {
   const { username } = useParams();
   const { endpoints } = useServices();
   const navigate = useNavigate();
+  const sessionUser = useSession((s) => s.user);
   const own = username === undefined;
   const { state, reload } = useLoad(
     () => (username === undefined ? endpoints.stats.mine() : endpoints.stats.forUser(username)),
@@ -57,10 +60,12 @@ export function ProfilePage() {
   }
 
   const { username: name, stats } = state.data;
+  // El propio sale de la sesión (se actualiza al instante al cambiarlo); el ajeno, de sus estadísticas.
+  const avatarId = own ? (sessionUser && !isGuest(sessionUser) ? sessionUser.avatarId : null) : state.data.avatarId;
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header style={rise(0)} className="animate-rise flex items-center gap-4">
-        <Avatar name={name} size="xl" />
+        <Avatar name={name} avatarId={avatarId} label={avatarId !== null ? avatarLabel(avatarPokemonName(avatarId)) : undefined} size="xl" />
         <div className="min-w-0">
           <h1 className="truncate font-display text-3xl font-semibold">{own ? "Tu perfil" : name}</h1>
           {own ? <p className="truncate text-muted">{name}</p> : null}

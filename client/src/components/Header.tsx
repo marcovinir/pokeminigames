@@ -70,7 +70,7 @@ export function Header() {
                 </Link>
               )}
               <span className="flex min-w-0 items-center gap-2">
-                <Avatar name={user.username} size="sm" />
+                <Avatar name={user.username} avatarId={guest ? null : user.avatarId} size="sm" />
                 {guest ? <GuestTag /> : null}
                 <span className="hidden max-w-40 truncate font-display text-sm font-semibold lg:inline">{user.username}</span>
               </span>

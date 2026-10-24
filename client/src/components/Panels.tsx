@@ -46,6 +46,7 @@ export function OpponentPanel({
   team,
   connected,
   guest = false,
+  avatarId,
 }: {
   name: string;
   total: number;
@@ -53,11 +54,12 @@ export function OpponentPanel({
   team: PokemonView[];
   connected: boolean;
   guest?: boolean;
+  avatarId?: number;
 }) {
   return (
     <Card as="section" aria-label="Tu rival" className="p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Avatar name={name} size="sm" />
+        <Avatar name={name} avatarId={avatarId} size="sm" />
         <h2 className="min-w-0 truncate text-sm font-semibold text-muted">{name}</h2>
         {guest ? <GuestTag /> : null}
       </div>

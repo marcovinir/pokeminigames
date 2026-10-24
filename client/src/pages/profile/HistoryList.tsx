@@ -21,7 +21,7 @@ function HistoryRow({ game }: { game: HistoryEntry }) {
     // tabIndex -1: se puede enfocar por código (al cargar más partidas) sin entrar en el orden de tabulación.
     <li tabIndex={-1} className="framed rounded-card bg-surface p-4 shadow-card">
       <div className="flex items-center gap-3">
-        <Avatar name={game.opponent.username} size="md" />
+        <Avatar name={game.opponent.username} avatarId={game.opponent.avatarId} size="md" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm">
             contra{" "}

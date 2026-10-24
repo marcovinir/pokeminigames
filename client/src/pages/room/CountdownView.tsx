@@ -15,11 +15,11 @@ export function CountdownView() {
       {opponent?.guest ? <GuestTag className="mt-2" /> : null}
       {me && opponent ? (
         <div className="mt-6 flex items-center justify-center gap-6">
-          <Avatar name={me.username} size="xl" />
+          <Avatar name={me.username} avatarId={me.avatarId} size="xl" />
           <span aria-hidden="true" className="font-display text-2xl font-semibold text-muted">
             VS
           </span>
-          <Avatar name={opponent.username} size="xl" />
+          <Avatar name={opponent.username} avatarId={opponent.avatarId} size="xl" />
         </div>
       ) : null}
       <p className="mt-6 text-sm text-muted">La partida empieza en…</p>

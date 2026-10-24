@@ -100,6 +100,7 @@ export function RoundView() {
             team={view.opponentTeam}
             connected={opponent?.connected ?? true}
             guest={opponent?.guest === true}
+            avatarId={opponent?.avatarId}
           />
         </div>
       </div>

@@ -37,19 +37,24 @@ const RESULT_CHIP = {
 } as const;
 
 /** El récord entre los dos (solo entre cuentas): el marcador grande, como un cartel de combate, y las últimas partidas. */
-function RecordCard({ record, me, rival }: { record: RematchRecord; me: string; rival: string }) {
+interface RecordPlayer {
+  name: string;
+  avatarId?: number;
+}
+
+function RecordCard({ record, me, rival }: { record: RematchRecord; me: RecordPlayer; rival: RecordPlayer }) {
   return (
-    <Card as="section" aria-label={`Récord contra ${rival}`} className="p-4 text-center">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted [overflow-wrap:anywhere]">{recordTitle(rival)}</p>
+    <Card as="section" aria-label={`Récord contra ${rival.name}`} className="p-4 text-center">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted [overflow-wrap:anywhere]">{recordTitle(rival.name)}</p>
       <div className="mt-2 flex items-center justify-center gap-3">
-        <Avatar name={me} size="sm" />
+        <Avatar name={me.name} avatarId={me.avatarId} size="sm" />
         <p className="font-num text-4xl font-semibold tabular-nums">
           {/* Su primera partida juntos en empate se dice con palabras: «0 – 0» parecería que no han jugado. */}
           {record.played === 1 && record.draws === 1 ? "Empate" : `${record.mine} – ${record.theirs}`}
         </p>
-        <Avatar name={rival} size="sm" />
+        <Avatar name={rival.name} avatarId={rival.avatarId} size="sm" />
       </div>
-      <p className="mt-1 text-sm text-muted">{recordHeadline(record, rival)}</p>
+      <p className="mt-1 text-sm text-muted">{recordHeadline(record, rival.name)}</p>
       {record.recent.length > 0 ? (
         <ol aria-label="Últimas partidas" className="mt-3 flex flex-wrap justify-center gap-1.5">
           {record.recent.map((result, index) => (
@@ -171,7 +176,13 @@ export function RematchPanel() {
   const mine = offer.status === "mine";
   return (
     <div className="mx-auto flex w-full max-w-md min-w-0 flex-col gap-3">
-      {offer.record ? <RecordCard record={offer.record} me={me?.username ?? "Tú"} rival={rival} /> : null}
+      {offer.record ? (
+        <RecordCard
+          record={offer.record}
+          me={{ name: me?.username ?? "Tú", avatarId: me?.avatarId }}
+          rival={{ name: rival, avatarId: opponent?.avatarId }}
+        />
+      ) : null}
       <Card as="section" aria-labelledby={headingId} className="p-4 text-center">
         <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
           <h2 id={headingId} ref={headingRef} tabIndex={-1} className="min-w-0 font-display text-lg font-semibold outline-none [overflow-wrap:anywhere]">

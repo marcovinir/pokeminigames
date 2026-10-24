@@ -33,9 +33,9 @@ export function RematchLoadingView() {
         {REMATCH_TEXT.loadingTitle}
       </h1>
       <div className="mt-6 flex items-center justify-center gap-5">
-        <Avatar name={me?.username ?? "Tú"} size="lg" />
+        <Avatar name={me?.username ?? "Tú"} avatarId={me?.avatarId} size="lg" />
         <span aria-hidden="true" className="pokeball animate-rock" />
-        <Avatar name={rival} size="lg" />
+        <Avatar name={rival} avatarId={opponent?.avatarId} size="lg" />
       </div>
       <p className="mt-5 text-sm text-muted">{REMATCH_TEXT.loadingSub}</p>
       <ul className="mt-3 flex flex-wrap justify-center gap-2">

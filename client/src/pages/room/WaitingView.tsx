@@ -67,7 +67,7 @@ export function WaitingView() {
       <ul className="mt-7 flex justify-center gap-4 sm:gap-8" aria-label="Jugadores">
         {view.players.map((player) => (
           <li key={player.seat} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-            <Avatar name={player.username} size="lg" />
+            <Avatar name={player.username} avatarId={player.avatarId} size="lg" />
             <span className="max-w-full text-sm font-semibold [overflow-wrap:anywhere]">{player.username}</span>
             {player.guest ? <GuestTag /> : null}
             {player.connected ? null : <span className="text-xs text-muted">(sin conectar)</span>}
