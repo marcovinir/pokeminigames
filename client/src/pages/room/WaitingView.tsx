@@ -1,6 +1,6 @@
 import { gameOf } from "@pokemon-minigames/shared";
 import { lobbyPath } from "../lobby-path";
-import { asDobleTipo } from "@pokemon-minigames/shared";
+import { asDobleTipo, isSilhouetteConfig } from "@pokemon-minigames/shared";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
@@ -9,7 +9,7 @@ import { GuestTag } from "../../components/GuestTag";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { rise } from "../../components/rise";
-import { describeConfig } from "../../i18n/es";
+import { describeConfig, describeSilhouetteConfig } from "../../i18n/es";
 import { useRoom } from "./use-room";
 
 /** Copia el código de la sala al portapapeles; si el navegador no lo permite, lo dice. */
@@ -65,6 +65,10 @@ export function WaitingView() {
         <p aria-label="Configuración de la sala" className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
           <span>{describeConfig(dobleTipo)}</span>
           {dobleTipo.typeHints ? <Badge tone="info">Pistas de tipos</Badge> : null}
+        </p>
+      ) : view.config && isSilhouetteConfig(view.config) ? (
+        <p aria-label="Configuración de la sala" className="mt-4 text-sm text-muted [overflow-wrap:anywhere]">
+          {describeSilhouetteConfig(view.config)}
         </p>
       ) : null}
 

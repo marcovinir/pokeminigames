@@ -1,14 +1,16 @@
-import type {
-  GameKind,
-  BaseStats,
-  ErrorCode,
-  GameEndReason,
-  GameResult,
-  PickResult,
-  RematchClosedReason,
-  RematchRecord,
-  DobleTipoConfig,
-  TypeName,
+import {
+  type BaseStats,
+  type DobleTipoConfig,
+  type ErrorCode,
+  GENERATIONS,
+  type GameEndReason,
+  type GameKind,
+  type GameResult,
+  type PickResult,
+  type RematchClosedReason,
+  type RematchRecord,
+  type SilhouetteConfig,
+  type TypeName,
 } from "@pokemon-minigames/shared";
 
 export const TYPE_LABELS: Record<TypeName, string> = {
@@ -238,3 +240,32 @@ export const SILHOUETTE_TEXT = {
 
 /** «1.ª (Kanto)». */
 export const generationLabel = (n: number, region: string): string => `${n}.ª (${region})`;
+
+/** Textos de las pantallas de la silueta. */
+export const SILHOUETTE_SCREEN = {
+  question: "¿Quién es ese Pokémon?",
+  imageAlt: "Silueta de un Pokémon",
+  unavailable: "No se pudo cargar la silueta",
+  noAnswer: "sin respuesta",
+  correct: "Acertó",
+  wrong: "Falló",
+  you: "Tú",
+  answers: "Respuestas",
+  pokemonList: "Pokémon de la partida",
+  youGotIt: "Acertaste",
+  bothGotIt: "Acertaron los dos",
+  nobody: "Nadie acertó",
+} as const;
+
+/** «3,2 s»: los milisegundos con una decimal y coma. */
+export const silhouetteSeconds = (ms: number): string => `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
+export const silhouetteRoundOf = (round: number, total: number): string => `Ronda ${round} de ${total}`;
+export const silhouetteAnsweredIn = (ms: number): string => `Respondiste en ${silhouetteSeconds(ms)}`;
+export const silhouetteReveal = (name: string): string => `¡Es ${name}!`;
+export const silhouetteRivalGotIt = (rival: string): string => `Acertó ${rival}`;
+
+/** «10 rondas · 1.ª (Kanto), 2.ª (Johto)»: la configuración de una sala de silueta. */
+export function describeSilhouetteConfig(config: SilhouetteConfig): string {
+  const gens = config.generations.map((n) => generationLabel(n, GENERATIONS.find((g) => g.n === n)?.region ?? "")).join(", ");
+  return `${config.rounds} rondas · ${gens}`;
+}

@@ -1,16 +1,29 @@
-import { asDobleTipo } from "@pokemon-minigames/shared";
+import { asDobleTipo, gameOf } from "@pokemon-minigames/shared";
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
 import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
-import { REMATCH_TEXT, ROOM_GONE_CODES, TYPE_LABELS, errorMessage, rematchClosedMessage, rematchNoShow, rematchRequested, rematchWaiting } from "../../i18n/es";
+import {
+  REMATCH_TEXT,
+  ROOM_GONE_CODES,
+  SILHOUETTE_SCREEN,
+  TYPE_LABELS,
+  errorMessage,
+  rematchClosedMessage,
+  rematchNoShow,
+  rematchRequested,
+  rematchWaiting,
+  silhouetteReveal,
+} from "../../i18n/es";
 import { useGame, useServices } from "../../services";
 import { CountdownView } from "./CountdownView";
 import { RematchLoadingView, RematchNoShow } from "./RematchLoadingView";
 import { RoundResultView } from "./RoundResultView";
 import { RoundView } from "./RoundView";
+import { SilhouetteRevealView } from "./SilhouetteRevealView";
+import { SilhouetteRoundView } from "./SilhouetteRoundView";
 import { SummaryView, scoreLabel, verdictLabel } from "./SummaryView";
 import { TypePickerView } from "./TypePickerView";
 import { WaitingView } from "./WaitingView";
@@ -49,6 +62,8 @@ function rematchAnnouncement(view: GameView): string {
 
 /** Lo que se anuncia a los lectores de pantalla al cambiar de fase (lo visual cambia, pero no se oye). */
 function announcement(view: GameView): string {
+  if (view.silhouette && view.phase === "round_active") return `Ronda ${view.silhouette.round?.number ?? ""}: ${SILHOUETTE_SCREEN.question}`;
+  if (view.silhouette && view.phase === "round_result") return view.silhouette.lastReveal ? silhouetteReveal(view.silhouette.lastReveal.pokemon.names.es) : "";
   switch (view.phase) {
     case "starting":
       return "La partida empieza.";
@@ -72,6 +87,7 @@ function announcement(view: GameView): string {
 
 function RoomView() {
   const { view } = useRoom();
+  const isSilhouette = view.config !== null && gameOf(view.config) === "silueta";
   switch (view.phase) {
     case "waiting":
       // Una sala de revancha ya tiene a los dos sentados: no hay código que compartir, solo esperar a que entren.
@@ -81,9 +97,9 @@ function RoomView() {
     case "choosing_types":
       return <TypePickerView />;
     case "round_active":
-      return <RoundView />;
+      return isSilhouette ? <SilhouetteRoundView /> : <RoundView />;
     case "round_result":
-      return <RoundResultView />;
+      return isSilhouette ? <SilhouetteRevealView /> : <RoundResultView />;
     case "finished":
       // Si la sala de la revancha caducó porque el rival no entró, no hubo partida: no hay veredicto.
       return view.isRematchRoom && view.ended?.reason === "expired" ? <RematchNoShow /> : <SummaryView />;

@@ -12,6 +12,7 @@ import { rise } from "../../components/rise";
 import { END_REASON_LABELS } from "../../i18n/es";
 import { RematchLoadingView } from "./RematchLoadingView";
 import { RematchPanel } from "./RematchPanel";
+import { SilhouetteSummary } from "./SilhouetteSummary";
 import { useRoom } from "./use-room";
 
 /** El Pokémon de más puntos va primero (con el arte grande); los demás siguen en el orden en que se ganaron. */
@@ -94,10 +95,14 @@ export function SummaryView() {
 
       <RematchPanel />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
-        <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} guest={opponent?.guest === true} />
-      </div>
+      {ended.silhouette ? (
+        <SilhouetteSummary reveals={ended.silhouette.reveals} mySeat={mySeat} rival={opponent?.username ?? "Tu rival"} />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
+          <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} guest={opponent?.guest === true} />
+        </div>
+      )}
 
       <div className="flex flex-wrap justify-center gap-3">
         {/* Un invitado no tiene perfil: ni se ofrece el suyo ni el de quien juega contra él. */}
