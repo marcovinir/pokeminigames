@@ -15,6 +15,7 @@ afterAll(() => prisma.$disconnect());
 const ACCOUNT_ROUTES: [string, string, object?][] = [
   ["get", "/auth/me"],
   ["put", "/auth/me/preferences", { theme: "clasico", themeMode: "auto" }],
+  ["put", "/auth/me/avatar", { avatarId: 94 }],
   ["get", "/stats"],
   ["get", "/stats/history"],
   ["get", "/users/ash/stats"],

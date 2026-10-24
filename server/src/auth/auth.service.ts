@@ -12,6 +12,8 @@ export interface AuthUser {
   createdAt: Date;
   /** Nulo mientras la persona no haya guardado una preferencia de tema. */
   preferences: ThemePreferences | null;
+  /** Número de Pokédex de su avatar; nulo = iniciales. */
+  avatarId: number | null;
 }
 
 /** Lo que el servicio necesita de una fila de `users`. */
@@ -22,6 +24,7 @@ interface UserRow {
   createdAt: Date;
   theme: ThemeName | null;
   themeMode: ThemeMode | null;
+  avatarPokemonId: number | null;
 }
 
 export interface AuthResult {
@@ -51,6 +54,7 @@ function toAuthUser(user: UserRow): AuthUser {
     createdAt: user.createdAt,
     // La base de datos exige que tema y modo vayan juntos, así que basta con mirar uno.
     preferences: user.theme && user.themeMode ? { theme: user.theme, themeMode: user.themeMode } : null,
+    avatarId: user.avatarPokemonId,
   };
 }
 
@@ -158,6 +162,25 @@ export class AuthService {
       throw error;
     }
     return { theme: preferences.theme, themeMode: preferences.themeMode };
+  }
+
+  /** Guarda (o quita, con `null`) el avatar; la validación contra la lista la hace la ruta. */
+  async saveAvatar(userId: string, avatarId: number | null): Promise<number | null> {
+    try {
+      await this.prisma.user.update({ where: { id: userId }, data: { avatarPokemonId: avatarId } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
+      }
+      throw error;
+    }
+    return avatarId;
+  }
+
+  /** El avatar de una cuenta para mostrarlo en una sala; nulo si no tiene o si la cuenta ya no existe. */
+  async avatarOf(userId: string): Promise<number | null> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { avatarPokemonId: true } });
+    return user?.avatarPokemonId ?? null;
   }
 
   private async assertAvailable(email: string, username: string): Promise<void> {

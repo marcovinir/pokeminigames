@@ -1,4 +1,4 @@
-import { THEME_MODES, THEME_NAMES } from "@pokemon-minigames/shared";
+import { THEME_MODES, THEME_NAMES, isAvatarPokemon } from "@pokemon-minigames/shared";
 import { z } from "zod";
 import { MAX_PASSWORD_BYTES } from "./password.js";
 
@@ -32,6 +32,11 @@ export const loginSchema = z.object({
 export const preferencesSchema = z.object({
   theme: z.enum(THEME_NAMES),
   themeMode: z.enum(THEME_MODES),
+});
+
+/** Uno de los 24 avatares, o `null` para volver a las iniciales. Falta el campo = error (no se adivina qué quería). */
+export const avatarSchema = z.object({
+  avatarId: z.union([z.null(), z.number().refine(isAvatarPokemon, "Ese Pokémon no está entre los avatares")]),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

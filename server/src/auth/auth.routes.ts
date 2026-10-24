@@ -3,7 +3,7 @@ import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
 import { type KeyedLimiter, tooManyRequests } from "../http/rate-limit.js";
 import { createRequireAccount, getAuth } from "./auth.middleware.js";
-import { guestSchema, loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
+import { avatarSchema, guestSchema, loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
 import { GUEST_COOKIE, type GuestSessions, type IssuedGuestSession } from "./guest-sessions.js";
 import type { TokenService } from "./tokens.js";
@@ -35,6 +35,7 @@ function toUserDto(user: AuthUser) {
     username: user.username,
     createdAt: user.createdAt.toISOString(),
     preferences: user.preferences,
+    avatarId: user.avatarId,
   };
 }
 
@@ -188,6 +189,11 @@ export function createAuthRouter({ env, authService, tokens, guests, limiters = 
   router.put("/me/preferences", requireAccount, async (req, res) => {
     const preferences = preferencesSchema.parse(req.body);
     res.json({ preferences: await authService.savePreferences(getAuth(res).userId, preferences) });
+  });
+
+  router.put("/me/avatar", requireAccount, async (req, res) => {
+    const { avatarId } = avatarSchema.parse(req.body);
+    res.json({ avatarId: await authService.saveAvatar(getAuth(res).userId, avatarId) });
   });
 
   return router;
