@@ -1,4 +1,5 @@
 import { avatarPokemonName } from "@pokemon-minigames/shared";
+import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ApiError } from "../../api/client";
 import { isGuest } from "../../api/types";
@@ -7,8 +8,9 @@ import { Button } from "../../components/Button";
 import { LogoMark } from "../../components/Logo";
 import { Notice } from "../../components/Notice";
 import { rise } from "../../components/rise";
-import { avatarLabel, errorMessage } from "../../i18n/es";
+import { AVATAR_TEXT, avatarLabel, errorMessage } from "../../i18n/es";
 import { useServices, useSession } from "../../services";
+import { AvatarPicker } from "./AvatarPicker";
 import { HistoryList } from "./HistoryList";
 import { StatsView } from "./StatsView";
 import { useLoad } from "./use-load";
@@ -22,6 +24,9 @@ export function ProfilePage() {
   const { endpoints } = useServices();
   const navigate = useNavigate();
   const sessionUser = useSession((s) => s.user);
+  const [picking, setPicking] = useState(false);
+  // Al cerrar la ventana el foco vuelve a «Cambiar avatar» (Button no reenvía refs: se busca dentro de su envoltorio).
+  const changeRef = useRef<HTMLDivElement>(null);
   const own = username === undefined;
   const { state, reload } = useLoad(
     () => (username === undefined ? endpoints.stats.mine() : endpoints.stats.forUser(username)),
@@ -61,7 +66,12 @@ export function ProfilePage() {
 
   const { username: name, stats } = state.data;
   // El propio sale de la sesión (se actualiza al instante al cambiarlo); el ajeno, de sus estadísticas.
-  const avatarId = own ? (sessionUser && !isGuest(sessionUser) ? sessionUser.avatarId : null) : state.data.avatarId;
+  const account = sessionUser && !isGuest(sessionUser) ? sessionUser : null;
+  const avatarId = own ? (account?.avatarId ?? null) : state.data.avatarId;
+  const closePicker = () => {
+    setPicking(false);
+    changeRef.current?.querySelector("button")?.focus();
+  };
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
       <header style={rise(0)} className="animate-rise flex items-center gap-4">
@@ -69,8 +79,14 @@ export function ProfilePage() {
         <div className="min-w-0">
           <h1 className="truncate font-display text-3xl font-semibold">{own ? "Tu perfil" : name}</h1>
           {own ? <p className="truncate text-muted">{name}</p> : null}
+          {own && account ? (
+            <div ref={changeRef} className="mt-2">
+              <Button onClick={() => setPicking(true)}>{AVATAR_TEXT.change}</Button>
+            </div>
+          ) : null}
         </div>
       </header>
+      {picking ? <AvatarPicker current={avatarId} name={name} onClose={closePicker} /> : null}
       <StatsView stats={stats} own={own} />
       {own ? <HistoryList /> : null}
       <div>
