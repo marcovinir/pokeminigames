@@ -69,6 +69,7 @@ describe("GET /stats", () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       username: "ash",
+      avatarId: null,
       stats: {
         played: 0,
         wins: 0,
@@ -117,7 +118,7 @@ describe("GET /users/:username/stats", () => {
     });
     const response = await get("/users/ash/stats", misty);
     const text = JSON.stringify(response.body);
-    expect(Object.keys(response.body).sort()).toEqual(["stats", "username"]);
+    expect(Object.keys(response.body).sort()).toEqual(["avatarId", "stats", "username"]);
     expect(text).not.toContain("@example.com");
     expect(text).not.toContain(ash.userId);
     expect(text).not.toContain("SECRET");
@@ -170,7 +171,7 @@ describe("GET /stats/history", () => {
         endedAt: day(1).toISOString(),
         result: "won",
         reason: "completed",
-        opponent: { username: "misty" },
+        opponent: { username: "misty", avatarId: null },
         myScore: 1100,
         opponentScore: 0,
         config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null },
@@ -222,5 +223,14 @@ describe("GET /stats/history", () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("VALIDATION_ERROR");
     }
+  });
+});
+
+describe("las estadísticas y el avatar", () => {
+  it("GET /stats y /users/:username/stats traen el avatar de esa cuenta", async () => {
+    await request(ctx.app).put("/auth/me/avatar").set(auth(misty)).send({ avatarId: 25 }).expect(200);
+    expect((await get("/stats")).body.avatarId).toBeNull();
+    expect((await get("/users/misty/stats")).body.avatarId).toBe(25);
+    expect((await get("/stats", misty)).body.avatarId).toBe(25);
   });
 });

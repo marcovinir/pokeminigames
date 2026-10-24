@@ -33,6 +33,8 @@ export interface Stats {
 /** Respuesta de `GET /stats` y `GET /users/:username/stats`. */
 export interface StatsResponse {
   username: string;
+  /** Número de Pokédex de su avatar; nulo = iniciales. */
+  avatarId: number | null;
   stats: Stats;
 }
 
@@ -43,7 +45,8 @@ export interface HistoryEntry {
   result: GameResult;
   /** Nulo en las partidas anteriores a que se guardara el motivo. */
   reason: GameEndReason | null;
-  opponent: { username: string };
+  /** El rival con su avatar de hoy (no el que tenía en esa partida); nulo = iniciales. */
+  opponent: { username: string; avatarId: number | null };
   myScore: number | null;
   opponentScore: number | null;
   config: RoomConfig;

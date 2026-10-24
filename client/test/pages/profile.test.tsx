@@ -29,7 +29,7 @@ const entry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
   endedAt: "2026-09-30T12:00:00.000Z",
   result: "won",
   reason: "completed",
-  opponent: { username: "misty" },
+  opponent: { username: "misty", avatarId: null },
   myScore: 1100,
   opponentScore: 0,
   config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null },
@@ -76,7 +76,7 @@ describe("perfil propio", () => {
 
   it("muestra el resumen: partidas, ganadas, empatadas, perdidas, porcentaje y rachas", async () => {
     const services = fakeServices();
-    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", stats: FULL }));
+    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", avatarId: null, stats: FULL }));
     renderAt("/perfil", services);
     const summary = await screen.findByRole("region", { name: "Resumen" });
     const value = (label: string) => within(summary).getByText(label).nextElementSibling;
@@ -91,7 +91,7 @@ describe("perfil propio", () => {
 
   it("muestra el poder promedio con coma decimal y la mejor partida", async () => {
     const services = fakeServices();
-    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", stats: FULL }));
+    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", avatarId: null, stats: FULL }));
     renderAt("/perfil", services);
     const power = await screen.findByRole("region", { name: "Poder" });
     expect(within(power).getByText("Poder promedio").nextElementSibling).toHaveTextContent("512,5");
@@ -100,7 +100,7 @@ describe("perfil propio", () => {
 
   it("muestra los Pokémon más ganados con las veces que los ganó", async () => {
     const services = fakeServices();
-    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", stats: FULL }));
+    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", avatarId: null, stats: FULL }));
     renderAt("/perfil", services);
     const top = await screen.findByRole("region", { name: "Pokémon más ganados" });
     expect(within(top).getByRole("heading", { name: "Charizard" })).toBeInTheDocument();
@@ -119,6 +119,7 @@ describe("perfil propio", () => {
     const services = fakeServices();
     services.endpoints.stats.mine = vi.fn(async () => ({
       username: "ash",
+      avatarId: null,
       stats: { ...NO_STATS, played: 2, losses: 2, winRate: 0 },
     }));
     renderAt("/perfil", services);
@@ -134,7 +135,7 @@ describe("perfil propio", () => {
     services.endpoints.stats.mine = vi
       .fn()
       .mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR"))
-      .mockResolvedValueOnce({ username: "ash", stats: FULL });
+      .mockResolvedValueOnce({ username: "ash", avatarId: null, stats: FULL });
     const { user } = renderAt("/perfil", services);
     expect(await screen.findByRole("alert")).toHaveTextContent("Algo falló en el servidor");
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
@@ -153,7 +154,7 @@ describe("perfil propio", () => {
 describe("perfil de otra persona", () => {
   it("pide las estadísticas de ese nombre y muestra su nombre como título", async () => {
     const services = fakeServices();
-    services.endpoints.stats.forUser = vi.fn(async (username: string) => ({ username, stats: FULL }));
+    services.endpoints.stats.forUser = vi.fn(async (username: string) => ({ username, avatarId: null, stats: FULL }));
     renderAt("/jugador/misty", services);
     expect(await screen.findByRole("heading", { name: "misty" })).toBeInTheDocument();
     expect(services.endpoints.stats.forUser).toHaveBeenCalledExactlyOnceWith("misty");
@@ -163,7 +164,7 @@ describe("perfil de otra persona", () => {
 
   it("no muestra el historial ni lo pide", async () => {
     const services = fakeServices();
-    services.endpoints.stats.forUser = vi.fn(async (username: string) => ({ username, stats: FULL }));
+    services.endpoints.stats.forUser = vi.fn(async (username: string) => ({ username, avatarId: null, stats: FULL }));
     renderAt("/jugador/misty", services);
     await screen.findByRole("heading", { name: "misty" });
     expect(screen.queryByRole("heading", { name: "Historial" })).not.toBeInTheDocument();
@@ -197,7 +198,7 @@ describe("perfil de otra persona", () => {
 describe("historial", () => {
   const withHistory = (...pages: { games: HistoryEntry[]; nextCursor: string | null }[]) => {
     const services = fakeServices();
-    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", stats: FULL }));
+    services.endpoints.stats.mine = vi.fn(async () => ({ username: "ash", avatarId: null, stats: FULL }));
     const history = vi.fn();
     for (const page of pages) history.mockResolvedValueOnce(page);
     services.endpoints.stats.history = history;
@@ -215,12 +216,12 @@ describe("historial", () => {
     const services = withHistory({
       games: [
         entry({ id: "g1", result: "won", reason: "forfeit" }),
-        entry({ id: "g2", result: "drawn", reason: "completed", opponent: { username: "brock" }, myScore: 500, opponentScore: 500 }),
+        entry({ id: "g2", result: "drawn", reason: "completed", opponent: { username: "brock", avatarId: null }, myScore: 500, opponentScore: 500 }),
         entry({
           id: "g3",
           result: "lost",
           reason: "disconnect",
-          opponent: { username: "gary" },
+          opponent: { username: "gary", avatarId: null },
           myScore: 200,
           opponentScore: 900,
           config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 2500 },
@@ -262,7 +263,7 @@ describe("historial", () => {
   it("'Cargar más' pide la página siguiente con el cursor y la agrega; al acabar el botón desaparece", async () => {
     const services = withHistory(
       { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
-      { games: [entry({ id: "g2", opponent: { username: "brock" } })], nextCursor: null },
+      { games: [entry({ id: "g2", opponent: { username: "brock", avatarId: null } })], nextCursor: null },
     );
     const { user } = renderAt("/perfil", services);
     await screen.findByRole("list", { name: "Historial de partidas" });
@@ -276,7 +277,7 @@ describe("historial", () => {
   it("al llegar la página siguiente el foco pasa a su primera partida y se anuncia (el botón puede desaparecer)", async () => {
     const services = withHistory(
       { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
-      { games: [entry({ id: "g2", opponent: { username: "brock" } }), entry({ id: "g3", opponent: { username: "gary" } })], nextCursor: null },
+      { games: [entry({ id: "g2", opponent: { username: "brock", avatarId: null } }), entry({ id: "g3", opponent: { username: "gary", avatarId: null } })], nextCursor: null },
     );
     const { user } = renderAt("/perfil", services);
     await screen.findByRole("list", { name: "Historial de partidas" });
@@ -291,7 +292,7 @@ describe("historial", () => {
   it("si la página siguiente trae una sola partida, el anuncio va en singular", async () => {
     const services = withHistory(
       { games: [entry({ id: "g1" })], nextCursor: "cursor-1" },
-      { games: [entry({ id: "g2", opponent: { username: "brock" } })], nextCursor: "cursor-2" },
+      { games: [entry({ id: "g2", opponent: { username: "brock", avatarId: null } })], nextCursor: "cursor-2" },
     );
     const { user } = renderAt("/perfil", services);
     await screen.findByRole("list", { name: "Historial de partidas" });
@@ -318,7 +319,7 @@ describe("historial", () => {
   it("si falla cargar más, conserva lo que ya se veía y permite reintentar", async () => {
     const services = withHistory({ games: [entry({ id: "g1" })], nextCursor: "cursor-1" });
     const history = services.endpoints.stats.history as ReturnType<typeof vi.fn>;
-    history.mockRejectedValueOnce(new ApiError(0, "NETWORK")).mockResolvedValueOnce({ games: [entry({ id: "g2", opponent: { username: "brock" } })], nextCursor: null });
+    history.mockRejectedValueOnce(new ApiError(0, "NETWORK")).mockResolvedValueOnce({ games: [entry({ id: "g2", opponent: { username: "brock", avatarId: null } })], nextCursor: null });
     const { user } = renderAt("/perfil", services);
     await screen.findByRole("list", { name: "Historial de partidas" });
     await user.click(screen.getByRole("button", { name: "Cargar más" }));

@@ -63,6 +63,7 @@ describe("sin desbordes en pantallas estrechas", () => {
     const services = fakeServices();
     services.endpoints.stats.mine = vi.fn(async () => ({
       username: "ash",
+      avatarId: null,
       stats: {
         played: 2,
         wins: 1,
@@ -170,6 +171,7 @@ describe("textos largos y tarjetas sueltas en pantallas estrechas", () => {
     const services = fakeServices();
     services.endpoints.stats.mine = vi.fn(async () => ({
       username: "a".repeat(30),
+      avatarId: null,
       stats: {
         played: 2,
         wins: 1,

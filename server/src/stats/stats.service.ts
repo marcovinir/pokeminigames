@@ -35,7 +35,7 @@ export class StatsService {
   }
 
   async getStats(userId: string): Promise<StatsResponse> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { username: true } });
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { username: true, avatarPokemonId: true } });
     if (!user) throw new AppError(404, "USER_NOT_FOUND", "No existe ese jugador");
 
     const rows = await this.prisma.gamePlayer.findMany({
@@ -55,7 +55,7 @@ export class StatsService {
     });
     const wonPokemonIds = picks.flatMap((pick) => (pick.pokemonId === null ? [] : [pick.pokemonId]));
 
-    return { username: user.username, stats: buildStats(games, wonPokemonIds, this.catalog) };
+    return { username: user.username, avatarId: user.avatarPokemonId, stats: buildStats(games, wonPokemonIds, this.catalog) };
   }
 
   async getHistory(userId: string, { limit, before }: HistoryOptions): Promise<HistoryPage> {
@@ -95,7 +95,7 @@ export class StatsService {
             lengthMode: true,
             roundsLimit: true,
             statsGoal: true,
-            players: { select: { userId: true, finalStats: true, user: { select: { username: true } } } },
+            players: { select: { userId: true, finalStats: true, user: { select: { username: true, avatarPokemonId: true } } } },
           },
         },
       },
@@ -110,7 +110,7 @@ export class StatsService {
         endedAt: game.endedAt!.toISOString(),
         result: resultFor(game.winnerId, userId),
         reason: game.endReason,
-        opponent: { username: opponent?.user.username ?? "?" },
+        opponent: { username: opponent?.user.username ?? "?", avatarId: opponent?.user.avatarPokemonId ?? null },
         myScore: row.finalStats,
         opponentScore: opponent?.finalStats ?? null,
         config: {

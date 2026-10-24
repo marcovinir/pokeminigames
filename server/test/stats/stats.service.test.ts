@@ -144,7 +144,7 @@ describe("StatsService.getHistory", () => {
         endedAt: day(5).toISOString(),
         result: "lost",
         reason: "forfeit",
-        opponent: { username: "misty" },
+        opponent: { username: "misty", avatarId: null },
         myScore: 300,
         opponentScore: 700,
         config,
@@ -248,5 +248,28 @@ describe("StatsService.getHistory", () => {
         });
       }
     });
+  });
+});
+
+describe("StatsService: el avatar", () => {
+  const setAvatar = (userId: string, avatarPokemonId: number | null) => prisma.user.update({ where: { id: userId }, data: { avatarPokemonId } });
+
+  it("getStats trae el avatar de esa cuenta, null si no tiene", async () => {
+    await setAvatar(ash, 94);
+    expect((await service.getStats(ash)).avatarId).toBe(94);
+    expect((await service.getStats(misty)).avatarId).toBeNull();
+  });
+
+  it("el historial trae el avatar actual del rival, null si no tiene", async () => {
+    await seedGame({ code: "AV0001", endedAt: day(1), players: [{ userId: ash, score: 500 }, { userId: misty, score: 400 }], winner: 0 });
+    await seedGame({ code: "AV0002", endedAt: day(2), players: [{ userId: ash, score: 500 }, { userId: brock, score: 400 }], winner: 0 });
+    await setAvatar(misty, 25);
+    await setAvatar(misty, 6);
+
+    const { games } = await service.getHistory(ash, { limit: 10 });
+    expect(games.map((game) => game.opponent)).toEqual([
+      { username: "brock", avatarId: null },
+      { username: "misty", avatarId: 6 },
+    ]);
   });
 });
