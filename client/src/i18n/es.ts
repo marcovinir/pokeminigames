@@ -208,6 +208,14 @@ export function recordHeadline(record: RematchRecord, rivalName: string): string
   return `${record.played} partidas jugadas · ${verdict}`;
 }
 
+/** El lema de las pantallas de acceso (la parte resaltada va en el color de acento). */
+export const AUTH_HERO_TEXT = {
+  lead: "Minijuegos Pokémon para jugar",
+  highlight: "1 vs 1",
+  tail: "con tus amigos.",
+  gamesLabel: "Minijuegos",
+} as const;
+
 /** «Borrar mi cuenta», al final del perfil propio. */
 export const DELETE_ACCOUNT_TEXT = {
   title: "Borrar mi cuenta",

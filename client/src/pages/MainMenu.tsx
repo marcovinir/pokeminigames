@@ -1,53 +1,14 @@
-import { GAME_KINDS, type GameKind } from "@pokemon-minigames/shared";
+import { GAME_KINDS } from "@pokemon-minigames/shared";
 import { useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/Badge";
 import { Card } from "../components/Card";
 import { rise } from "../components/rise";
-import { TypeChip } from "../components/TypeChip";
-import { artworkUrl } from "../catalog/artwork";
+import { GameArt } from "../components/GameArt";
 import { GAME_CARDS, MENU_TEXT } from "../i18n/es";
 import { useSession } from "../services";
-import { TYPE_STYLES } from "../theme/type-styles";
 import { lobbyPath } from "./lobby-path";
-import { DOBLE_TIPO_EXAMPLES, type DobleTipoExample, MENU_BACKGROUNDS, type MenuBackground, pickRandom } from "./menu-art";
-
-/**
- * El dibujo de cada tarjeta. «Doble tipo»: el arte de un Pokémon de ejemplo sobre un fondo partido en los colores de
- * sus dos tipos, con los tipos debajo. La silueta: un Pokémon en negro sobre los rayos.
- */
-function GameArt({ game, example }: { game: GameKind; example: DobleTipoExample }) {
-  if (game === "doble_tipo") {
-    const [first, second] = example.types;
-    return (
-      <div aria-hidden="true">
-        <div
-          className="flex h-32 items-center justify-center overflow-hidden rounded-card"
-          style={{
-            background: `linear-gradient(115deg, ${TYPE_STYLES[first].background} 0 50%, ${TYPE_STYLES[second].background} 50% 100%)`,
-          }}
-        >
-          <img
-            src={artworkUrl(example.pokemonId)}
-            alt=""
-            width={128}
-            height={128}
-            className="size-32 object-contain drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]"
-          />
-        </div>
-        <div className="mt-2 flex justify-center gap-2">
-          <TypeChip type={first} />
-          <TypeChip type={second} />
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div aria-hidden="true" className="silhouette-rays flex h-32 items-center justify-center overflow-hidden rounded-card">
-      <img src={artworkUrl(94)} alt="" width={96} height={96} className="size-24 object-contain brightness-0" />
-    </div>
-  );
-}
+import { DOBLE_TIPO_EXAMPLES, MENU_BACKGROUNDS, type MenuBackground, pickRandom } from "./menu-art";
 
 /** El fanart de fondo: llena la pantalla detrás del menú, con un velo del color del tema para que todo se lea. */
 function MenuBackdrop({ background }: { background: MenuBackground }) {
