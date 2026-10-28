@@ -10,13 +10,56 @@ import { useSession } from "../services";
 import { lobbyPath } from "./lobby-path";
 import { DOBLE_TIPO_EXAMPLES, MENU_BACKGROUNDS, type MenuBackground, pickRandom } from "./menu-art";
 
-/** El fanart de fondo: llena la pantalla detrás del menú, con un velo del color del tema para que todo se lea. */
-function MenuBackdrop({ background }: { background: MenuBackground }) {
+/** En qué pantallas se ve cada forma de dibujo: los verticales en el teléfono y los horizontales en las anchas. */
+const SHAPE_VISIBILITY: Record<MenuBackground["shape"], string> = {
+  portrait: "lg:hidden",
+  landscape: "hidden lg:block",
+};
+
+/**
+ * El fanart de fondo: llena la pantalla detrás del menú, con un velo del color del tema para que todo se lea. Hay una
+ * capa por forma (vertical para el teléfono, horizontal para pantallas anchas): un dibujo de la otra forma se vería
+ * ampliado y recortado, así que si falta una forma esas pantallas se quedan sin fanart.
+ */
+function MenuBackdrop({ portrait, landscape }: { portrait?: MenuBackground; landscape?: MenuBackground }) {
   return (
     <div data-menu-background aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
-      <img src={background.src} alt="" className="size-full object-cover object-[center_30%]" />
-      <div className="menu-veil absolute inset-0" />
+      {portrait ? (
+        <div data-menu-phone className={`absolute inset-0 ${SHAPE_VISIBILITY.portrait}`}>
+          <img src={portrait.src} alt="" className="size-full object-cover object-[center_30%]" />
+          <div className="menu-veil absolute inset-0" />
+        </div>
+      ) : null}
+      {landscape ? (
+        <div data-menu-wide className={`absolute inset-0 ${SHAPE_VISIBILITY.landscape}`}>
+          <img src={landscape.src} alt="" className="size-full object-cover" />
+          <div className="menu-veil absolute inset-0" />
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/** El crédito de un fondo, que solo se ve en las pantallas donde se ve ese dibujo. */
+function BackgroundCredit({ background }: { background: MenuBackground }) {
+  return (
+    <p className={`menu-panel self-start rounded-pill px-3 py-1 text-xs text-muted ${SHAPE_VISIBILITY[background.shape]}`}>
+      {background.author !== undefined ? (
+        <>
+          {MENU_TEXT.backgroundCredit(background.title)}
+          <a href={background.authorUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+            {background.author}
+          </a>
+        </>
+      ) : (
+        <>
+          {MENU_TEXT.unknownAuthorCredit(background.title)}
+          <Link to="/contacto" className="font-semibold underline">
+            {MENU_TEXT.isItYours}
+          </Link>
+        </>
+      )}
+    </p>
   );
 }
 
@@ -32,10 +75,12 @@ export function MainMenu({
   const user = useSession((s) => s.user);
   // Se eligen una vez al abrir el menú: no cambian mientras se está en él.
   const [example] = useState(() => pickRandom(DOBLE_TIPO_EXAMPLES, random)!);
-  const [background] = useState(() => pickRandom(backgrounds, random));
+  const [portrait] = useState(() => pickRandom(backgrounds.filter((b) => b.shape === "portrait"), random));
+  const [landscape] = useState(() => pickRandom(backgrounds.filter((b) => b.shape === "landscape"), random));
+  const background = portrait ?? landscape;
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5">
-      {background ? <MenuBackdrop background={background} /> : null}
+      {background ? <MenuBackdrop portrait={portrait} landscape={landscape} /> : null}
       {/* Con fanart, el título va sobre un panel translúcido: el velo es ligero para que el dibujo luzca. */}
       <div style={rise(0)} className={background ? "menu-panel animate-rise self-start rounded-card px-4 py-3" : "animate-rise"}>
         {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
@@ -62,25 +107,8 @@ export function MainMenu({
           </Card>
         );
       })}
-      {background ? (
-        <p className="menu-panel self-start rounded-pill px-3 py-1 text-xs text-muted">
-          {background.author !== undefined ? (
-            <>
-              {MENU_TEXT.backgroundCredit(background.title)}
-              <a href={background.authorUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
-                {background.author}
-              </a>
-            </>
-          ) : (
-            <>
-              {MENU_TEXT.unknownAuthorCredit(background.title)}
-              <Link to="/contacto" className="font-semibold underline">
-                {MENU_TEXT.isItYours}
-              </Link>
-            </>
-          )}
-        </p>
-      ) : null}
+      {portrait ? <BackgroundCredit background={portrait} /> : null}
+      {landscape ? <BackgroundCredit background={landscape} /> : null}
     </div>
   );
 }

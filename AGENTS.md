@@ -11,7 +11,7 @@ Para agentes de programación y para personas. Si Marco te dice **«haz las issu
 1. Lee la issue **«Hoja de ruta y convenciones del proyecto»** (la que lleva la etiqueta `hoja-de-ruta`): lista las issues en orden con sus dependencias y las decisiones de Marco ya tomadas. `gh issue list --state open` muestra el resto.
 2. Toma **la primera issue abierta que no tenga dependencias abiertas**. Cada issue es autosuficiente: contexto, qué cambiar (con rutas), decisiones tomadas y abiertas, criterios de aceptación.
 3. Etiquetas: **`requiere-diseno`** → no se implementa hasta que haya una spec aprobada por Marco (se diseña con él primero, sección 5); **`manual`** → la hace Marco, un agente no puede; `mantenimiento`, `deuda-tecnica`, `enhancement`, `documentation` → trabajo normal.
-4. Una rama por issue (`etapa-N-tema`, `feat/…`, `fix/…`), commits pequeños, y al terminar: marca los criterios de aceptación, comenta el resultado en la issue y ciérrala (`Closes #N` en el PR o el commit de fusión). Tacha su casilla en la issue de hoja de ruta.
+4. Una rama por issue (`feat/…`, `fix/…`, `docs/…`), commits pequeños, y **el cambio entra en `main` por un Pull Request** (con la plantilla de `.github/PULL_REQUEST_TEMPLATE.md` y la CI en verde; fusionarlo sigue necesitando el permiso de Marco). Al terminar: marca los criterios de aceptación, comenta el resultado en la issue y ciérrala (`Closes #N` en el PR o el commit de fusión). Tacha su casilla en la issue de hoja de ruta.
 5. Las ideas nuevas de Marco se vuelven issues nuevas (con la misma estructura), no tareas sueltas en una conversación.
 
 ## 2. Mapa del repositorio
@@ -24,9 +24,9 @@ npm workspaces; Node 24 o superior.
 | `server/` | Express 5 + Socket.io + Prisma 7.10.0 (PostgreSQL 18). El **motor de juego** es un reductor puro (`server/src/game/engine/`: `reduce(state, event, now, { catalog, rng })` devuelve estado y efectos); `room.ts`, `room-manager.ts` y `realtime/` lo ejecutan. Catálogo de 1025 Pokémon en `server/data/catalog.snapshot.json` |
 | `client/` | React 19 + Vite 8 + Tailwind 4 + Zustand 5 + React Router 8. `src/game/apply-event.ts` es el reductor puro de los eventos del servidor; `src/i18n/es.ts` los textos |
 | `e2e/` | Playwright: dos navegadores reales juegan contra la construcción de producción |
-| `docs/` | `despliegue.md` (Render + Neon), `superpowers/specs/` (diseños aprobados) y `superpowers/plans/` (planes de las etapas hechas), `img/` (capturas del README) |
+| `docs/` | `despliegue.md` (Render + Neon), `superpowers/specs/` (diseños aprobados) y `superpowers/plans/` (planes de las etapas hechas), `guia-tecnica.md` (todo el detalle: puesta en marcha, comandos, funciones, API REST y eventos), `img/` (capturas del README) |
 
-El README tiene la puesta en marcha, la tabla de comandos, la API REST y los eventos de Socket.io.
+El README (en inglés, con `README.es.md` en español) es la portada para quien visita el repositorio; la puesta en marcha completa, la tabla de comandos, la API REST y los eventos de Socket.io están en `docs/guia-tecnica.md`. Si cambias una función, actualiza la guía y, si se nota desde fuera, los dos README.
 
 ## 3. Idioma y estilo
 
@@ -49,7 +49,7 @@ npm run db:generate -w server    # regenera el cliente de Prisma (tras tocar sch
 npm run smoke:deployed -- https://pokemon-minigames.onrender.com   # comprueba el sitio en vivo sin escribir nada
 ```
 
-- **Requisitos:** PostgreSQL 18 local sin Docker (en Windows es el servicio `postgresql-x64-18`: si las pruebas dicen `ECONNREFUSED`, está detenido y se arranca como administrador con `Start-Service postgresql-x64-18`), y los archivos `server/.env` y `server/.env.test` (se copian de `server/.env.example` y `server/.env.test.example`; **nunca se versionan**). La puesta en marcha completa está en el README.
+- **Requisitos:** PostgreSQL 18 local sin Docker (en Windows es el servicio `postgresql-x64-18`: si las pruebas dicen `ECONNREFUSED`, está detenido y se arranca como administrador con `Start-Service postgresql-x64-18`), y los archivos `server/.env` y `server/.env.test` (se copian de `server/.env.example` y `server/.env.test.example`; **nunca se versionan**). La puesta en marcha completa está en `docs/guia-tecnica.md`.
 - **E2E:** necesita un navegador: `npx playwright install chromium` desde `e2e/`, o `E2E_CHANNEL=msedge` (o `chrome`) para usar el ya instalado. Las imágenes de PokeAPI se sirven **falsas** durante la E2E (para no depender de la red); `E2E_REAL_IMAGES=1` usa las reales y `E2E_SCREENSHOTS=1` regenera las capturas del README.
 - Si el equipo va justo de CPU, las pruebas pueden agotar el tiempo por defecto: `--testTimeout=30000 --maxWorkers=2`. **La E2E tiene ventanas de 6 s y 15 s del propio juego: córrela con el equipo enchufado** (con el portátil en batería el procesador va muy lento y fallan por tiempo).
 - Los comandos largos conviene lanzarlos fuera de la sesión (en segundo plano, con el registro a un archivo) y no esperarlos en primer plano.
@@ -82,7 +82,7 @@ Con evidencia, no por sensación:
 - `npm test`, `npm run typecheck`, `npm run build` y `npm run e2e` en verde **en un clon limpio** de la rama.
 - Si tocaste la interfaz: míralo en un navegador real a 375 px y en escritorio, con las imágenes reales, y pasa la auditoría de contraste (`client/scripts/contrast-audit.js`: pégalo en la consola y ejecuta `__contrastAuditAll()`; debe dar una lista vacía en los 4 temas/modos).
 - Si tocaste algo crítico: las mutaciones correspondientes se detectan.
-- La documentación (README, `docs/`) y la issue están al día.
+- La documentación (los dos README, `docs/guia-tecnica.md`) y la issue están al día.
 - Tras desplegar: `npm run smoke:deployed -- https://pokemon-minigames.onrender.com` da «Todo bien».
 
 ## 8. Trampas conocidas
