@@ -97,6 +97,29 @@ describe("la ventana «Elige tu avatar»", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  it("mientras guarda, Escape y «Cerrar» no la cierran; se ve que está guardando y el elegido va marcado", async () => {
+    const services = fakeServices();
+    let finish: (value: number | null) => void = () => {};
+    services.endpoints.auth.saveAvatar = vi.fn(() => new Promise<number | null>((resolve) => (finish = resolve)));
+    const { user } = await openPicker(ASH, services);
+    await user.click(pokemonButton("Gengar"));
+    expect(within(dialog()).getByRole("group", { name: "Avatares" })).toHaveAttribute("aria-busy", "true");
+    expect(pokemonButton("Gengar")).toHaveAttribute("data-saving", "true");
+    await user.keyboard("{Escape}");
+    await user.click(within(dialog()).getByRole("button", { name: "Cerrar" }));
+    expect(dialog()).toBeInTheDocument();
+    finish(94);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(await changeButton()).toHaveFocus();
+  });
+
+  it("la ventana se desplaza en pantallas bajas y el aro de foco de cada avatar no tapa el de selección", async () => {
+    await openPicker({ ...ASH, avatarId: 94 });
+    expect(dialog().className).toContain("max-h-full");
+    expect(dialog().className).toContain("overflow-y-auto");
+    expect(pokemonButton("Gengar").className).toContain("focus-visible:outline-offset-[6px]");
+  });
+
   it("si falla, sigue abierta con el aviso y el avatar anterior", async () => {
     const services = fakeServices();
     services.endpoints.auth.saveAvatar = vi.fn(async () => {

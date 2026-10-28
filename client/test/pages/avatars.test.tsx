@@ -100,6 +100,16 @@ describe("el avatar en cada pantalla", () => {
     expect(avatarImgs(avatar, 25)).toHaveLength(1);
   });
 
+  it("perfil ajeno de un servidor anterior (sin avatarId): iniciales, nunca «n.º undefined»", async () => {
+    const services = fakeServices();
+    signIn(services);
+    services.endpoints.stats.forUser = vi.fn(async (username: string) => ({ username, stats: NO_STATS }) as never);
+    renderProfile("/jugador/misty", services);
+    await screen.findByRole("heading", { name: "misty" });
+    expect(document.body.textContent).not.toContain("undefined");
+    expect(screen.queryByRole("img", { name: /Avatar:/ })).toBeNull();
+  });
+
   it("historial: cada rival", async () => {
     const services = fakeServices();
     signIn(services);

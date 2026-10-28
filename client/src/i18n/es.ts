@@ -243,6 +243,7 @@ export const DELETE_ACCOUNT_TEXT = {
 export const DELETED_ACCOUNT_NAME = "Cuenta borrada";
 
 export const AVATAR_TEXT = {
+  gridLabel: "Avatares",
   change: "Cambiar avatar",
   title: "Elige tu avatar",
   useInitials: "Usar mis iniciales",
