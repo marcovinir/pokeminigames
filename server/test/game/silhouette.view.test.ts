@@ -18,10 +18,10 @@ describe("silueta: vista", () => {
     expect(mine).toMatchObject({ phase: "round_active", round: null, myTeam: [], opponentTeam: [], roundsPlayed: 1 });
     expect(mine.silhouette).toEqual({
       totalRounds: 5,
-      round: { number: 2, deadline: ROUND_START + 21_000 + 15_000, silhouetteUrl: "/silhouettes/tok2", answered: true, answeredMs: 2000 },
+      round: { number: 2, deadline: ROUND_START + 21_000 + 15_000, silhouetteUrl: "/silhouettes/tok2", answered: true, answeredMs: 2000, opponentAnswered: false },
       reveals: [expect.objectContaining({ round: 1 })],
     });
-    expect(h.view(1).silhouette?.round).toMatchObject({ answered: false, answeredMs: null });
+    expect(h.view(1).silhouette?.round).toMatchObject({ answered: false, answeredMs: null, opponentAnswered: true });
   });
 
   it("los puntos van en totalStats de cada jugador", () => {

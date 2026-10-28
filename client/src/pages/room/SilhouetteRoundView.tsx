@@ -8,10 +8,11 @@ import { rise } from "../../components/rise";
 import { Timer } from "../../components/Timer";
 import { namesInGenerations } from "../../catalog/generations";
 import { ROUND_MS } from "../../game/durations";
-import { SILHOUETTE_SCREEN, silhouetteAnsweredIn, silhouetteRoundOf } from "../../i18n/es";
+import { OPPONENT_ANSWERED, SILHOUETTE_SCREEN, silhouetteAnsweredIn, silhouetteRoundOf } from "../../i18n/es";
 import { useNames } from "../../services";
 import { LeaveButton } from "./LeaveButton";
 import { useRoom } from "./use-room";
+import { useLastSeconds } from "../../sound/use-last-seconds";
 
 /** La imagen de la silueta (la genera el servidor en negro). Si no carga, un aviso y la ronda sigue. */
 function SilhouetteImage({ src }: { src: string }) {
@@ -54,6 +55,8 @@ export function SilhouetteRoundView() {
   const { view, client } = useRoom();
   const allNames = useNames((s) => s.names);
   const round = view.silhouette?.round;
+  // Antes del primer `return`: los hooks van siempre en el mismo orden.
+  useLastSeconds({ deadline: round?.deadline ?? null, offset: view.clockOffset, answered: round?.answered ?? true, round: round?.number ?? 0 });
   if (!round || !view.config || !isSilhouetteConfig(view.config)) return null;
   const names = namesInGenerations(allNames, view.config.generations);
 
@@ -67,6 +70,7 @@ export function SilhouetteRoundView() {
         <h1 className="font-display text-2xl font-semibold">{SILHOUETTE_SCREEN.question}</h1>
         <Timer deadline={round.deadline} offset={view.clockOffset} totalMs={ROUND_MS} label="Tiempo de la ronda" />
         {round.answered && round.answeredMs !== null ? <Notice tone="success">{silhouetteAnsweredIn(round.answeredMs)}</Notice> : null}
+        {round.opponentAnswered ? <Notice>{OPPONENT_ANSWERED}</Notice> : null}
         <div className="text-left">
           <Autocomplete names={names} showSprites={false} submitted={round.answered} autoFocus onSubmit={(text) => client.submit(text)} />
         </div>

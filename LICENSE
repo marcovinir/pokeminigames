@@ -27,3 +27,5 @@ related names, characters and artwork are trademarks and copyrights of
 Nintendo, Game Freak and The Pokémon Company, and are not covered by this
 license. Pokémon artwork and data are loaded from PokeAPI (https://pokeapi.co).
 Fan artwork used as menu backgrounds belongs to its respective authors.
+The music in client/public/audio keeps its own licenses (CC0, CC-BY 4.0 and
+CC-BY-SA 3.0); see client/public/audio/CREDITOS.md.

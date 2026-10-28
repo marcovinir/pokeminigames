@@ -52,6 +52,8 @@ export interface RoomStateView {
     answered: boolean;
     /** Ya elegí mi tipo en esta ronda. */
     typeChosen: boolean;
+    /** El rival ya envió su respuesta en esta ronda (sin decir qué). */
+    opponentAnswered: boolean;
   } | null;
 }
 
@@ -118,6 +120,8 @@ export interface ServerToClientEvents {
   "type-received": (payload: { round: number }) => void;
   "round-started": (payload: RoundStartedPayload) => void;
   "answer-received": (payload: { round: number }) => void;
+  /** Al otro jugador: su rival ya respondió en esta ronda (sin decir qué). En los dos juegos. */
+  "opponent-answered": (payload: { round: number }) => void;
   "round-result": (payload: RoundResultPayload) => void;
   "game-ended": (payload: GameEndedPayload) => void;
   "opponent-disconnected": (payload: { graceEndsAt: number; serverNow: number }) => void;

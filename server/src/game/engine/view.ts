@@ -64,6 +64,7 @@ export function buildRoomState(
           deadline: state.round.deadline,
           answered: state.round.picks[seat] !== undefined,
           typeChosen: state.round.typeChoices[seat] !== undefined,
+          opponentAnswered: state.round.picks[seat === 1 ? 2 : 1] !== undefined,
         }
       : null;
 

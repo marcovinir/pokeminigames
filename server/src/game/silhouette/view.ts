@@ -36,6 +36,7 @@ export function buildSilhouetteRoomState(state: SilhouetteState, seat: Seat, cod
           silhouetteUrl: `/silhouettes/${state.round!.token}`,
           answered: mine !== undefined,
           answeredMs: mine ? mine.at - state.round!.startedAt : null,
+          opponentAnswered: state.round!.answers[seat === 1 ? 2 : 1] !== undefined,
         }
       : null,
     reveals: structuredClone(state.reveals),

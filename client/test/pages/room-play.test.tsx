@@ -17,6 +17,14 @@ describe("ronda (etapa 6)", () => {
       ...stateExtra,
     });
 
+  it("dice «Tu rival ya respondió» solo cuando es cierto", () => {
+    const { unmount } = renderRoom([playing()]);
+    expect(screen.queryByText("Tu rival ya respondió")).not.toBeInTheDocument();
+    unmount();
+    renderRoom([playing({ opponentAnswered: true })]);
+    expect(screen.getByText("Tu rival ya respondió").closest("[role='status']")).not.toBeNull();
+  });
+
   it("la zona central es una «arena» elevada", () => {
     const { container } = renderRoom([playing()]);
     const arena = container.querySelector("[data-arena]")!;

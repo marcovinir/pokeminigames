@@ -96,6 +96,9 @@ describe("vistas de la partida", () => {
     const theirs = buildRoomState(h.state, 2, "X", h.catalog, h.now);
     expect(mine.round).toMatchObject({ number: 1, pair: ["flying", "fire"], answered: true, typeChosen: false });
     expect(theirs.round?.answered).toBe(false);
+    // Lo que el rival ve de mí: que ya respondí (sin qué); y yo, que él aún no.
+    expect(theirs.round?.opponentAnswered).toBe(true);
+    expect(mine.round?.opponentAnswered).toBe(false);
     expect(mine.phase).toBe("round_active");
   });
 

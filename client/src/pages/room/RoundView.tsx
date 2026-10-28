@@ -3,6 +3,7 @@ import { Autocomplete } from "../../components/Autocomplete";
 import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
 import { Notice } from "../../components/Notice";
+import { OPPONENT_ANSWERED } from "../../i18n/es";
 import { rise } from "../../components/rise";
 import { OpponentPanel, TeamPanel } from "../../components/Panels";
 import { Timer } from "../../components/Timer";
@@ -11,6 +12,7 @@ import { ROUND_MS } from "../../game/durations";
 import { useNames } from "../../services";
 import { LeaveButton } from "./LeaveButton";
 import { useRoom } from "./use-room";
+import { useLastSeconds } from "../../sound/use-last-seconds";
 
 const DOT_STATE = (index: number, current: number): "done" | "current" | "todo" =>
   index + 1 < current ? "done" : index + 1 === current ? "current" : "todo";
@@ -38,6 +40,8 @@ export function RoundView() {
   const { view, client, me, opponent } = useRoom();
   const names = useNames((s) => s.names);
   const round = view.round;
+  // Antes del primer `return`: los hooks van siempre en el mismo orden.
+  useLastSeconds({ deadline: round?.deadline ?? null, offset: view.clockOffset, answered: round?.answered ?? true, round: round?.number ?? 0 });
   if (!round || !round.pair) return null;
 
   const config = asDobleTipo(view.config);
@@ -82,6 +86,8 @@ export function RoundView() {
           {round.typesNotice === "pair_replaced" ? (
             <Notice>El par elegido no tenía suficientes Pokémon; el servidor sorteó otro.</Notice>
           ) : null}
+
+          {round.opponentAnswered ? <Notice>{OPPONENT_ANSWERED}</Notice> : null}
 
           <Autocomplete
             names={names}

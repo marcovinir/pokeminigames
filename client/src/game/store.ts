@@ -16,11 +16,21 @@ export interface GameStoreState {
   reset(): void;
 }
 
-export function createGameStore(): StoreApi<GameStoreState> {
-  return createStore<GameStoreState>((set) => ({
+export interface GameStoreOptions {
+  /** Se llama tras aplicar cada evento, con la vista de antes y la de después (así suenan los efectos). */
+  onEvent?(before: GameView, event: ServerEvent, after: GameView): void;
+}
+
+export function createGameStore(options: GameStoreOptions = {}): StoreApi<GameStoreState> {
+  return createStore<GameStoreState>((set, get) => ({
     view: initialGameView,
     connection: "idle",
-    receive: (event, receivedAt) => set((state) => ({ view: applyServerEvent(state.view, event, receivedAt) })),
+    receive: (event, receivedAt) => {
+      const before = get().view;
+      const after = applyServerEvent(before, event, receivedAt);
+      set({ view: after });
+      options.onEvent?.(before, event, after);
+    },
     setConnection: (connection) => set({ connection }),
     clearError: () => set((state) => ({ view: { ...state.view, lastError: null } })),
     reset: () => set({ view: initialGameView, connection: "idle" }),

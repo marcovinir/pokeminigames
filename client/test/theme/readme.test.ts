@@ -80,5 +80,6 @@ describe("licencia", () => {
     const license = read("LICENSE");
     expect(license).toMatch(/^MIT License/);
     expect(license).toContain("Nintendo");
+    expect(license).toMatch(/music/i);
   });
 });

@@ -34,6 +34,16 @@ describe("motor: rondas (modo aleatorio)", () => {
     expect(h.state.phase).toBe("round_active");
   });
 
+  it("avisa al rival (opponent-answered) sin decir qué respondió; un envío rechazado no avisa", () => {
+    const h = round1();
+    h.submit(1, "Alfa");
+    expect(h.payloads("opponent-answered", 2)).toEqual([{ round: 1 }]);
+    expect(h.payloads("opponent-answered", 1)).toEqual([]);
+    h.submit(1, "Beto");
+    expect(h.errorCodes(1)).toContain("ALREADY_ANSWERED");
+    expect(h.payloads("opponent-answered", 2)).toHaveLength(1);
+  });
+
   it("cuando ambos responden cierra la ronda de inmediato y suma los stats", () => {
     const h = round1();
     h.advance(1000);

@@ -59,7 +59,7 @@ describe("room-state", () => {
           mySeat: 2,
           roundsPlayed: 1,
           myTeam: [pokemon(7, 400)],
-          round: { number: 2, pair: ["flying", "fire"], deadline: SERVER_NOW + 9000, answered: true, typeChosen: false },
+          round: { number: 2, pair: ["flying", "fire"], deadline: SERVER_NOW + 9000, answered: true, typeChosen: false, opponentAnswered: false },
         }),
         SERVER_NOW - 5000,
       ],
@@ -77,9 +77,9 @@ describe("room-state", () => {
   });
 
   it("vuelve a sincronizar tras una reconexión: lo que el servidor dice pisa lo que había", () => {
-    const before = play([[event.roomState({ phase: "round_active", round: { number: 1, pair: ["flying", "fire"], deadline: 1, answered: false, typeChosen: false } })], [event.answerReceived(1)]]);
+    const before = play([[event.roomState({ phase: "round_active", round: { number: 1, pair: ["flying", "fire"], deadline: 1, answered: false, typeChosen: false, opponentAnswered: false } })], [event.answerReceived(1)]]);
     expect(before.round?.answered).toBe(true);
-    const after = applyServerEvent(before, event.roomState({ phase: "round_active", round: { number: 1, pair: ["flying", "fire"], deadline: 1, answered: false, typeChosen: false } }), SERVER_NOW);
+    const after = applyServerEvent(before, event.roomState({ phase: "round_active", round: { number: 1, pair: ["flying", "fire"], deadline: 1, answered: false, typeChosen: false, opponentAnswered: false } }), SERVER_NOW);
     expect(after.round?.answered).toBe(false);
   });
 
@@ -380,20 +380,20 @@ describe("la silueta en la vista", () => {
     const view = play([[event.roomState({
       phase: "round_active",
       config: SILHOUETTE,
-      silhouette: { totalRounds: 10, round: { number: 2, deadline: SERVER_NOW + 9000, silhouetteUrl: "/silhouettes/tok2", answered: true, answeredMs: 2100 }, reveals: [reveal] },
+      silhouette: { totalRounds: 10, round: { number: 2, deadline: SERVER_NOW + 9000, silhouetteUrl: "/silhouettes/tok2", answered: true, answeredMs: 2100, opponentAnswered: false }, reveals: [reveal] },
     })]]);
-    expect(view.silhouette).toMatchObject({ round: { number: 2, answered: true, answeredMs: 2100 }, reveals: [reveal], lastReveal: reveal });
+    expect(view.silhouette).toMatchObject({ round: { number: 2, answered: true, answeredMs: 2100, opponentAnswered: false }, reveals: [reveal], lastReveal: reveal });
   });
 
   it("silhouette-round-started abre la ronda", () => {
     const view = applyServerEvent(inRoom(), event.silhouetteRoundStarted(1, SERVER_NOW + 15_000, "/silhouettes/tok1"), SERVER_NOW);
     expect(view.phase).toBe("round_active");
-    expect(view.silhouette?.round).toEqual({ number: 1, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok1", answered: false, answeredMs: null });
+    expect(view.silhouette?.round).toEqual({ number: 1, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok1", answered: false, answeredMs: null, opponentAnswered: false });
   });
 
   it("silhouette-answer-received marca que respondí y en cuánto", () => {
     const open = applyServerEvent(inRoom(), event.silhouetteRoundStarted(), SERVER_NOW);
-    expect(applyServerEvent(open, event.silhouetteAnswerReceived(3200), SERVER_NOW).silhouette?.round).toMatchObject({ answered: true, answeredMs: 3200 });
+    expect(applyServerEvent(open, event.silhouetteAnswerReceived(3200), SERVER_NOW).silhouette?.round).toMatchObject({ answered: true, answeredMs: 3200, opponentAnswered: false });
   });
 
   it("silhouette-round-result añade la revelación, actualiza los puntos y pasa al resultado", () => {
@@ -404,5 +404,31 @@ describe("la silueta en la vista", () => {
     expect(view.silhouette).toMatchObject({ round: null, reveals: [reveal], lastReveal: reveal, nextRoundAt: SERVER_NOW + 6000 });
     expect(view.players.map((p) => p.totalStats)).toEqual([808, 0]);
     expect(view.roundsPlayed).toBe(1);
+  });
+});
+
+describe("el rival ya respondió", () => {
+  const roundActive = (opponentAnswered = false) =>
+    event.roomState({ phase: "round_active", round: { number: 1, pair: ["flying", "fire"], deadline: 1, answered: false, typeChosen: false, opponentAnswered } });
+
+  it("opponent-answered de la ronda abierta lo marca; de otra ronda, no", () => {
+    const view = play([[roundActive()], [event.opponentAnswered(1)]]);
+    expect(view.round?.opponentAnswered).toBe(true);
+    const other = play([[roundActive()], [event.opponentAnswered(2)]]);
+    expect(other.round?.opponentAnswered).toBe(false);
+  });
+
+  it("se lee del room-state (al reconectar) y vuelve a false al empezar otra ronda", () => {
+    const view = play([[roundActive(true)]]);
+    expect(view.round?.opponentAnswered).toBe(true);
+    const next = play([[roundActive(true)], [event.roundStarted(2, SERVER_NOW + 15_000)]]);
+    expect(next.round?.opponentAnswered).toBe(false);
+  });
+
+  it("en la silueta, igual en su ronda", () => {
+    const view = play([[event.roomState({ phase: "round_active", silhouette: { totalRounds: 10, round: null, reveals: [] } })], [event.silhouetteRoundStarted(1)], [event.opponentAnswered(1)]]);
+    expect(view.silhouette?.round?.opponentAnswered).toBe(true);
+    const other = play([[event.roomState({ phase: "round_active", silhouette: { totalRounds: 10, round: null, reveals: [] } })], [event.silhouetteRoundStarted(1)], [event.opponentAnswered(3)]]);
+    expect(other.silhouette?.round?.opponentAnswered).toBe(false);
   });
 });

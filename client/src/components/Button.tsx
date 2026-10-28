@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import { useOptionalServices } from "../services";
 
 type Variant = "primary" | "secondary" | "ghost" | "header";
 type Size = "md" | "lg";
@@ -46,8 +47,10 @@ export function Button({
   className = "",
   type = "button",
   children,
+  onClick,
   ...props
 }: ButtonProps) {
+  const sound = useOptionalServices()?.sound;
   return (
     <button
       type={type}
@@ -55,6 +58,10 @@ export function Button({
       aria-busy={loading || undefined}
       className={`inline-flex items-center justify-center gap-2 rounded-pill border-(length:--frame) font-display font-semibold transition-[transform,box-shadow,background-color] duration-(--dur-fast) ease-(--ease-out) disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 ${SIZES[size]} ${VARIANTS[variant]} ${className}`}
       {...props}
+      onClick={(e) => {
+        sound?.play("click");
+        onClick?.(e);
+      }}
     >
       {loading ? <Spinner /> : null}
       {children}

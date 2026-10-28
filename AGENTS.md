@@ -4,7 +4,7 @@ Para agentes de programación y para personas. Si Marco te dice **«haz las issu
 
 ## Qué es esto
 
-**PokeMiniGames** (antes «Pokémon Minigames»): juego web de dos personas en tiempo real. En cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga los dos; gana quien acumule más stats base. Es un proyecto de portafolio de Marco (estudiante), desplegado gratis en Render + Neon: https://pokemon-minigames.onrender.com . Repositorio privado `marcovinir/pokemon-minigames`. Proyecto de fans sin fines de lucro: los nombres, sprites y arte de Pokémon son de Nintendo, Game Freak y The Pokémon Company (las imágenes se cargan de PokeAPI); no se monetiza ni se usa su arte como identidad de marca.
+**PokeMiniGames** (antes «Pokémon Minigames»): juego web de dos personas en tiempo real. En cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga los dos; gana quien acumule más stats base. Es un proyecto de portafolio de Marco (estudiante), desplegado gratis en Render + Neon: https://pokemon-minigames.onrender.com . Repositorio público `marcovinir/pokemon-minigames`. Proyecto de fans sin fines de lucro: los nombres, sprites y arte de Pokémon son de Nintendo, Game Freak y The Pokémon Company (las imágenes se cargan de PokeAPI); no se monetiza ni se usa su arte como identidad de marca.
 
 ## 1. Cómo trabajar las issues
 
@@ -22,7 +22,7 @@ npm workspaces; Node 24 o superior.
 |---|---|
 | `shared/` | Tipos de eventos y payloads de Socket.io, códigos de error, `normalizeName`: lo comparten servidor y cliente (`shared/src/events.ts` es el contrato) |
 | `server/` | Express 5 + Socket.io + Prisma 7.10.0 (PostgreSQL 18). El **motor de juego** es un reductor puro (`server/src/game/engine/`: `reduce(state, event, now, { catalog, rng })` devuelve estado y efectos); `room.ts`, `room-manager.ts` y `realtime/` lo ejecutan. Catálogo de 1025 Pokémon en `server/data/catalog.snapshot.json` |
-| `client/` | React 19 + Vite 8 + Tailwind 4 + Zustand 5 + React Router 8. `src/game/apply-event.ts` es el reductor puro de los eventos del servidor; `src/i18n/es.ts` los textos |
+| `client/` | React 19 + Vite 8 + Tailwind 4 + Zustand 5 + React Router 8. `src/game/apply-event.ts` es el reductor puro de los eventos del servidor; `src/i18n/es.ts` los textos; `src/sound/` la música y los efectos (qué suena lo deciden las funciones puras de `cues.ts`) |
 | `e2e/` | Playwright: dos navegadores reales juegan contra la construcción de producción |
 | `docs/` | `despliegue.md` (Render + Neon), `superpowers/specs/` (diseños aprobados) y `superpowers/plans/` (planes de las etapas hechas), `guia-tecnica.md` (todo el detalle: puesta en marcha, comandos, funciones, API REST y eventos), `img/` (capturas del README) |
 

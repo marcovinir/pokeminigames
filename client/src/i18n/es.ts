@@ -208,6 +208,19 @@ export function recordHeadline(record: RematchRecord, rivalName: string): string
   return `${record.played} partidas jugadas · ${verdict}`;
 }
 
+/** El control de sonido del encabezado. */
+export const SOUND_TEXT = {
+  button: "Sonido",
+  buttonMuted: "Sonido (silenciado)",
+  music: "Música",
+  musicVolume: "Volumen de la música",
+  effects: "Efectos",
+  effectsVolume: "Volumen de los efectos",
+} as const;
+
+/** Aviso en la ronda: el rival ya envió su respuesta (sin decir qué). */
+export const OPPONENT_ANSWERED = "Tu rival ya respondió";
+
 /** El lema de las pantallas de acceso (la parte resaltada va en el color de acento). */
 export const AUTH_HERO_TEXT = {
   lead: "Minijuegos Pokémon para jugar",
