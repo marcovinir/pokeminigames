@@ -11,6 +11,7 @@ import { rise } from "../../components/rise";
 import { AVATAR_TEXT, MENU_TEXT, avatarLabel, errorMessage } from "../../i18n/es";
 import { useServices, useSession } from "../../services";
 import { AvatarPicker } from "./AvatarPicker";
+import { DeleteAccount } from "./DeleteAccount";
 import { HistoryList } from "./HistoryList";
 import { StatsView } from "./StatsView";
 import { useLoad } from "./use-load";
@@ -89,6 +90,7 @@ export function ProfilePage() {
       {picking ? <AvatarPicker current={avatarId} name={name} onClose={closePicker} /> : null}
       <StatsView stats={stats} own={own} />
       {own ? <HistoryList /> : null}
+      {own && account ? <DeleteAccount /> : null}
       <div>
         <Button onClick={() => navigate("/")}>{MENU_TEXT.backToMenu}</Button>
       </div>

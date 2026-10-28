@@ -208,6 +208,20 @@ export function recordHeadline(record: RematchRecord, rivalName: string): string
   return `${record.played} partidas jugadas · ${verdict}`;
 }
 
+/** «Borrar mi cuenta», al final del perfil propio. */
+export const DELETE_ACCOUNT_TEXT = {
+  title: "Borrar mi cuenta",
+  warning:
+    "No se puede deshacer: se borran tu correo, tu nombre y tu contraseña, y se cierran tus sesiones. Tus partidas seguirán en el historial de tus rivales como «Cuenta borrada».",
+  confirm: "Borrar mi cuenta para siempre",
+  cancel: "Cancelar",
+  missingPassword: "Escribe tu contraseña.",
+  done: "Tu cuenta se borró.",
+} as const;
+
+/** Cómo se ve una cuenta borrada (su nombre de relleno, `borrada_…`, no se enseña). */
+export const DELETED_ACCOUNT_NAME = "Cuenta borrada";
+
 export const AVATAR_TEXT = {
   change: "Cambiar avatar",
   title: "Elige tu avatar",

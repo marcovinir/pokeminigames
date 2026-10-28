@@ -16,6 +16,8 @@ export interface SessionState {
   logout(): Promise<void>;
   /** Guarda el avatar de la cuenta y lo pone en la sesión; si falla, lanza y no cambia nada. */
   saveAvatar(avatarId: number | null): Promise<void>;
+  /** Borra la cuenta con su contraseña y deja la sesión cerrada; si falla, lanza y la sesión sigue. */
+  deleteAccount(password: string): Promise<void>;
   /** La sesión se perdió (no se pudo renovar): hay que volver a iniciar sesión. */
   expire(): void;
 }
@@ -63,6 +65,11 @@ export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState>
       const { user } = get();
       // Un invitado no tiene avatar (ni puede guardarlo): su sesión no se toca.
       if (user && !isGuest(user)) set({ user: { ...user, avatarId: saved } });
+    },
+
+    async deleteAccount(password) {
+      await endpoints.auth.deleteAccount(password);
+      set({ status: "anonymous", user: null });
     },
 
     expire() {

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { Notice } from "../components/Notice";
 import { useServices } from "../services";
 import { AuthForm } from "./AuthForm";
 import { AuthHero } from "./AuthHero";
@@ -26,10 +27,13 @@ export function LoginPage() {
   const { session } = useServices();
   const navigate = useNavigate();
   const returnTo = useReturnPath();
+  // Un aviso que trae la navegación (p. ej. «Tu cuenta se borró.» al borrar la cuenta).
+  const notice = (useLocation().state as { notice?: string } | null)?.notice;
 
   return (
     <AuthLayout>
       <div className="flex min-w-0 flex-col gap-5">
+        {notice ? <Notice tone="success">{notice}</Notice> : null}
         <AuthForm
           title="Iniciar sesión"
           submitLabel="Entrar"
