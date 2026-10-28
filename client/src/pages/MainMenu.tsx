@@ -64,10 +64,21 @@ export function MainMenu({
       })}
       {background ? (
         <p className="menu-panel self-start rounded-pill px-3 py-1 text-xs text-muted">
-          {MENU_TEXT.backgroundCredit(background.title)}
-          <a href={background.authorUrl} target="_blank" rel="noreferrer" className="font-semibold underline">
-            {background.author}
-          </a>
+          {background.author !== undefined ? (
+            <>
+              {MENU_TEXT.backgroundCredit(background.title)}
+              <a href={background.authorUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                {background.author}
+              </a>
+            </>
+          ) : (
+            <>
+              {MENU_TEXT.unknownAuthorCredit(background.title)}
+              <Link to="/contacto" className="font-semibold underline">
+                {MENU_TEXT.isItYours}
+              </Link>
+            </>
+          )}
         </p>
       ) : null}
     </div>

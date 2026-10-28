@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -71,10 +71,24 @@ describe("el fondo del menú", () => {
     expect(screen.queryByText(/Fondo:/)).not.toBeInTheDocument();
   });
 
-  it("la lista publicada solo lleva fondos con autor y enlace", () => {
+  it("sin autor conocido lo dice y ofrece «¿Es tuyo?», que lleva a Contacto", () => {
+    renderMenu({ random: () => 0, backgrounds: [{ src: "/menu/x.webp", title: "Equis" }] });
+    expect(screen.getByText(/Fondo:/)).toHaveTextContent("Fondo: «Equis», fanart de autor desconocido");
+    expect(screen.getByRole("link", { name: "¿Es tuyo?" })).toHaveAttribute("href", "/contacto");
+  });
+
+  it("la lista publicada: Umbreon y Espeon; cada imagen existe y pesa 200 KB como mucho; el autor va con su enlace o sin ninguno", () => {
+    expect(MENU_BACKGROUNDS.map((background) => background.src)).toEqual(["/menu/umbreon.webp", "/menu/espeon.webp"]);
     for (const background of MENU_BACKGROUNDS) {
-      expect(background.author).not.toBe("");
-      expect(background.authorUrl).toMatch(/^https:\/\//);
+      const file = join(import.meta.dirname, "../../public", background.src);
+      expect(existsSync(file), background.src).toBe(true);
+      expect(statSync(file).size, background.src).toBeLessThanOrEqual(200 * 1024);
+      if (background.author !== undefined) {
+        expect(background.author).not.toBe("");
+        expect(background.authorUrl).toMatch(/^https:\/\//);
+      } else {
+        expect(background.authorUrl).toBeUndefined();
+      }
     }
   });
 });

@@ -18,21 +18,25 @@ export const DOBLE_TIPO_EXAMPLES: readonly DobleTipoExample[] = [
   { pokemonId: 1, types: ["grass", "poison"] },
 ];
 
-/** Un fondo del menú: un fanart con el permiso de su autor. */
+/** Un fondo del menú: un fanart. */
 export interface MenuBackground {
   /** Ruta de la imagen (en `client/public/menu/`). */
   src: string;
   title: string;
-  author: string;
-  /** Perfil del autor, enlazado en el crédito. */
-  authorUrl: string;
+  /** Su autor, si se sabe; sin él, el crédito dice «autor desconocido» y ofrece «¿Es tuyo?» (lleva a Contacto). */
+  author?: string;
+  /** Perfil del autor, enlazado en el crédito (solo con `author`). */
+  authorUrl?: string;
 }
 
 /**
- * Los fondos del menú. **Solo entra un dibujo con el permiso de su autor** (anotado en `client/public/menu/CREDITOS.md`):
- * vacía, el menú se ve como siempre.
+ * Los fondos del menú; cada vez que se abre sale uno. De dónde sale cada uno y quién decidió usarlo se anota en
+ * `client/public/menu/CREDITOS.md`; si un autor pide retirarlo o que se le dé crédito, se hace aquí.
  */
-export const MENU_BACKGROUNDS: readonly MenuBackground[] = [];
+export const MENU_BACKGROUNDS: readonly MenuBackground[] = [
+  { src: "/menu/umbreon.webp", title: "Umbreon" },
+  { src: "/menu/espeon.webp", title: "Espeon" },
+];
 
 /** Uno al azar (o nada si la lista está vacía). */
 export function pickRandom<T>(items: readonly T[], random: () => number = Math.random): T | undefined {

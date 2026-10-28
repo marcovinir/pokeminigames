@@ -249,6 +249,9 @@ export const MENU_TEXT = {
   backToMenu: "Volver al menú",
   /** El crédito del fanart de fondo; el nombre del autor va después, enlazado a su perfil. */
   backgroundCredit: (title: string) => `Fondo: «${title}», de `,
+  /** El crédito de un fanart sin autor conocido; le sigue el enlace «¿Es tuyo?» a Contacto. */
+  unknownAuthorCredit: (title: string) => `Fondo: «${title}», fanart de autor desconocido · `,
+  isItYours: "¿Es tuyo?",
 } as const;
 
 /** Las tarjetas del menú: nombre, frase y si es nuevo. */
