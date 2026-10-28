@@ -150,8 +150,8 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
         </Section>
         <Section title="Cookies y almacenamiento del navegador">
           <p>
-            Se usa una sola cookie, necesaria para mantener tu sesión iniciada. No hay cookies de publicidad ni de
-            analítica. El navegador recuerda el tema que elegiste.
+            Solo se usa la cookie necesaria para mantener tu sesión iniciada (una para las cuentas y otra para los
+            invitados). No hay cookies de publicidad ni de analítica. El navegador recuerda el tema que elegiste.
           </p>
         </Section>
         <Section title="Con quién se comparte">
