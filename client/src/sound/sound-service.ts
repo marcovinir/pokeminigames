@@ -24,6 +24,9 @@ export interface SoundServiceDeps {
   timers: Timers;
 }
 
+/** Los eventos que el navegador cuenta como interacción para dejar sonar audio. */
+const UNLOCK_EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
+
 export function createSoundService(deps: SoundServiceDeps): SoundService {
   const settings = () => deps.settings.getState().settings;
   const visible = () => deps.document.visibilityState !== "hidden";
@@ -36,7 +39,8 @@ export function createSoundService(deps: SoundServiceDeps): SoundService {
     volume: () => settings().musicVolume,
   });
 
-  // El contexto de audio se crea con el primer efecto: crearlo antes de una interacción solo da avisos en la consola.
+  // El contexto de audio se crea con la primera interacción: antes, el navegador lo deja suspendido y lo que se programara
+  // en él sonaría todo de golpe al despertarlo.
   let ctx: AudioContext | null = null;
   let synth: Synth | null = null;
   const ensureSynth = (): Synth | null => {
@@ -50,13 +54,13 @@ export function createSoundService(deps: SoundServiceDeps): SoundService {
   };
 
   const unlock = () => {
-    ctx?.resume().catch(() => {});
+    if (ensureSynth()) ctx?.resume().catch(() => {});
     player.resume();
   };
   const onVisibility = () => (visible() ? player.resume() : player.pause());
-  // La primera interacción desbloquea el audio; se sigue escuchando porque cada vuelta a la pestaña puede necesitarlo.
-  deps.document.addEventListener("pointerdown", unlock);
-  deps.document.addEventListener("keydown", unlock);
+  // La primera interacción desbloquea el audio. En el teléfono un toque solo cuenta al levantar el dedo (pointerup,
+  // touchend, click), no en pointerdown. Se sigue escuchando porque cada vuelta a la pestaña puede necesitarlo.
+  for (const type of UNLOCK_EVENTS) deps.document.addEventListener(type, unlock);
   deps.document.addEventListener("visibilitychange", onVisibility);
 
   let previous = settings();
@@ -74,8 +78,10 @@ export function createSoundService(deps: SoundServiceDeps): SoundService {
       if (!settings().effectsOn) return;
       const run = () => {
         if (!settings().effectsOn) return;
+        // Sin desbloquear (o aún suspendido) no se programa nada: no debe sonar todo junto al primer toque.
+        if (!synth || ctx?.state !== "running") return;
         try {
-          ensureSynth()?.play(effect, settings().effectsVolume);
+          synth.play(effect, settings().effectsVolume);
         } catch {
           // Un efecto que falla no debe romper la partida.
         }
@@ -86,8 +92,7 @@ export function createSoundService(deps: SoundServiceDeps): SoundService {
     setMusic: (cue) => player.setCue(cue),
     unlock,
     dispose() {
-      deps.document.removeEventListener("pointerdown", unlock);
-      deps.document.removeEventListener("keydown", unlock);
+      for (const type of UNLOCK_EVENTS) deps.document.removeEventListener(type, unlock);
       deps.document.removeEventListener("visibilitychange", onVisibility);
       unsubscribe();
       player.stop();

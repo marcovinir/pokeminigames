@@ -90,6 +90,14 @@ describe("effectsForEvent: qué efectos suenan", () => {
     expect(effects(event.gameEnded({ winnerSeat: null, reason: "expired" }))).toEqual([]);
   });
 
+  it("si la partida termina con la última ronda (Doble tipo), el efecto de final espera al de la ronda", () => {
+    const lastRound = view({ phase: "round_result", lastResult: roundResult({ nextRoundAt: null }) });
+    expect(effects(event.gameEnded({ winnerSeat: 1 }), lastRound)).toEqual([["win", 500]]);
+    expect(effects(event.gameEnded({ winnerSeat: 2 }), lastRound)).toEqual([["lose", 500]]);
+    // Si no venía de un resultado (abandono en plena ronda), suena al momento.
+    expect(effects(event.gameEnded({ winnerSeat: 1, reason: "forfeit" }), view({ phase: "round_active" }))).toEqual([["win", 0]]);
+  });
+
   it("el rival respondió en la ronda abierta; uno atrasado de otra ronda no suena", () => {
     const before = view({ phase: "round_active" });
     const marked = view({ phase: "round_active", round: { number: 1, pair: null, deadline: 1, answered: false, typeChosen: false, opponentAnswered: true } });

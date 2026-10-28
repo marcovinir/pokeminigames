@@ -15,6 +15,8 @@ export interface EffectCue {
 
 /** El efecto de acierto o fallo de la silueta suena después de la revelación. */
 const AFTER_REVEAL_MS = 600;
+/** El efecto de ganar o perder, tras el acierto o el fallo de la última ronda. */
+const AFTER_LAST_ROUND_MS = 500;
 
 const BATTLE_PHASES = new Set<GameView["phase"]>(["starting", "choosing_types", "round_active", "round_result"]);
 
@@ -63,7 +65,9 @@ export function effectsForEvent(before: GameView, event: ServerEvent, after: Gam
       return [now("reveal"), { effect: event.payload.reveal.answers[seat].correct ? "correct" : "wrong", delayMs: AFTER_REVEAL_MS }];
     case "game-ended": {
       const outcome = endOutcome(event.payload, seat);
-      return outcome ? [now(outcome)] : [];
+      if (!outcome) return [];
+      // En «Doble tipo» el final llega junto al resultado de la última ronda: espera a que acabe su efecto.
+      return [{ effect: outcome, delayMs: before.phase === "round_result" ? AFTER_LAST_ROUND_MS : 0 }];
     }
     case "opponent-answered": {
       // Solo si el aviso era de la ronda abierta (el reductor lo ignora si es de otra).

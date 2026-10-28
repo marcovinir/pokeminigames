@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSoundSettingsStore } from "../../src/sound/settings-store";
+import { FINAL_DELAY_MS } from "../../src/sound/music-player";
 import { type SoundService, createSoundService } from "../../src/sound/sound-service";
 import { BATTLE_TRACKS, LOBBY_TRACKS, LOSE_TRACK, WIN_TRACK } from "../../src/sound/tracks";
 import { FakeAudio, FakeAudioContext, fakeDocument, fakeTimers } from "./fakes";
@@ -83,7 +84,7 @@ describe("la música", () => {
     service.setMusic({ zone: "final", outcome: "win" });
     await flush();
     expect(playingSrcs()).toEqual([]);
-    timers.advance(1200);
+    timers.advance(FINAL_DELAY_MS);
     await flush();
     const win = FakeAudio.playing()[0]!;
     expect(win.src).toBe(WIN_TRACK.src);
@@ -97,7 +98,7 @@ describe("la música", () => {
     await flush();
     expect(playingSrcs()).toEqual([]);
     service.setMusic({ zone: "final", outcome: "lose" });
-    timers.advance(1200);
+    timers.advance(FINAL_DELAY_MS);
     await flush();
     expect(playingSrcs()).toEqual([LOSE_TRACK.src]);
   });
@@ -160,20 +161,44 @@ describe("la música", () => {
 });
 
 describe("los efectos", () => {
-  it("suenan con el sintetizador (el contexto de audio se crea al primer efecto)", () => {
+  it("antes de la primera interacción no suenan ni se acumulan; después, suenan", () => {
+    service.play("round");
+    service.play("rival");
     expect(FakeAudioContext.created).toHaveLength(0);
+    doc.fire("pointerdown");
+    // Lo pedido antes no suena de golpe al desbloquear.
+    expect(FakeAudioContext.created[0]?.oscillators ?? 0).toBe(0);
     service.play("correct");
-    expect(FakeAudioContext.created).toHaveLength(1);
     expect(FakeAudioContext.created[0]!.oscillators).toBeGreaterThan(0);
   });
 
+  it("en el teléfono, el toque cuenta como interacción (pointerup, touchend, click)", async () => {
+    for (const type of ["pointerup", "touchend", "click"]) {
+      service.dispose();
+      FakeAudio.reset();
+      FakeAudioContext.reset();
+      build();
+      FakeAudio.blocked = true;
+      service.setMusic({ zone: "lobby" });
+      await flush();
+      FakeAudio.blocked = false;
+      doc.fire(type);
+      await flush();
+      expect(playingSrcs(), type).toEqual([LOBBY_TRACKS[0]!.src]);
+      service.play("click");
+      expect(FakeAudioContext.created[0]?.oscillators ?? 0, type).toBeGreaterThan(0);
+    }
+  });
+
   it("todos los efectos se pueden tocar sin errores", () => {
+    doc.fire("pointerdown");
     for (const effect of ["correct", "wrong", "win", "lose", "round", "tick", "click", "reveal", "rival"] as const) {
       expect(() => service.play(effect)).not.toThrow();
     }
   });
 
   it("con retraso, esperan; con los efectos apagados, no suenan", () => {
+    doc.fire("pointerdown");
     service.play("correct", 600);
     expect(FakeAudioContext.created[0]?.oscillators ?? 0).toBe(0);
     timers.advance(600);
@@ -184,8 +209,7 @@ describe("los efectos", () => {
     expect(FakeAudioContext.created[0]!.oscillators).toBe(before);
   });
 
-  it("la primera interacción despierta el contexto de audio", () => {
-    service.play("click");
+  it("la primera interacción crea y despierta el contexto de audio", () => {
     doc.fire("keydown");
     expect(FakeAudioContext.created[0]!.resumes).toBeGreaterThan(0);
   });

@@ -31,8 +31,8 @@ export interface MusicPlayer {
 /** El fundido al cambiar de tema. */
 export const FADE_MS = 400;
 const FADE_STEPS = 8;
-/** El tema de final espera a que acabe el efecto de ganar o perder. */
-export const FINAL_DELAY_MS = 1200;
+/** El tema de final espera a que acabe el efecto de ganar o perder (que a su vez puede esperar 0,5 s al de la ronda). */
+export const FINAL_DELAY_MS = 1700;
 
 interface Playing {
   track: Track;
