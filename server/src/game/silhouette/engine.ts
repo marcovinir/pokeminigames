@@ -183,6 +183,11 @@ function onLeave(c: Ctx, seat: Seat): void {
     }
     return;
   }
+  // En la pausa de la última revelación ya se jugaron todas las rondas: termina como completada, no como abandono.
+  if (s.phase === "round_result" && s.roundsPlayed >= s.config.rounds) {
+    finish(c, "completed");
+    return;
+  }
   if (inGame(s)) finish(c, "forfeit", otherSeat(seat));
 }
 
