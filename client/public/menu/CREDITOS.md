@@ -1,9 +1,12 @@
 # Fondos del menú
 
-Aquí van los fanarts que se muestran de fondo en el menú principal (`MENU_BACKGROUNDS` en
-`client/src/pages/menu-art.ts`). **Solo entra un dibujo con el permiso de su autor**, y se anota aquí.
+Los fanarts que se muestran de fondo en el menú principal (`MENU_BACKGROUNDS` en `client/src/pages/menu-art.ts`).
+Cada imagen: WebP de 200 KB como mucho.
 
-Cada imagen: WebP de 200 KB como mucho (unos 1600 px de ancho bastan).
-
-| Archivo | Título | Autor | Perfil | Permiso (fecha y dónde) |
+| Archivo | Título | Autor | Origen | Decisión |
 |---|---|---|---|---|
+| `umbreon.webp` | Umbreon | Desconocido | Compartido en Facebook | Marco decidió usarlo el 27 de octubre de 2026 |
+| `espeon.webp` | Espeon | Desconocido | Compartido en Facebook | Marco decidió usarlo el 27 de octubre de 2026 |
+
+Sin autor conocido, el crédito del menú dice «fanart de autor desconocido» y enlaza «¿Es tuyo?» a Contacto.
+**Si un autor pide que se retire su dibujo o que se le dé crédito, se hace en cuanto se sepa.**
