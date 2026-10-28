@@ -47,6 +47,20 @@ describe("el control de sonido", () => {
     expect(soundButton()).toHaveFocus();
   });
 
+  it("Escape con el foco en otro control no es para el panel: no le roba el foco (el panel ya se cerró al perderlo)", async () => {
+    renderWithServices(
+      <>
+        <Header />
+        <input aria-label="Otro campo" />
+      </>,
+    );
+    const user = userEvent.setup();
+    await user.click(soundButton());
+    screen.getByLabelText("Otro campo").focus();
+    await user.keyboard("{Escape}");
+    expect(screen.getByLabelText("Otro campo")).toHaveFocus();
+  });
+
   it("sacar el foco del panel con Tab lo cierra", async () => {
     renderWithServices(
       <>

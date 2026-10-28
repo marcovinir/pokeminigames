@@ -70,6 +70,9 @@ export function ThemeMenu({ compact = false }: { compact?: boolean }) {
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      // Con el foco en otro control, el Escape es suyo (por ejemplo, cerrar unas sugerencias): no se cierra ni se roba el foco.
+      const focused = document.activeElement;
+      if (focused && focused !== document.body && !root.current?.contains(focused)) return;
       setOpen(false);
       root.current?.querySelector("button")?.focus();
     };
