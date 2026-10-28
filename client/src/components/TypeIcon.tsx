@@ -1,4 +1,4 @@
-import type { TypeName } from "@pokemon-minigames/shared";
+import { TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
 import { useState } from "react";
 import { typeIconUrl } from "../catalog/artwork";
 
@@ -39,6 +39,8 @@ export interface TypeIconProps {
 
 /** El símbolo oficial de un tipo (recortado de su imagen de PokeAPI). Es decorativo (el nombre va aparte, como texto) y, si no carga, desaparece. */
 export function TypeIcon(props: TypeIconProps) {
+  // Un tipo desconocido (solo con datos corruptos) haría lanzar a typeIconUrl: no se dibuja.
+  if (!(TYPE_NAMES as readonly string[]).includes(props.type)) return null;
   // Con otro tipo se empieza de cero: un fallo anterior no apaga el icono nuevo.
   return <Icon key={props.type} {...props} />;
 }
