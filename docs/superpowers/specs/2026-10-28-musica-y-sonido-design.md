@@ -12,7 +12,7 @@ A Marco le han dicho que el juego necesita **música y efectos de sonido**, y é
    - **Sala de espera** (menú, lobbies y sala de espera antes de empezar): *Town Center*, *Title Screen*, *Bittersweet Story*, *Pavane* y *Dungeon*.
    - **Durante la partida**: *Porkymon Battle Theme* (su entrada corta suena una vez y luego el combate en bucle), *8-Bit Battle Loop* y *Chipped Urgency*.
    - **Final de la partida**: si **ganas**, *Menu*; si **pierdes**, *Game Over*.
-2. **Efectos (selección de Marco)**: acierto y fallo de la «versión anterior» de la playlist; ganar, perder, empieza la ronda, últimos segundos, botón, Pokémon revelado y el rival respondió de la «versión nueva». Los dos sonidos exactos están en la playlist (su código fuente, `scratchpad/playlist/playlist.html`, se copia a `docs/superpowers/specs/2026-10-28-musica-y-sonido-efectos.js` como referencia para el implementador).
+2. **Efectos (selección de Marco)**: acierto y fallo de la «versión anterior» de la playlist; ganar, perder, empieza la ronda, últimos segundos, botón, Pokémon revelado y el rival respondió de la «versión nueva». El código exacto de esos sonidos (el de la playlist) está en `docs/superpowers/specs/2026-10-28-musica-y-sonido-efectos.js`, como referencia para el implementador.
 3. **Activado desde el principio (decisión de Marco).** Como los navegadores no dejan sonar nada hasta que la persona toca la página, el sonido empieza con su primera interacción.
 4. **Control siempre a la vista**: un botón de altavoz en el encabezado abre un panel con **Música** (interruptor y volumen) y **Efectos** (interruptor y volumen). Se recuerda en el navegador.
 5. **Igual en los dos minijuegos** (Doble tipo y ¿Quién es ese Pokémon?).
@@ -43,7 +43,7 @@ A Marco le han dicho que el juego necesita **música y efectos de sonido**, y é
 
 ## Los temas (origen y licencia)
 
-Todos de OpenGameArt. Descargados ya en `scratchpad/playlist/audio/` (se pueden volver a bajar de su página).
+Todos de OpenGameArt; se descargan de su página (los nombres de archivo exactos están en cada una).
 
 | Momento | Tema | Autor | Licencia | Página |
 |---|---|---|---|---|
