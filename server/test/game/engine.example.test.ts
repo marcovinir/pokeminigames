@@ -31,6 +31,15 @@ describe("motor: ejemplo tras la ronda", () => {
     expect(h.state.owners.has(result.example!.id)).toBe(false);
   });
 
+  it("en la última ronda no hay ejemplo ni se gasta azar: el resumen sale al instante y nunca se vería", () => {
+    const h = new Harness({ config: { typeMode: "random", lengthMode: "custom", roundsLimit: null, statsGoal: 500 }, rng: [0, 0] });
+    h.startGame();
+    h.submit(1, "Alfa");
+    h.submit(2, "nada");
+    expect(h.state.phase).toBe("finished");
+    expect(h.last("round-result")!.example).toBeUndefined();
+  });
+
   it("si aciertan los dos, no hay ejemplo ni se gasta azar", () => {
     const h = round1([0, 0]);
     const before = h.rng.calls;
