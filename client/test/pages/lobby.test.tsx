@@ -1,11 +1,10 @@
-import type { DobleTipoConfig } from "@pokemon-minigames/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../src/api/client";
 import * as durations from "../../src/game/durations";
 import { LobbyPage } from "../../src/pages/Lobby";
-import { DEFAULT_FORM, buildRequest, formFromConfig } from "../../src/pages/room-form";
+import { DEFAULT_FORM, buildRequest } from "../../src/pages/room-form";
 import * as serverConstants from "../../../server/src/game/constants";
 import { fakeServices, renderRoute, ASH, GUEST, signIn } from "../helpers/services";
 
@@ -63,29 +62,6 @@ describe("buildRequest", () => {
   it("acepta los extremos de los rangos", () => {
     for (const customRounds of ["1", "20"]) expect(buildRequest({ ...DEFAULT_FORM, lengthKind: "custom-rounds", customRounds }).ok).toBe(true);
     for (const statsGoal of ["500", "5000"]) expect(buildRequest({ ...DEFAULT_FORM, lengthKind: "custom-stats", statsGoal }).ok).toBe(true);
-  });
-});
-
-describe("formFromConfig", () => {
-  const config = (overrides: Partial<DobleTipoConfig>): DobleTipoConfig => ({
-    typeMode: "random",
-    lengthMode: "fixed_rounds",
-    roundsLimit: 3,
-    statsGoal: null,
-    ...overrides,
-  });
-
-  it("recupera cada tipo de configuración para volver a jugar con la misma", () => {
-    expect(formFromConfig(config({}))).toMatchObject({ typeMode: "random", lengthKind: "fixed-3" });
-    expect(formFromConfig(config({ roundsLimit: 5, typeMode: "chosen" }))).toMatchObject({ typeMode: "chosen", lengthKind: "fixed-5" });
-    expect(formFromConfig(config({ lengthMode: "custom", roundsLimit: 8 }))).toMatchObject({ lengthKind: "custom-rounds", customRounds: "8" });
-    expect(formFromConfig(config({ lengthMode: "custom", roundsLimit: null, statsGoal: 1800 }))).toMatchObject({ lengthKind: "custom-stats", statsGoal: "1800" });
-  });
-
-  it("convertir y volver a convertir da la misma petición", () => {
-    const original: DobleTipoConfig = { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 2200 };
-    const built = buildRequest(formFromConfig(original));
-    expect(built).toEqual({ ok: true, request: { typeMode: "chosen", lengthMode: "custom", statsGoal: 2200 } });
   });
 });
 
@@ -177,11 +153,11 @@ describe("lobby: crear sala", () => {
     release();
   });
 
-  it("al volver a jugar, el formulario parte de la configuración de la partida anterior", () => {
-    renderLobby({ state: { config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 1800 } } });
-    expect(screen.getByRole("radio", { name: /Elegido/ })).toBeChecked();
-    expect(screen.getByLabelText("Largo de la partida")).toHaveValue("custom-stats");
-    expect(screen.getByLabelText("Meta de stats")).toHaveValue("1800");
+  it("el formulario siempre parte de los valores por defecto (ya no hay «Jugar de nuevo» que le pase una configuración)", () => {
+    renderLobby({ state: { config: { typeMode: "chosen", lengthMode: "custom", roundsLimit: null, statsGoal: 1800, typeHints: true } } });
+    expect(screen.getByRole("radio", { name: /Elegido/ })).not.toBeChecked();
+    expect(screen.getByLabelText("Largo de la partida")).toHaveValue(DEFAULT_FORM.lengthKind);
+    expect(screen.getByRole("switch", { name: "Pistas de tipos" })).not.toBeChecked();
   });
 });
 
@@ -260,14 +236,6 @@ describe("lobby: volver a tu partida", () => {
 });
 
 describe("formulario con pistas de tipos (etapa 8)", () => {
-  const config = (overrides: Partial<DobleTipoConfig> = {}): DobleTipoConfig => ({
-    typeMode: "random",
-    lengthMode: "fixed_rounds",
-    roundsLimit: 3,
-    statsGoal: null,
-    ...overrides,
-  });
-
   it("las pistas parten apagadas", () => {
     expect(DEFAULT_FORM.typeHints).toBe(false);
   });
@@ -286,17 +254,6 @@ describe("formulario con pistas de tipos (etapa 8)", () => {
       const built = buildRequest({ ...DEFAULT_FORM, lengthKind, typeHints: true });
       expect(built.ok && built.request.typeHints).toBe(true);
     }
-  });
-
-  it("formFromConfig recupera las pistas; sin el campo (servidor anterior) quedan apagadas", () => {
-    expect(formFromConfig(config({ typeHints: true })).typeHints).toBe(true);
-    expect(formFromConfig(config({ typeHints: false })).typeHints).toBe(false);
-    expect(formFromConfig(config()).typeHints).toBe(false);
-  });
-
-  it("convertir y volver a convertir conserva las pistas", () => {
-    const built = buildRequest(formFromConfig(config({ typeHints: true })));
-    expect(built).toEqual({ ok: true, request: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, typeHints: true } });
   });
 });
 
@@ -325,10 +282,5 @@ describe("lobby: pistas de tipos (etapa 8)", () => {
     expect(toggle).toBeChecked();
     await user.keyboard(" ");
     expect(toggle).not.toBeChecked();
-  });
-
-  it("al volver a jugar, parte de las pistas de la partida anterior", () => {
-    renderLobby({ state: { config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, typeHints: true } } });
-    expect(screen.getByRole("switch", { name: "Pistas de tipos" })).toBeChecked();
   });
 });

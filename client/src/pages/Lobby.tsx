@@ -1,17 +1,15 @@
 import {
   GENERATIONS,
   type GameKind,
-  type RoomConfig,
   SILHOUETTE_DEFAULT_GENERATIONS,
   SILHOUETTE_DEFAULT_ROUNDS,
   SILHOUETTE_ROUNDS,
   type SilhouetteRounds,
   type TypeMode,
-  asDobleTipo,
   gameFromSlug,
 } from "@pokemon-minigames/shared";
 import { type FormEvent, type ReactNode, useEffect, useId, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
+import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { ApiError } from "../api/client";
 import type { CurrentRoom } from "../api/endpoints";
 import { Button } from "../components/Button";
@@ -28,7 +26,6 @@ import {
   LENGTH_LABELS,
   type LengthKind,
   buildRequest,
-  formFromConfig,
 } from "./room-form";
 
 const shownError = (error: unknown): string => (error instanceof ApiError ? error.message : errorMessage(undefined));
@@ -118,10 +115,10 @@ const TYPE_MODE_OPTIONS: { value: TypeMode; label: string; hint: string }[] = [
   { value: "chosen", label: "Elegido", hint: "Cada jugador elige un tipo y juntos forman el par." },
 ];
 
-function CreateRoomCard({ initial }: { initial?: RoomConfig }) {
+function CreateRoomCard() {
   const { endpoints } = useServices();
   const navigate = useNavigate();
-  const [form, setForm] = useState<CreateRoomForm>(asDobleTipo(initial ?? null) ? formFromConfig(asDobleTipo(initial ?? null)!) : DEFAULT_FORM);
+  const [form, setForm] = useState<CreateRoomForm>(DEFAULT_FORM);
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -403,7 +400,6 @@ function JoinRoomCard() {
 
 /** El lobby de un juego: crear su sala o unirse con un código (de cualquier juego). */
 export function LobbyPage({ game = "doble_tipo" }: { game?: GameKind }) {
-  const state = useLocation().state as { config?: RoomConfig } | null;
   const user = useSession((s) => s.user);
 
   return (
@@ -417,7 +413,7 @@ export function LobbyPage({ game = "doble_tipo" }: { game?: GameKind }) {
       </div>
       <ResumeBanner />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {game === "silueta" ? <CreateSilhouetteRoomCard /> : <CreateRoomCard initial={state?.config} />}
+        {game === "silueta" ? <CreateSilhouetteRoomCard /> : <CreateRoomCard />}
         <JoinRoomCard />
       </div>
     </div>
