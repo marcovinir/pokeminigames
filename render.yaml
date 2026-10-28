@@ -23,7 +23,7 @@ services:
       # docs/despliegue.md (sección 5) dio seis 401 en el sitio en vivo: Render pone más de un proxy. Se prueba 2 y, si las dos
       # pruebas no pasan, 3.
       - key: TRUST_PROXY
-        value: "2"
+        value: "3"
       - key: COOKIE_SECURE
         value: "true"
       - key: COOKIE_SAME_SITE
