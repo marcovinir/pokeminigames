@@ -30,8 +30,9 @@ const serverSends = (services: FakeServices, e: ServerEvent) => act(() => servic
 afterEach(() => vi.useRealTimers());
 
 describe("ciclo de vida de la sala", () => {
-  it("al entrar se une a la sala de la URL y carga la lista de nombres", async () => {
+  it("al entrar se une a la sala de la URL y, al conocer la configuración, carga la lista de nombres", async () => {
     const { services } = renderRoom();
+    await serverSends(services, event.roomState({ phase: "waiting", players: [ash()] }));
     expect(services.client.join).toHaveBeenCalledExactlyOnceWith("ABC234");
     await waitFor(() => expect(services.endpoints.catalog.names).toHaveBeenCalledTimes(1));
   });
@@ -480,6 +481,14 @@ describe("pistas de tipos en la sala (etapa 8)", () => {
       players: [ash({ totalStats: 500, teamSize: 1 }), misty({ totalStats: 400, teamSize: 1 })],
       round: roundState({ number: 2 }),
     });
+
+  it("si la configuración llega después de entrar, solo descarga una lista: la que toca (con pistas, la de tipos)", async () => {
+    const { services } = renderRoom([]);
+    await act(async () => {});
+    expect(services.endpoints.catalog.names).not.toHaveBeenCalled();
+    await serverSends(services, withConfig(true));
+    await waitFor(() => expect(services.endpoints.catalog.names).toHaveBeenCalledExactlyOnceWith({ withTypes: true }));
+  });
 
   it("en una sala con pistas pide la lista con tipos", async () => {
     const { services } = renderRoom([withConfig(true)]);

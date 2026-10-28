@@ -138,10 +138,12 @@ export function RoomPage() {
     if (nextRoom) navigate(`/sala/${encodeURIComponent(nextRoom)}`, { replace: true });
   }, [nextRoom, navigate]);
 
-  // Los tipos de cada Pokémon solo se piden en las salas con «Pistas de tipos»; sin ellas ni siquiera viajan.
+  // Los tipos de cada Pokémon solo se piden en las salas con «Pistas de tipos»; sin ellas ni siquiera viajan. Se espera a
+  // conocer la configuración: pedir antes descargaba la lista sin tipos y luego otra vez con ellos.
+  const configKnown = useGame((s) => s.view.config !== null);
   useEffect(() => {
-    void names.getState().load({ withTypes: typeHints });
-  }, [names, typeHints]);
+    if (configKnown) void names.getState().load({ withTypes: typeHints });
+  }, [names, typeHints, configKnown]);
 
   // La sala ya no existe, terminó o no eres parte de ella: no hay nada más que hacer aquí.
   // Con la partida terminada el resumen se queda: el servidor ya cerró la sala y es lo esperable.
