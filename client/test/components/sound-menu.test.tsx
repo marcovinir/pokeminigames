@@ -47,6 +47,25 @@ describe("el control de sonido", () => {
     expect(soundButton()).toHaveFocus();
   });
 
+  it("sacar el foco del panel con Tab lo cierra", async () => {
+    renderWithServices(
+      <>
+        <Header />
+        <button type="button">Después</button>
+      </>,
+    );
+    const user = userEvent.setup();
+    await user.click(soundButton());
+    screen.getByRole("slider", { name: "Volumen de los efectos" }).focus();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(screen.queryByRole("switch", { name: "Música" })).not.toBeInTheDocument();
+  });
+
   it("el botón dice si todo está silenciado", async () => {
     const { services } = renderWithServices(<Header />);
     expect(soundButton()).toHaveAccessibleName("Sonido");

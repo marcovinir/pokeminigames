@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router";
-import { useGame, useServices } from "../services";
+import { useGame, useServices, useSession } from "../services";
 import { musicCueFor } from "./cues";
 
 /**
@@ -11,10 +11,12 @@ export function SoundDirector() {
   const { sound } = useServices();
   const { pathname } = useLocation();
   const view = useGame((s) => s.view);
-  const cue = musicCueFor(pathname, view);
-  const key = cue.zone === "final" ? `final:${cue.outcome}` : cue.zone;
+  const session = useSession((s) => s.status);
+  const cue = musicCueFor(pathname, view, session);
+  const key = cue === null ? null : cue.zone === "final" ? `final:${cue.outcome}` : cue.zone;
 
   useEffect(() => {
+    if (cue === null) return; // Sin cambio: sigue lo que sonaba.
     sound.setMusic(cue);
     document.documentElement.dataset.music = cue.zone;
     // `cue` cambia de identidad en cada render; lo que importa es la zona (y el resultado del final).

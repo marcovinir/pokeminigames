@@ -75,7 +75,7 @@ describe("la música", () => {
     service.setMusic({ zone: "lobby" });
     await flush();
     timers.advance(400);
-    const lobbies = FakeAudio.created.filter((a) => LOBBY_TRACKS.some((t) => t.src === a.src)).map((a) => a.src);
+    const lobbies = FakeAudio.created.filter((a) => LOBBY_TRACKS.some((t) => t.src === a.originalSrc)).map((a) => a.originalSrc);
     expect(lobbies).toHaveLength(2);
     expect(lobbies[1]).not.toBe(lobbies[0]);
   });
@@ -160,7 +160,41 @@ describe("la música", () => {
   });
 });
 
+describe("la música: detalles", () => {
+  it("al cambiar de tema, el reproductor viejo se libera (sin src) tras el fundido", async () => {
+    service.setMusic({ zone: "lobby" });
+    await flush();
+    const old = FakeAudio.playing()[0]!;
+    service.setMusic({ zone: "none" });
+    timers.advance(400);
+    expect(old.src).toBe("");
+  });
+
+  it("si al tocarle el turno al final la pestaña está oculta, el final se descarta (no suena minutos después)", async () => {
+    service.setMusic({ zone: "final", outcome: "win" });
+    doc.visibilityState = "hidden";
+    doc.fire("visibilitychange");
+    timers.advance(FINAL_DELAY_MS);
+    doc.visibilityState = "visible";
+    doc.fire("visibilitychange");
+    await flush();
+    expect(playingSrcs()).toEqual([]);
+  });
+});
+
 describe("los efectos", () => {
+  it("cada efecto suena con el volumen de cuando se pidió, aunque luego cambie", () => {
+    doc.fire("pointerdown");
+    const ctx = FakeAudioContext.created[0]!;
+    settings.getState().update({ effectsVolume: 0.2 });
+    service.play("click");
+    settings.getState().update({ effectsVolume: 1 });
+    service.play("click");
+    const values = ctx.gains.map((g) => Number(g.gain.value.toFixed(2)));
+    expect(values).toContain(0.18);
+    expect(values).toContain(0.9);
+  });
+
   it("antes de la primera interacción no suenan ni se acumulan; después, suenan", () => {
     service.play("round");
     service.play("rival");

@@ -2,7 +2,7 @@ import type { MusicCue } from "./cues";
 import { BATTLE_TRACKS, LOBBY_TRACKS, LOSE_TRACK, type Track, WIN_TRACK } from "./tracks";
 
 /** Lo que el reproductor necesita de `HTMLAudioElement`. */
-export type AudioLike = Pick<HTMLAudioElement, "play" | "pause" | "loop" | "volume" | "currentTime" | "addEventListener" | "removeEventListener">;
+export type AudioLike = Pick<HTMLAudioElement, "play" | "pause" | "loop" | "volume" | "currentTime" | "addEventListener" | "removeEventListener" | "removeAttribute" | "load">;
 
 export interface Timers {
   setTimeout(fn: () => void, ms: number): unknown;
@@ -71,7 +71,12 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
       deps.timers.setTimeout(() => {
         audios.forEach((audio, i) => {
           audio.volume = Math.max(0, start[i]! * (1 - step / FADE_STEPS));
-          if (step === FADE_STEPS) audio.pause();
+          if (step === FADE_STEPS) {
+            audio.pause();
+            // Suelta el archivo (y su descarga, si seguía): el reproductor no se vuelve a usar.
+            audio.removeAttribute("src");
+            audio.load();
+          }
         });
       }, (FADE_MS / FADE_STEPS) * step);
     }
@@ -131,6 +136,8 @@ export function createMusicPlayer(deps: MusicPlayerDeps): MusicPlayer {
         const track = cue.outcome === "win" ? WIN_TRACK : LOSE_TRACK;
         finalTimer = deps.timers.setTimeout(() => {
           finalTimer = null;
+          // Si no puede sonar ahora (pestaña oculta, música apagada), el final se descarta: no tendría sentido minutos después.
+          if (!deps.canPlay()) return;
           start(track);
         }, FINAL_DELAY_MS);
         return;

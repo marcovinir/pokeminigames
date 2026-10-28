@@ -34,7 +34,10 @@ describe("el store avisa de cada evento con la vista de antes y la de después",
 });
 
 describe("la música sigue a la pantalla", () => {
-  const director = (route: string, services: FakeServices = fakeServices()) => renderWithServices(<SoundDirector />, { services, route });
+  const director = (route: string, services: FakeServices = fakeServices()) => {
+    signIn(services);
+    return renderWithServices(<SoundDirector />, { services, route });
+  };
 
   it("sala en el menú, silencio en el acceso, y lo anota en <html data-music>", () => {
     const menu = director("/");
@@ -95,6 +98,28 @@ describe("últimos segundos", () => {
       view.rerender(<Probe deadline={45_000} answered round={3} now={clock} />);
       at(41_000);
       expect(ticks()).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("últimos segundos al recargar", () => {
+  function Probe(props: { deadline: number; now: () => number }) {
+    useLastSeconds({ deadline: props.deadline, offset: 0, answered: false, round: 1, now: props.now });
+    return null;
+  }
+
+  it("si al montar ya quedan menos de 5 s (recargar o reconectar), no suena", () => {
+    vi.useFakeTimers();
+    try {
+      const services = fakeServices();
+      const now = 12_000;
+      render(<Probe deadline={15_000} now={() => now} />, {
+        wrapper: ({ children }) => <ServicesProvider services={services}>{children}</ServicesProvider>,
+      });
+      act(() => void vi.advanceTimersByTime(600));
+      expect(services.sound.play).not.toHaveBeenCalledWith("tick");
     } finally {
       vi.useRealTimers();
     }
