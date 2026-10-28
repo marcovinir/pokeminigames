@@ -76,7 +76,7 @@ Cada persona puede borrar su cuenta desde su perfil («Borrar mi cuenta», con s
 2. En una terminal, desde la raíz del repositorio, pégala **solo en la línea de comandos** (nunca en un archivo del repositorio):
 
    ```bash
-   DATABASE_URL='postgresql://…' npm run account:delete -w server -- NombreDeUsuario
+   DATABASE_URL='postgresql://usuario:clave@host/base' npm run account:delete -w server -- NombreDeUsuario
    ```
 
 3. El script enseña la cuenta (nombre, correo enmascarado y fecha de alta) y pide escribir el nombre para confirmar. Si no coincide, no toca nada.

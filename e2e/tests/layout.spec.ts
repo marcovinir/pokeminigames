@@ -73,6 +73,31 @@ test("sin sesión el encabezado y el menú de apariencia caben en todos los anch
   }
 });
 
+test("el pie y sus enlaces caben en la pantalla en la entrada y en una página de información", async ({ browser }) => {
+  const visitor = await newPlayer(browser, "pie");
+  try {
+    for (const width of [360, 375, 768, 1280]) {
+      await visitor.page.setViewportSize({ width, height: 740 });
+      for (const [path, heading] of [
+        ["/login", "Iniciar sesión"],
+        ["/privacidad", "Privacidad"],
+      ] as const) {
+        await visitor.page.goto(path);
+        await expect(visitor.page.getByRole("heading", { name: heading, level: 1 })).toBeVisible();
+        const nav = visitor.page.getByRole("navigation", { name: "Información" });
+        const links = nav.getByRole("link");
+        await expect(links).toHaveCount(7);
+        for (const link of await links.all()) {
+          await expectInsideViewport(visitor.page, link, `${width} px, ${path}: «${await link.textContent()}»`);
+        }
+        await expectNoSideScroll(visitor.page, `${width} px, ${path}`);
+      }
+    }
+  } finally {
+    await visitor.context.close();
+  }
+});
+
 for (const [kind, label] of [
   ["corto", "ash"],
   ["de 30 letras", longName("a")],
