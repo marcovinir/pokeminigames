@@ -105,10 +105,10 @@ describe("el fondo del menú", () => {
     expect(screen.queryByText(/Fondo:/)).not.toBeInTheDocument();
   });
 
-  it("la lista publicada: Umbreon y Espeon para el teléfono, Eevee y Lucario para pantallas anchas; cada imagen existe y pesa 200 KB como mucho; el autor va con su enlace o sin ninguno", () => {
+  it("la lista publicada: Umbreon y Espeon para el teléfono, Eevee, Lucario y Charizard para pantallas anchas; cada imagen existe y pesa 200 KB como mucho; el autor va con su enlace o sin ninguno", () => {
     const of = (shape: MenuBackground["shape"]) => MENU_BACKGROUNDS.filter((b) => b.shape === shape).map((b) => b.src);
     expect(of("portrait")).toEqual(["/menu/umbreon.webp", "/menu/espeon.webp"]);
-    expect(of("landscape")).toEqual(["/menu/eevee.webp", "/menu/lucario.webp"]);
+    expect(of("landscape")).toEqual(["/menu/eevee.webp", "/menu/lucario.webp", "/menu/charizard.webp"]);
     for (const background of MENU_BACKGROUNDS) {
       const file = join(import.meta.dirname, "../../public", background.src);
       expect(existsSync(file), background.src).toBe(true);

@@ -40,6 +40,7 @@ export const MENU_BACKGROUNDS: readonly MenuBackground[] = [
   { src: "/menu/espeon.webp", title: "Espeon", shape: "portrait" },
   { src: "/menu/eevee.webp", title: "Eevee", shape: "landscape" },
   { src: "/menu/lucario.webp", title: "Lucario", shape: "landscape" },
+  { src: "/menu/charizard.webp", title: "Charizard", shape: "landscape" },
 ];
 
 /** Uno al azar (o nada si la lista está vacía). */

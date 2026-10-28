@@ -10,6 +10,7 @@ No se usan dibujos firmados sin permiso de su autor (por eso se descartaron el d
 | `espeon.webp` | Espeon | Desconocido | Compartido en Facebook | Marco decidió usarlo el 27 de octubre de 2026 |
 | `eevee.webp` | Eevee (horizontal) | Desconocido | xtrafondos.com | Marco decidió usarlo el 27 de octubre de 2026 |
 | `lucario.webp` | Lucario (horizontal) | Desconocido | xtrafondos.com | Marco decidió usarlo el 27 de octubre de 2026 |
+| `charizard.webp` | Charizard (horizontal) | Desconocido | pixelstalk.net (lleva su marca de agua, que se conserva) | Marco decidió usarlo el 27 de octubre de 2026 |
 
 Sin autor conocido, el crédito del menú dice «fanart de autor desconocido» y enlaza «¿Es tuyo?» a Contacto.
 **Si un autor pide que se retire su dibujo o que se le dé crédito, se hace en cuanto se sepa.**
