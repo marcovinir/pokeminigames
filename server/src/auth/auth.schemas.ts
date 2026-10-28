@@ -41,5 +41,8 @@ export const avatarSchema = z.object({
   avatarId: z.union([z.null(), z.number().refine(isAvatarPokemon, "Ese Pokémon no está entre los avatares")]),
 });
 
+/** Borrar la cuenta: se confirma con la contraseña (la comprobación es la misma que la del inicio de sesión). */
+export const deleteAccountSchema = z.object({ password: z.string().min(1, "Escribe tu contraseña") });
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
