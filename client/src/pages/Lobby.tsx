@@ -20,6 +20,7 @@ import { Notice } from "../components/Notice";
 import { rise } from "../components/rise";
 import { TextField } from "../components/TextField";
 import { GAME_CARDS, MENU_TEXT, SILHOUETTE_TEXT, errorMessage, generationLabel } from "../i18n/es";
+import { isGuest } from "../api/types";
 import { useServices, useSession } from "../services";
 import {
   type CreateRoomForm,
@@ -337,8 +338,15 @@ function CreateSilhouetteRoomCard() {
   );
 }
 
+/** «Ya hay alguien con ese nombre»: una cuenta no puede cambiar de nombre, un invitado sí (saliendo y entrando con otro). */
+const NAME_IN_USE_TEXT = {
+  account: "Ya hay alguien con tu mismo nombre en esa sala: con esta cuenta no puedes unirte a ella.",
+  guest: "Ya hay alguien con ese nombre en la sala. Cierra sesión (arriba a la derecha) y entra como invitado con otro nombre.",
+} as const;
+
 function JoinRoomCard() {
   const { endpoints } = useServices();
+  const user = useSession((s) => s.user);
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -360,7 +368,8 @@ function JoinRoomCard() {
       await endpoints.rooms.join(clean);
       navigate(`/sala/${clean}`);
     } catch (joinError) {
-      setFormError(shownError(joinError));
+      const nameInUse = joinError instanceof ApiError && joinError.code === "NAME_IN_USE";
+      setFormError(nameInUse ? NAME_IN_USE_TEXT[isGuest(user) ? "guest" : "account"] : shownError(joinError));
       setSubmitting(false);
     }
   }
