@@ -421,7 +421,7 @@ describe("el rival ya respondió", () => {
   it("se lee del room-state (al reconectar) y vuelve a false al empezar otra ronda", () => {
     const view = play([[roundActive(true)]]);
     expect(view.round?.opponentAnswered).toBe(true);
-    const next = play([[roundActive(true)], [event.roundStarted(2)]]);
+    const next = play([[roundActive(true)], [event.roundStarted(2, SERVER_NOW + 15_000)]]);
     expect(next.round?.opponentAnswered).toBe(false);
   });
 
