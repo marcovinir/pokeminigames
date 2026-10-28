@@ -68,6 +68,21 @@ Imprime `401 401 401 401 401`. Ahora, desde otra red (el celular con datos móvi
 
 **Cómo cambiarlo:** en el panel de Render, *Environment* → `TRUST_PROXY` → guardar (Render redespliega y, de paso, reinicia los límites, que viven en memoria). Empieza en `2`; si no pasan las dos pruebas prueba `3` (y `1`), y repite las dos pruebas con cada valor. El correcto es el que pasa las dos: un valor demasiado alto falla la Prueba 1, y uno demasiado bajo falla la Prueba 2 y, si los proxies cambian de IP, también la 1. Anótalo en `render.yaml` y súbelo para que el repositorio diga lo mismo que el panel.
 
+## 6. Retirar una cuenta (moderación)
+
+Cada persona puede borrar su cuenta desde su perfil («Borrar mi cuenta», con su contraseña). Si hay que retirar una cuenta por otro motivo (por ejemplo, un nombre ofensivo, como prevén los Términos), hay un script que hace lo mismo: anonimiza la cuenta (correo, nombre, contraseña, avatar y tema) y cierra sus sesiones; sus partidas siguen en el historial de sus rivales como «Cuenta borrada».
+
+1. En el panel de Neon, copia la cadena de conexión de la base de producción.
+2. En una terminal, desde la raíz del repositorio, pégala **solo en la línea de comandos** (nunca en un archivo del repositorio):
+
+   ```bash
+   DATABASE_URL='postgresql://…' npm run account:delete -w server -- NombreDeUsuario
+   ```
+
+3. El script enseña la cuenta (nombre, correo enmascarado y fecha de alta) y pide escribir el nombre para confirmar. Si no coincide, no toca nada.
+
+No se puede deshacer.
+
 ## Variables de entorno
 
 | Variable | Valor en Render | Para qué |
