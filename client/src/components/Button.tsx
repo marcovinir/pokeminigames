@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import { useOptionalServices } from "../services";
 
-type Variant = "primary" | "secondary" | "ghost" | "header";
+type Variant = "primary" | "secondary" | "ghost" | "header" | "danger";
 type Size = "md" | "lg";
 
 /*
@@ -14,6 +14,9 @@ const VARIANTS: Record<Variant, string> = {
   secondary:
     "bg-surface text-fg border-line shadow-[0_var(--depth)_0_0_var(--line)] hover:bg-surface-2 active:translate-y-[calc(var(--depth)/2)] active:shadow-[0_calc(var(--depth)/2)_0_0_var(--line)]",
   ghost: "bg-transparent text-fg border-transparent hover:bg-surface-2",
+  // Para lo que no se puede deshacer: los mismos colores que el aviso de error (ya pasan la auditoría de contraste).
+  danger:
+    "bg-danger-bg text-danger border-danger shadow-[0_var(--depth)_0_0_var(--danger)] hover:-translate-y-px active:translate-y-[calc(var(--depth)/2)] active:shadow-[0_calc(var(--depth)/2)_0_0_var(--danger)]",
   // Sobre el encabezado, que tiene su propio fondo y su propio color de texto según el tema.
   header: "bg-transparent text-header-fg border-transparent hover:bg-header-fg/15",
 };
@@ -26,6 +29,8 @@ const SIZES: Record<Size, string> = {
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** Para devolverle el foco (en React 19 `ref` llega como una prop más y va al <button> con el resto). */
+  ref?: Ref<HTMLButtonElement>;
   /** Mientras carga queda deshabilitado, muestra una ruedita y lo indica a los lectores de pantalla. */
   loading?: boolean;
 }
