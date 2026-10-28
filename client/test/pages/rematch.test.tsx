@@ -71,7 +71,7 @@ describe("el bloque de revancha del resumen", () => {
   it("su primera partida juntos terminó en empate: se ve «Empate», no «0 – 0»", () => {
     renderRoom(summary({ status: "mine", deadline: SERVER_NOW + 60_000, record: { mine: 0, theirs: 0, draws: 1, played: 1, recent: ["drawn"] } }));
     const card = screen.getByRole("region", { name: "Récord contra misty" });
-    expect(within(card).getByText("Empate")).toBeInTheDocument();
+    expect(within(card).getByText("Empate", { selector: "p" })).toBeInTheDocument();
     expect(within(card).queryByText("0 – 0")).toBeNull();
     expect(within(card).getByText("Es su primera partida juntos")).toBeInTheDocument();
   });
@@ -115,7 +115,7 @@ describe("el bloque de revancha del resumen", () => {
     expect(within(card).getByText("3 – 2")).toBeInTheDocument();
     expect(within(card).getByText("5 partidas jugadas · vas ganando")).toBeInTheDocument();
     const chips = within(within(card).getByRole("list", { name: "Últimas partidas" })).getAllByRole("listitem");
-    expect(chips.map((chip) => chip.textContent)).toEqual(["G", "P", "G", "E", "G"]);
+    expect(chips.map((chip) => chip.querySelector("[aria-hidden]")!.textContent)).toEqual(["G", "P", "G", "E", "G"]);
     unmount();
 
     const first = renderRoom(summary({ status: "mine", deadline: SERVER_NOW + 60_000, record: record(1, 0, { recent: ["won"] }) }));
@@ -137,7 +137,7 @@ describe("el bloque de revancha del resumen", () => {
     ["self", null],
   ])("cerrada por %s: muestra su aviso exacto y solo «Volver al lobby»", (reason, message) => {
     renderRoom(summary({ status: "closed", deadline: null, closedReason: reason }));
-    if (message) expect(screen.getByText(message)).toBeInTheDocument();
+    if (message) expect(screen.getByRole("status")).toHaveTextContent(message);
     else expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("button", { name: /Revancha|Cancelar|Aceptar|Rechazar/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Volver al lobby" })).toBeInTheDocument();
@@ -157,10 +157,10 @@ describe("el bloque de revancha del resumen", () => {
     expect(screen.getByRole("button", { name: "Aceptar" })).toBeInTheDocument();
   });
 
-  it("el cambio de estado de la oferta se anuncia en el registro de la partida y lleva el foco al título del bloque", async () => {
+  it("el cambio de estado de la oferta se anuncia en el registro de la revancha y lleva el foco al título del bloque", async () => {
     const { services } = renderRoom(summary({ status: "open" }));
     await serverSends(services, event.rematchState({ status: "theirs", deadline: SERVER_NOW + 60_000 }));
-    expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("misty quiere la revancha");
+    expect(screen.getByRole("log", { name: "Anuncios de la revancha" })).toHaveTextContent("misty quiere la revancha");
     expect(screen.getByRole("heading", { name: "misty quiere la revancha" })).toHaveFocus();
     // El título no es un control (no está en el orden del tabulador): recibir el foco no le pinta el aro de los botones.
     expect(screen.getByRole("heading", { name: "misty quiere la revancha" }).className).toContain("outline-none");
@@ -208,17 +208,13 @@ describe("pantalla «¡Revancha!» y la sala nueva", () => {
     expect(services.client.join).toHaveBeenCalledWith("GAME02");
   });
 
-  it("en la sala de revancha esperando se ve «¡Revancha!» (no la sala de espera con su código) y se marca quién ya entró", () => {
-    const { unmount } = renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), misty({ connected: false })] })]);
+  it("en la sala de revancha esperando se ve «¡Revancha!» (no la sala de espera con su código)", () => {
+    renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), misty({ connected: false })] })]);
     expect(screen.getByRole("heading", { name: "¡Revancha!" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Código de la sala")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Sala de espera" })).toBeNull();
     expect(screen.getByText("✓ Tú, listo")).toBeInTheDocument();
     expect(screen.getByText("misty entrando…")).toBeInTheDocument();
-    unmount();
-
-    renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), misty({ connected: true })] })]);
-    expect(screen.getByText("✓ misty, listo")).toBeInTheDocument();
   });
 
   it("una sala normal en espera sigue siendo la sala de espera con su código", () => {
@@ -233,5 +229,77 @@ describe("pantalla «¡Revancha!» y la sala nueva", () => {
     expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("misty no llegó.");
     expect(screen.getByRole("button", { name: "Volver al lobby" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Empate" })).toBeNull();
+  });
+});
+
+describe("revancha: menores de la revisión final (#8)", () => {
+  it("con una oferta viva, el resumen muestra «Conexión perdida» y «Jugar aquí»; sin oferta, no", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom(summary({ status: "mine", deadline: SERVER_NOW + 60_000 }), services);
+    act(() => services.game.store.getState().setConnection("disconnected"));
+    expect(screen.getByText("Conexión perdida. Reconectando…")).toBeInTheDocument();
+    act(() => services.game.store.getState().setConnection("replaced"));
+    await user.click(screen.getByRole("button", { name: "Jugar aquí" }));
+    expect(services.client.join).toHaveBeenCalledTimes(2);
+  });
+
+  it("con la oferta cerrada el resumen sigue sin avisos de conexión (la sala ya terminó)", () => {
+    const services = fakeServices();
+    renderRoom(summary({ status: "closed", deadline: null, closedReason: "timeout" }), services);
+    act(() => services.game.store.getState().setConnection("disconnected"));
+    expect(screen.queryByText(/Reconectando/)).toBeNull();
+  });
+
+  it("la pantalla «¡Revancha!» de la sala nueva tiene «Volver al lobby», que sale de la sala", async () => {
+    const { user, services } = renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), misty({ connected: false })] })]);
+    await user.click(screen.getByRole("button", { name: "Volver al lobby" }));
+    expect(services.client.leave).toHaveBeenCalledTimes(1);
+  });
+
+  it("ya no hay ficha «✓ misty, listo»: el rival sale «entrando…» hasta que empieza la cuenta atrás", () => {
+    renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), misty({ connected: true })] })]);
+    expect(screen.queryByText(/misty, listo/)).toBeNull();
+    expect(screen.getByText("misty entrando…")).toBeInTheDocument();
+  });
+
+  it("la etiqueta «Invitado» acompaña a «entrando…», a «no llegó.» y al aviso de cierre", () => {
+    const guest = misty({ guest: true, connected: false });
+    const loading = renderRoom([event.roomState({ phase: "waiting", rematch: true, players: [ash(), guest] })]);
+    expect(within(screen.getByText("misty entrando…").closest("li")!).getByText("Invitado")).toBeInTheDocument();
+    loading.unmount();
+
+    const noShow = renderRoom([finished([ash(), guest], { rematch: true }), event.gameEnded({ winnerSeat: null, reason: "expired" })]);
+    expect(within(screen.getByRole("status")).getByText("Invitado")).toBeInTheDocument();
+    noShow.unmount();
+
+    renderRoom(summary({ status: "closed", deadline: null, closedReason: "left" }, [ash(), guest]));
+    expect(within(screen.getByRole("status")).getByText("Invitado")).toBeInTheDocument();
+  });
+
+  it("los cambios de la oferta se anuncian en su propio registro: el de la partida no repite el veredicto", async () => {
+    const { services } = renderRoom(summary({ status: "open" }));
+    const game = screen.getByRole("log", { name: "Anuncios de la partida" });
+    expect(game).toHaveTextContent("Ganaste. ");
+    await serverSends(services, event.rematchState({ status: "theirs", deadline: SERVER_NOW + 60_000 }));
+    expect(screen.getByRole("log", { name: "Anuncios de la revancha" })).toHaveTextContent("misty quiere la revancha");
+    expect(game).not.toHaveTextContent("revancha");
+  });
+
+  it("las fichas del récord se leen por su texto oculto, no por aria-label en el <li>", () => {
+    renderRoom(summary({ status: "mine", deadline: SERVER_NOW + 60_000, record: record(1, 0, { recent: ["won"] }) }));
+    const chip = within(screen.getByRole("list", { name: "Últimas partidas" })).getByRole("listitem");
+    expect(chip).not.toHaveAttribute("aria-label");
+    expect(within(chip).getByText("Ganada")).toHaveClass("sr-only");
+    expect(within(chip).getByText("G")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("«Ver perfil de misty» se esconde mientras la oferta espera respuesta (navegar cerraría la conexión)", () => {
+    for (const status of ["mine", "theirs"] as const) {
+      const view = renderRoom(summary({ status, deadline: SERVER_NOW + 60_000 }));
+      expect(screen.queryByRole("button", { name: "Ver perfil de misty" })).toBeNull();
+      view.unmount();
+    }
+    renderRoom(summary({ status: "open" }));
+    expect(screen.getByRole("button", { name: "Ver perfil de misty" })).toBeInTheDocument();
   });
 });

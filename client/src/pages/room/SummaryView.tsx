@@ -76,6 +76,7 @@ export function SummaryView() {
   if (view.rematchOffer?.status === "starting" || view.nextRoom !== null) return <RematchLoadingView />;
 
   const mySeat = view.mySeat;
+  const offerPending = view.rematchOffer?.status === "mine" || view.rematchOffer?.status === "theirs";
   const rivalSeat: Seat = mySeat === 1 ? 2 : 1;
   const verdict = verdictLabel(ended, mySeat);
   const kind = ended.winnerSeat === null ? "drawn" : ended.winnerSeat === mySeat ? "won" : "lost";
@@ -105,8 +106,9 @@ export function SummaryView() {
       )}
 
       <div className="flex flex-wrap justify-center gap-3">
-        {/* Un invitado no tiene perfil: ni se ofrece el suyo ni el de quien juega contra él. */}
-        {opponent && !opponent.guest && !isGuest(sessionUser) ? (
+        {/* Un invitado no tiene perfil: ni se ofrece el suyo ni el de quien juega contra él. Mientras la oferta espera
+            respuesta tampoco: navegar cierra la conexión y el rival vería «se fue». */}
+        {opponent && !opponent.guest && !isGuest(sessionUser) && !offerPending ? (
           // Con un nombre largo (hasta 30 letras seguidas) el botón se parte en vez de ensanchar la pantalla del teléfono.
           <Button size="lg" className="max-w-full [overflow-wrap:anywhere]" onClick={() => navigate(`/jugador/${encodeURIComponent(opponent.username)}`)}>
             Ver perfil de {opponent.username}

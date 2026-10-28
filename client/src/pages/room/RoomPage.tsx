@@ -78,7 +78,7 @@ function announcement(view: GameView): string {
       if (view.isRematchRoom && view.ended.reason === "expired") {
         return rematchNoShow(view.players.find((player) => player.seat !== view.mySeat)?.username ?? "Tu rival");
       }
-      return [`${verdictLabel(view.ended, view.mySeat)}. ${scoreLabel(view.ended, view.mySeat)}`, rematchAnnouncement(view)].filter(Boolean).join(" ");
+      return `${verdictLabel(view.ended, view.mySeat)}. ${scoreLabel(view.ended, view.mySeat)}`;
     }
     default:
       return "";
@@ -123,6 +123,9 @@ export function RoomPage() {
   const view = useGame((s) => s.view);
   const typeHints = useGame((s) => asDobleTipo(s.view.config)?.typeHints === true);
   const nextRoom = useGame((s) => s.view.nextRoom);
+  // Con una oferta de revancha viva la sala sigue abierta: los avisos de conexión importan también en el resumen.
+  const offerStatus = useGame((s) => s.view.rematchOffer?.status);
+  const connectionMatters = phase !== "finished" || (offerStatus !== undefined && offerStatus !== "closed");
 
   useEffect(() => {
     game.client.join(code);
@@ -161,8 +164,12 @@ export function RoomPage() {
       <p role="log" aria-label="Anuncios de la partida" className="sr-only">
         {announcement(view)}
       </p>
-      {connection === "disconnected" && phase !== "finished" ? <Notice>Conexión perdida. Reconectando…</Notice> : null}
-      {connection === "replaced" && phase !== "finished" ? (
+      {/* La revancha va aparte: si cambia la oferta, no se vuelve a leer el veredicto. */}
+      <p role="log" aria-label="Anuncios de la revancha" className="sr-only">
+        {phase === "finished" && !(view.isRematchRoom && ended?.reason === "expired") ? rematchAnnouncement(view) : ""}
+      </p>
+      {connection === "disconnected" && connectionMatters ? <Notice>Conexión perdida. Reconectando…</Notice> : null}
+      {connection === "replaced" && connectionMatters ? (
         <Notice
           action={
             <Button variant="primary" onClick={() => game.client.join(code)}>
