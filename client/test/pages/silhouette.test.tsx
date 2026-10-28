@@ -126,3 +126,14 @@ describe("el marcador de la silueta con un invitado", () => {
     expect(bar.textContent!.replace(/\s+/g, " ")).toMatch(/misty Invitado 0$/);
   });
 });
+
+describe("el motivo del final en la silueta", () => {
+  it("«exhausted» dice que no quedaron Pokémon, no el texto de «Doble tipo» sobre pares de tipos", () => {
+    renderRoom([
+      event.roomState({ phase: "finished", config: SILHOUETTE, players: [ash(), misty()] }),
+      event.gameEnded({ winnerSeat: 1, reason: "exhausted", totals: { 1: 808, 2: 0 }, teams: { 1: [], 2: [] }, silhouette: { reveals: [gengar()] } }),
+    ]);
+    expect(screen.getByText("No quedaron más Pokémon por adivinar")).toBeInTheDocument();
+    expect(screen.queryByText(/pares de tipos/)).toBeNull();
+  });
+});

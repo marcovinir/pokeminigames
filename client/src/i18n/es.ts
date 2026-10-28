@@ -109,6 +109,11 @@ export const END_REASON_LABELS: Record<GameEndReason, string> = {
   abandoned: "La partida se abandonó",
 };
 
+/** El motivo del final según el juego: en la silueta, «exhausted» es que no quedaban Pokémon (no pares de tipos). */
+export function endReasonLabel(reason: GameEndReason, silhouette: boolean): string {
+  return silhouette && reason === "exhausted" ? "No quedaron más Pokémon por adivinar" : END_REASON_LABELS[reason];
+}
+
 export const RESULT_LABELS: Record<GameResult, string> = { won: "Ganaste", drawn: "Empate", lost: "Perdiste" };
 
 const SAME_FOR_ALL = (text: string): Record<GameResult, string> => ({ won: text, drawn: text, lost: text });
