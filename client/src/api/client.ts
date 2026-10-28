@@ -21,6 +21,8 @@ export interface ApiClientOptions {
   fetch?: typeof fetch;
   /** Se llama cuando la sesión no se pudo renovar: hay que volver a iniciar sesión. */
   onSessionLost?: () => void;
+  /** Se llama tras cada renovación: otra pestaña pudo cambiar de identidad (p. ej. de invitado a cuenta). */
+  onSessionRefreshed?: (session: AuthSession) => void;
 }
 
 export interface RequestOptions {
@@ -91,6 +93,7 @@ export class ApiClient {
       }
       const session = (await response.json()) as AuthSession;
       this.token = session.accessToken;
+      this.options.onSessionRefreshed?.(session);
       return session;
     } catch {
       return null;

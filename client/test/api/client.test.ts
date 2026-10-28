@@ -14,7 +14,7 @@ const errorBody = (code: string) => ({ error: { code, message: "mensaje del serv
 
 type Handler = (url: string, init: RequestInit) => Promise<Response> | Response;
 
-function setup(handler: Handler, options: { onSessionLost?: () => void; baseUrl?: string } = {}) {
+function setup(handler: Handler, options: { onSessionLost?: () => void; onSessionRefreshed?: (session: unknown) => void; baseUrl?: string } = {}) {
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => handler(String(input), init ?? {}));
   const api = new ApiClient({ fetch: fetchMock, ...options });
   const calls = (path: string) => fetchMock.mock.calls.filter(([url]) => String(url).endsWith(path));
@@ -94,6 +94,14 @@ describe("renovación de la sesión ante un 401", () => {
       return header(init, "Authorization") === "Bearer nuevo" ? json(200, { ok: true }) : json(401, errorBody("UNAUTHORIZED"));
     };
   }
+
+  it("avisa de cada renovación con la sesión nueva (otra pestaña pudo cambiar de identidad)", async () => {
+    const onSessionRefreshed = vi.fn();
+    const { api } = setup(tokenServer(), { onSessionRefreshed });
+    api.setToken("viejo");
+    await api.request("GET", "/rooms/current");
+    expect(onSessionRefreshed).toHaveBeenCalledWith(expect.objectContaining({ accessToken: "nuevo" }));
+  });
 
   it("renueva la sesión una vez y reintenta con el token nuevo", async () => {
     const { api, calls } = setup(tokenServer());

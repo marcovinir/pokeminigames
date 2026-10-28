@@ -162,3 +162,23 @@ describe("sesión: el avatar", () => {
     expect(store.getState().user).toEqual({ ...GUEST, username: "inv_1" });
   });
 });
+
+describe("una renovación que trae otra identidad", () => {
+  it("si el usuario renovado es otro (invitado → cuenta en otra pestaña), la sesión pasa a ser la nueva", () => {
+    const { services, store } = setup();
+    store.setState({ status: "authenticated", user: GUEST });
+    store.getState().refreshed(ASH);
+    expect(store.getState()).toMatchObject({ status: "authenticated", user: ASH });
+    expect(isGuest(store.getState().user)).toBe(false);
+    void services;
+  });
+
+  it("si es el mismo, no cambia nada (ni dispara suscriptores)", () => {
+    const { store } = setup();
+    store.setState({ status: "authenticated", user: ASH });
+    const seen = vi.fn();
+    store.subscribe(seen);
+    store.getState().refreshed({ ...ASH });
+    expect(seen).not.toHaveBeenCalled();
+  });
+});

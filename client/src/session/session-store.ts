@@ -18,6 +18,11 @@ export interface SessionState {
   saveAvatar(avatarId: number | null): Promise<void>;
   /** Borra la cuenta con su contraseña y deja la sesión cerrada; si falla, lanza y la sesión sigue. */
   deleteAccount(password: string): Promise<void>;
+  /**
+   * Tras una renovación silenciosa: si trae otra identidad (otra pestaña entró con una cuenta, o como otro invitado),
+   * esta pestaña pasa a ser esa persona en vez de seguir mostrando a la anterior.
+   */
+  refreshed(user: SessionUser): void;
   /** La sesión se perdió (no se pudo renovar): hay que volver a iniciar sesión. */
   expire(): void;
 }
@@ -70,6 +75,11 @@ export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState>
     async deleteAccount(password) {
       await endpoints.auth.deleteAccount(password);
       set({ status: "anonymous", user: null });
+    },
+
+    refreshed(user) {
+      if (get().user?.id === user.id) return;
+      set({ status: "authenticated", user });
     },
 
     expire() {

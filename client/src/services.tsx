@@ -63,7 +63,11 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
   const baseUrl = options.baseUrl ?? "";
 
   const sessionHolder: { store?: StoreApi<SessionState> } = {};
-  const api = new ApiClient({ baseUrl, onSessionLost: () => sessionHolder.store?.getState().expire() });
+  const api = new ApiClient({
+    baseUrl,
+    onSessionLost: () => sessionHolder.store?.getState().expire(),
+    onSessionRefreshed: (session) => sessionHolder.store?.getState().refreshed(session.user),
+  });
   const endpoints = createEndpoints(api);
   const session = createSessionStore(endpoints);
   sessionHolder.store = session;
