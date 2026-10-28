@@ -42,7 +42,7 @@ export const avatarSchema = z.object({
 });
 
 /** Borrar la cuenta: se confirma con la contraseña (la comprobación es la misma que la del inicio de sesión). */
-export const deleteAccountSchema = z.object({ password: z.string().min(1, "Escribe tu contraseña") });
+export const deleteAccountSchema = z.object({ password: z.string().min(1, "Escribe tu contraseña").max(1024) });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

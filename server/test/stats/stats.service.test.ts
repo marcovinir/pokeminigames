@@ -147,7 +147,7 @@ describe("StatsService.getHistory", () => {
         opponent: { username: "misty", avatarId: null },
         myScore: 300,
         opponentScore: 700,
-        config,
+        config: { ...config, typeHints: false },
       },
     ]);
   });

@@ -1,7 +1,7 @@
 import type { ServerEvent } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import { type GameView, applyServerEvent, initialGameView } from "../../src/game/apply-event";
-import { SERVER_NOW, event, silhouetteReveal, pokemon } from "../helpers/events";
+import { SERVER_NOW, event, silhouetteReveal, pokemon, roundResult } from "../helpers/events";
 
 /** Aplica los eventos en orden, cada uno "recibido" en el navegador a la hora indicada. */
 function play(events: [ServerEvent, number?][], start: GameView = initialGameView): GameView {
@@ -404,6 +404,14 @@ describe("la silueta en la vista", () => {
     expect(view.silhouette).toMatchObject({ round: null, reveals: [reveal], lastReveal: reveal, nextRoundAt: SERVER_NOW + 6000 });
     expect(view.players.map((p) => p.totalStats)).toEqual([808, 0]);
     expect(view.roundsPlayed).toBe(1);
+  });
+});
+
+describe("reconectar en la pausa entre rondas", () => {
+  it("el room-state trae el último resultado y la pantalla lo puede enseñar", () => {
+    const result = roundResult({ round: 2 });
+    const view = play([[event.roomState({ phase: "round_result", roundsPlayed: 2, lastResult: result })]]);
+    expect(view.lastResult).toEqual(result);
   });
 });
 

@@ -1,6 +1,7 @@
 // Retira una cuenta (moderación, por ejemplo un nombre ofensivo): la anonimiza igual que «Borrar mi cuenta».
 // Uso: DATABASE_URL=… npm run account:delete -w server -- <nombre de usuario>
 import { stdin, stdout } from "node:process";
+import { isDeletedUsername } from "@pokemon-minigames/shared";
 import { createInterface } from "node:readline/promises";
 import { anonymizeAccount } from "../src/auth/delete-account.js";
 import { findAccountByUsername } from "../src/auth/find-account.js";
@@ -28,6 +29,7 @@ try {
     console.error(`No hay ninguna cuenta llamada «${username}».`);
     process.exitCode = 1;
   } else {
+    if (isDeletedUsername(account.username)) console.log("Esa cuenta ya está borrada (anonimizada); volver a hacerlo no cambia nada.");
     console.log(`Cuenta: ${account.username} · ${maskEmail(account.email)} · alta ${account.createdAt.toISOString().slice(0, 10)}`);
     const readline = createInterface({ input: stdin, output: stdout });
     const answer = await readline.question("Se anonimizará y no se puede deshacer. Escribe el nombre para confirmar: ");

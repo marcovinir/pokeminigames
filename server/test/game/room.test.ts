@@ -227,7 +227,18 @@ describe("GameRoom", () => {
       expect(repository.calls).toEqual(["discardGame:game-1"]);
     });
 
-    it("el descarte espera a lo que ya estaba en la cola y reintenta si falla", async () => {
+    it("el descarte espera a lo que ya estaba en la cola", async () => {
+      const { room, repository } = setup();
+      // Una escritura lenta ya encolada (sentar al segundo jugador) debe terminar antes de que empiece el descarte.
+      repository.delays.addSecondPlayer = 20;
+      room.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+      room.markNotPersisted();
+      await room.idle();
+      const order = repository.timeline.filter((entry) => /^(addSecondPlayer|discardGame):/.test(entry));
+      expect(order).toEqual(["addSecondPlayer:start", "addSecondPlayer:end", "discardGame:start", "discardGame:end"]);
+    });
+
+    it("el descarte reintenta si falla", async () => {
       const { room, repository } = setup();
       repository.failures.discardGame = 2;
       room.markNotPersisted();

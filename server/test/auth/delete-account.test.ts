@@ -126,3 +126,22 @@ describe("DELETE /auth/me: borrar la cuenta", () => {
     expect(Number(third.headers["retry-after"])).toBeGreaterThan(0);
   });
 });
+
+describe("una sesión vieja de una cuenta borrada", () => {
+  it("con el access token aún vigente no puede leer la cuenta ni guardar avatar o tema", async () => {
+    const { token, userId } = await register();
+    await remove(token, ash.password);
+    const auth = (req: request.Test) => req.set("Authorization", `Bearer ${token}`);
+    expect((await auth(request(app).get("/auth/me"))).status).toBe(401);
+    expect((await auth(request(app).put("/auth/me/avatar")).send({ avatarId: 94 })).status).toBe(401);
+    expect((await auth(request(app).put("/auth/me/preferences")).send({ theme: "pokedex", themeMode: "oscuro" })).status).toBe(401);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(row.avatarPokemonId).toBeNull();
+    expect(row.theme).toBeNull();
+  });
+
+  it("la contraseña para borrar tiene el mismo tope que la del inicio de sesión", async () => {
+    const { token } = await register();
+    expect((await remove(token, "x".repeat(2000))).status).toBe(400);
+  });
+});

@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../../src/app.js";
 import { buildTestContext } from "../helpers/app.js";
 import { prisma } from "../helpers/db.js";
+import { createSilhouetteRegistry } from "../../src/silhouettes/registry.js";
 
 const INDEX = '<!doctype html><html><body><div id="root"></div><script type="module" src="/assets/app.abc123.js"></script></body></html>';
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -31,7 +32,7 @@ afterAll(async () => {
 function appWith(clientDist?: string) {
   const ctx = buildTestContext();
   const { env, tokens, roomManager, catalog } = ctx;
-  return createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: "off", clientDist });
+  return createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: "off", clientDist, silhouettes: createSilhouetteRegistry() });
 }
 
 describe("el cliente construido", () => {
