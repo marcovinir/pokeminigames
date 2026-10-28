@@ -8,17 +8,17 @@ describe("motor: sala y conexiones", () => {
     expect(h.state.phase).toBe("waiting");
     expect(h.state.players[1]).toMatchObject({ username: "ash", connected: false, totalStats: 0, team: [] });
     expect(h.state.players[2]).toBeUndefined();
-    expect(h.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire" } }]);
+    expect(h.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire", expiresAt: START_TIME + 10 * 60 * 1000 } }]);
   });
 
   it("una sala de revancha caduca a los 30 s y su estado lo dice; una normal sigue caducando a los 10 min y sin la clave", () => {
     const rematch = new Harness({ rematch: true });
     expect(rematch.state.rematch).toBe(true);
-    expect(rematch.pending).toEqual([{ at: START_TIME + 30 * 1000, timer: { kind: "expire" } }]);
+    expect(rematch.pending).toEqual([{ at: START_TIME + 30 * 1000, timer: { kind: "expire", expiresAt: START_TIME + 30 * 1000 } }]);
 
     const normal = new Harness();
     expect("rematch" in normal.state).toBe(false);
-    expect(normal.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire" } }]);
+    expect(normal.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire", expiresAt: START_TIME + 10 * 60 * 1000 } }]);
   });
 
   it("si el rival no entra a la sala de revancha, a los 30 s caduca como una sala en espera (abandonada, motivo expired)", () => {
@@ -30,6 +30,36 @@ describe("motor: sala y conexiones", () => {
     h.advance(1_000);
     expect(h.state.phase).toBe("finished");
     expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+  });
+
+  it("si el rival entra tarde a la revancha y alguien se cae en la cuenta atrás pasado el segundo 30, la sala espera (no «no llegó»)", () => {
+    const h = new Harness({ rematch: true });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(27_000);
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    expect(h.state.phase).toBe("starting");
+    h.advance(4_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+    expect(h.state.phase).toBe("waiting");
+    // El temporizador viejo de 30 s ya no cierra la sala: entraron los dos, ahora caduca como una sala normal.
+    h.advance(60_000);
+    expect(h.state.phase).toBe("waiting");
+    h.advance(10 * 60 * 1000);
+    expect(h.state.phase).toBe("finished");
+    expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
+  });
+
+  it("revancha: si alguien se cae en la cuenta atrás antes del segundo 30, el temporizador viejo de 30 s ya no cierra la sala", () => {
+    const h = new Harness({ rematch: true });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(26_000);
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    h.advance(2_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+    h.advance(5_000);
+    expect(h.state.phase).toBe("waiting");
   });
 
   describe("PLAYER_JOINED", () => {

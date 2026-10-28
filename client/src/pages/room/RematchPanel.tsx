@@ -58,12 +58,9 @@ function RecordCard({ record, me, rival }: { record: RematchRecord; me: RecordPl
       {record.recent.length > 0 ? (
         <ol aria-label="Últimas partidas" className="mt-3 flex flex-wrap justify-center gap-1.5">
           {record.recent.map((result, index) => (
-            <li
-              key={index}
-              aria-label={RECENT_RESULT_LABELS[result].name}
-              className={`inline-flex size-6 items-center justify-center rounded-full text-xs font-bold ${RESULT_CHIP[result]}`}
-            >
-              {RECENT_RESULT_LABELS[result].short}
+            <li key={index} className={`inline-flex size-6 items-center justify-center rounded-full text-xs font-bold ${RESULT_CHIP[result]}`}>
+              <span aria-hidden="true">{RECENT_RESULT_LABELS[result].short}</span>
+              <span className="sr-only">{RECENT_RESULT_LABELS[result].name}</span>
             </li>
           ))}
         </ol>
@@ -168,7 +165,15 @@ export function RematchPanel() {
     const message = rematchClosedMessage(offer.closedReason ?? "failed", rival);
     return message ? (
       <div ref={closedRef} tabIndex={-1} className="outline-none">
-        <Notice>{message}</Notice>
+        <Notice>
+          {message}
+          {opponent?.guest ? (
+            <>
+              {" "}
+              <GuestTag className="align-middle" />
+            </>
+          ) : null}
+        </Notice>
       </div>
     ) : null;
   }

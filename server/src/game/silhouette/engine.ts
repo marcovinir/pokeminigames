@@ -77,7 +77,7 @@ export function createSilhouetteGame(
     graceEndsAt: {},
     outcome: null,
   };
-  return { state, effects: [{ kind: "schedule", at: state.expiresAt, timer: { kind: "expire" } }] };
+  return { state, effects: [{ kind: "schedule", at: state.expiresAt, timer: { kind: "expire", expiresAt: state.expiresAt } }] };
 }
 
 export function reduceSilhouette(prev: SilhouetteState, event: GameEvent, now: number, deps: SilhouetteDeps): SilhouetteResult {
@@ -145,6 +145,12 @@ function tryStart(c: Ctx): void {
   s.startsAt = c.now + seconds(START_COUNTDOWN_SECONDS);
   emit(c, "all", { name: "game-starting", payload: { startsAt: s.startsAt, serverNow: c.now } });
   schedule(c, s.startsAt, { kind: "start", startsAt: s.startsAt });
+  // En una revancha, con los dos dentro ya nadie «no llegó»: si luego alguien se cae en la cuenta atrás, la sala espera el
+  // plazo de una normal en vez de cerrarse al cumplir los 30 s.
+  if (s.rematch && s.expiresAt - c.now <= seconds(REMATCH_ROOM_TTL_SECONDS)) {
+    s.expiresAt = c.now + minutes(WAITING_ROOM_TTL_MINUTES);
+    schedule(c, s.expiresAt, { kind: "expire", expiresAt: s.expiresAt });
+  }
 }
 
 function backToWaiting(c: Ctx): void {
@@ -195,7 +201,7 @@ function onTimer(c: Ctx, timer: TimerId): void {
   const { s } = c;
   switch (timer.kind) {
     case "expire":
-      if (s.phase === "waiting") finish(c, "expired", null);
+      if (s.phase === "waiting" && s.expiresAt === timer.expiresAt) finish(c, "expired", null);
       break;
     case "start":
       if (s.phase === "starting" && s.startsAt === timer.startsAt) beginRound(c, 1);

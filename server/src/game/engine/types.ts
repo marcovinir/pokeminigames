@@ -82,7 +82,7 @@ export interface GameState {
 
 /** Identifica un temporizador. Los datos que lleva sirven para ignorarlo si ya quedó obsoleto. */
 export type TimerId =
-  | { kind: "expire" }
+  | { kind: "expire"; expiresAt: number }
   | { kind: "start"; startsAt: number }
   | { kind: "choose"; round: number }
   | { kind: "round"; round: number }

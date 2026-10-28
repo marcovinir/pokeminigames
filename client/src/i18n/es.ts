@@ -173,7 +173,6 @@ export const rematchYourSecondsLeft = (seconds: number): string => `Te quedan ${
 export const rematchRequested = (name: string): string => `${name} quiere la revancha`;
 export const rematchEntering = (name: string): string => `${name} entrando…`;
 export const rematchNoShow = (name: string): string => `${name} no llegó.`;
-export const rematchReady = (name: string): string => `✓ ${name}, listo`;
 
 /** Las últimas partidas del récord, como fichas: la letra que se ve y el nombre que se lee. */
 export const RECENT_RESULT_LABELS: Record<GameResult, { short: string; name: string }> = {

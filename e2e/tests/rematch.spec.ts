@@ -72,7 +72,7 @@ test("rechazar: quien la pidió ve «… ya no quiere la revancha.» y solo «Vo
     await playOneRoundGame(ash, misty);
     await rematchButton(ash.page).click();
     await misty.page.getByRole("button", { name: "Rechazar" }).click();
-    await expect(ash.page.getByText(`${misty.name} ya no quiere la revancha.`, { exact: true })).toBeVisible();
+    await expect(ash.page.getByRole("status").getByText(`${misty.name} ya no quiere la revancha.`, { exact: true })).toBeVisible();
     await expect(rematchButton(ash.page)).toHaveCount(0);
     await expect(ash.page.getByRole("button", { name: "Volver al lobby" })).toBeVisible();
   } finally {
@@ -91,7 +91,7 @@ test("cancelar: el rival ve «… ya no quiere la revancha.» y pierde los boton
     await rematchButton(ash.page).click();
     await expect(misty.page.getByRole("button", { name: "Aceptar" })).toBeVisible();
     await ash.page.getByRole("button", { name: "Cancelar" }).click();
-    await expect(misty.page.getByText(`${ash.name} ya no quiere la revancha.`, { exact: true })).toBeVisible();
+    await expect(misty.page.getByRole("status").getByText(`${ash.name} ya no quiere la revancha.`, { exact: true })).toBeVisible();
     await expect(misty.page.getByRole("button", { name: "Aceptar" })).toHaveCount(0);
   } finally {
     await ash.context.close();
@@ -108,7 +108,7 @@ test("«Volver al lobby» del rival: quien se queda ve «… se fue.»", async (
     await playOneRoundGame(ash, misty);
     await expect(rematchButton(ash.page)).toBeVisible();
     await misty.page.getByRole("button", { name: "Volver al lobby" }).click();
-    await expect(ash.page.getByText(`${misty.name} se fue.`, { exact: true })).toBeVisible();
+    await expect(ash.page.getByRole("status").getByText(`${misty.name} se fue.`, { exact: true })).toBeVisible();
     await expect(rematchButton(ash.page)).toHaveCount(0);
   } finally {
     await ash.context.close();
@@ -171,8 +171,8 @@ test("se agota el plazo: a los 60 s de la petición los dos ven «Se acabó el t
     await playOneRoundGame(ash, misty);
     await rematchButton(ash.page).click();
     await expect(misty.page.getByRole("button", { name: "Aceptar" })).toBeVisible();
-    await expect(ash.page.getByText("Se acabó el tiempo.", { exact: true })).toBeVisible({ timeout: 75_000 });
-    await expect(misty.page.getByText("Se acabó el tiempo.", { exact: true })).toBeVisible();
+    await expect(ash.page.getByRole("status").getByText("Se acabó el tiempo.", { exact: true })).toBeVisible({ timeout: 75_000 });
+    await expect(misty.page.getByRole("status").getByText("Se acabó el tiempo.", { exact: true })).toBeVisible();
     await expect(misty.page.getByRole("button", { name: "Aceptar" })).toHaveCount(0);
   } finally {
     await ash.context.close();

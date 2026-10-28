@@ -1,4 +1,4 @@
-import type { CreateDobleTipoRoomRequest, DobleTipoConfig, TypeMode } from "@pokemon-minigames/shared";
+import type { CreateDobleTipoRoomRequest, TypeMode } from "@pokemon-minigames/shared";
 import {
   CUSTOM_ROUNDS_MAX,
   CUSTOM_ROUNDS_MIN,
@@ -32,22 +32,6 @@ export const LENGTH_LABELS: Record<LengthKind, string> = {
   "custom-stats": "Personalizada: meta de stats",
 };
 
-/** El formulario de una sala que ya se jugó, para "Jugar de nuevo" con la misma configuración. */
-export function formFromConfig(config: DobleTipoConfig): CreateRoomForm {
-  const base = {
-    typeMode: config.typeMode,
-    customRounds: DEFAULT_FORM.customRounds,
-    statsGoal: DEFAULT_FORM.statsGoal,
-    typeHints: config.typeHints === true,
-  };
-  if (config.lengthMode === "fixed_rounds") {
-    return { ...base, lengthKind: config.roundsLimit === 5 ? "fixed-5" : "fixed-3" };
-  }
-  if (config.roundsLimit !== null) {
-    return { ...base, lengthKind: "custom-rounds", customRounds: String(config.roundsLimit) };
-  }
-  return { ...base, lengthKind: "custom-stats", statsGoal: String(config.statsGoal ?? DEFAULT_FORM.statsGoal) };
-}
 
 function wholeNumber(text: string): number | null {
   return /^\d+$/.test(text.trim()) ? Number(text.trim()) : null;

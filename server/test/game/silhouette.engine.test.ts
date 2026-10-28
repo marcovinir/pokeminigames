@@ -10,7 +10,7 @@ describe("silueta: sala y conexiones", () => {
   it("una sala nueva espera al segundo jugador y caduca a los 10 minutos", () => {
     const h = new SilhouetteHarness();
     expect(h.state.phase).toBe("waiting");
-    expect(h.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire" } }]);
+    expect(h.pending).toEqual([{ at: START_TIME + 10 * 60 * 1000, timer: { kind: "expire", expiresAt: START_TIME + 10 * 60 * 1000 } }]);
     h.advance(10 * 60 * 1000);
     expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "expired" });
   });
@@ -195,7 +195,19 @@ describe("silueta: rondas", () => {
   it("una sala de revancha caduca a los 30 s", () => {
     const h = new SilhouetteHarness({ rematch: true });
     expect(h.state.rematch).toBe(true);
-    expect(h.pending).toEqual([{ at: START_TIME + 30_000, timer: { kind: "expire" } }]);
+    expect(h.pending).toEqual([{ at: START_TIME + 30_000, timer: { kind: "expire", expiresAt: START_TIME + 30_000 } }]);
+  });
+
+  it("revancha: si alguien se cae en la cuenta atrás pasado el segundo 30, la sala espera como una normal", () => {
+    const h = new SilhouetteHarness({ rematch: true });
+    h.dispatch({ type: "PLAYER_JOINED", userId: "u2", username: "misty" });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(28_000);
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    h.advance(3_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+    h.advance(60_000);
+    expect(h.state.phase).toBe("waiting");
   });
 });
 
