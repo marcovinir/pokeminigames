@@ -6,6 +6,7 @@ import { Notice } from "../../components/Notice";
 import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
 import {
+  MENU_TEXT,
   REMATCH_TEXT,
   ROOM_GONE_CODES,
   SILHOUETTE_SCREEN,
@@ -153,8 +154,9 @@ export function RoomPage() {
       <section className="mx-auto max-w-md text-center">
         <Notice tone="danger">{errorMessage(error.code)}</Notice>
         <div className="mt-4">
+          {/* Lleva al menú (sin la sala no se sabe de qué juego era): el botón lo dice. */}
           <Button variant="primary" onClick={() => navigate("/")}>
-            Volver al lobby
+            {MENU_TEXT.backToMenu}
           </Button>
         </div>
       </section>

@@ -462,13 +462,13 @@ describe("avisos de conexión y errores", () => {
     ["ROOM_NOT_FOUND", "Esa sala no existe o ya terminó."],
     ["NOT_IN_ROOM", "No participas en esa sala."],
     ["ROOM_CLOSED", "Esa sala ya empezó o se cerró."],
-  ] as const)("con %s la sala ya no sirve: lo explica y ofrece volver al lobby", async (code, message) => {
+  ] as const)("con %s la sala ya no sirve: lo explica y ofrece «Volver al menú», que lleva al menú", async (code, message) => {
     const { services, user } = renderRoom();
     serverSends(services, event.error(code));
     expect(screen.getByRole("alert")).toHaveTextContent(message);
     expect(screen.queryByText("Conectando con la sala…")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Volver al lobby" }));
-    expect(screen.getByTestId("location")).toHaveTextContent("/");
+    await user.click(screen.getByRole("button", { name: "Volver al menú" }));
+    expect(screen.getByTestId("location").textContent).toBe("/");
   });
 });
 
