@@ -1,6 +1,6 @@
 # Música y efectos de sonido (versión 1.0) — diseño
 
-Fecha: 2026-10-28 · Estado: borrador para que Marco lo apruebe · Rama: `musica-y-sonido`
+Fecha: 2026-10-28 · Estado: borrador para que Marco lo apruebe · Rama: `musica-y-sonido` (sale de `main` y debe ponerse al día con él antes de implementar: trae la `LICENSE` y los fondos nuevos)
 
 ## Intención
 
@@ -37,7 +37,7 @@ A Marco le han dicho que el juego necesita **música y efectos de sonido**, y é
 
 - Las del repositorio (AGENTS.md): español con tildes, TDD, contraste AA en los 4 temas, 375 px y escritorio, no subir `main` sin permiso, y el trabajo entra por Pull Request con la CI en verde.
 - **Formato que suene en todos los navegadores, iPhone incluido:** MP3 (o AAC). Los temas que vienen en OGG o WAV se convierten; el implementador elige cómo (sin dependencias de pago; la conversión es un paso de preparación, no del servidor).
-- **Peso:** cada tema en torno a 128 kbps y el total de la música por debajo de ~15 MB (hoy *Town Center* pesa 7,2 MB a 320 kbps: se reconvierte).
+- **Peso:** cada tema en torno a 128 kbps y el total de la música por debajo de ~15 MB (hoy *Town Center* pesa 7,2 MB a 320 kbps: se reconvierte). Estimado con los archivos actuales: unos 14–15 MB. Si se pasa, se baja a 96 kbps antes que quitar temas (mi decisión: la selección es de Marco).
 - Los efectos **no son archivos**: se generan con Web Audio en el cliente.
 - Sin migraciones.
 
@@ -55,7 +55,7 @@ Todos de OpenGameArt; se descargan de su página (los nombres de archivo exactos
 | Ganar | Menu | SuperGamersGames | CC-BY 4.0 (citar) | https://opengameart.org/content/6-chiptune-loops |
 | Perder | Game Over | Aureolus_Omicron | CC0 | https://opengameart.org/content/15-melodic-rpg-chiptunes |
 
-Los créditos van en la página **Acerca de** (los dos que lo exigen, con autor, licencia y enlace; los CC0 como agradecimiento) y en `client/public/audio/CREDITOS.md`. La aclaración de la `LICENSE` sobre lo que no cubre se amplía a la música.
+Los créditos van en la página **Acerca de** (los dos que lo exigen, con autor, licencia y enlace; los CC0 como agradecimiento) y en `client/public/audio/CREDITOS.md`. La `LICENSE` (MIT, ya en `main` desde el PR #15) aclara que no cubre lo de Pokémon ni los fanarts; se amplía para decir que tampoco cubre la música, que conserva su propia licencia. Convertir *Town Center* a MP3 no la modifica como obra (es un cambio de formato): basta con citar autor, licencia CC-BY-SA 3.0 y enlace.
 
 ## Cuándo suena qué
 
@@ -65,7 +65,8 @@ Los créditos van en la página **Acerca de** (los dos que lo exigen, con autor,
 |---|---|---|
 | Sala | menú principal, lobbies, sala de espera (`waiting`), pantalla «¡Revancha!» | uno al azar de la lista de sala; **sigue sonando** al moverse entre estas pantallas |
 | Partida | desde la cuenta atrás hasta la última ronda (`starting`, `choosing_types`, `round_active`, `round_result`) | uno al azar de la lista de partida, en bucle; *Porkymon* empieza por su entrada |
-| Final | resumen (`finished`) | ganar → *Menu*; perder → *Game Over*; **empate → *Menu*** (mi decisión: nadie perdió). Suena **una vez**, sin bucle |
+| Final | resumen (`finished`) de una partida que **se jugó hasta el final o la ganó alguien** | ganar (también por abandono o desconexión del rival) → *Menu*; perder (también por abandonar yo) → *Game Over*; **empate (`completed` sin ganador) → *Menu*** (mi decisión: nadie perdió). Suena **una vez**, sin bucle, y **empieza cuando termina el efecto de ganar o perder** (~1,2 s; mi decisión, para no pisarse). Al terminar, **silencio** hasta salir del resumen (mi decisión) |
+| Sala (otra vez) | resumen de una partida **sin ganador que no se completó** (`cancelled`, `expired`, `abandoned` con `winnerSeat` nulo) | ni efecto de final ni tema de final: vuelve la música de sala (mi decisión: no suena a victoria algo que no se jugó) |
 | Nada | inicio de sesión, crear cuenta, páginas de información, perfil | silencio (la música se detiene con fundido) |
 
 - Al volver a un momento se elige otro tema al azar, sin repetir el último si hay más (mi decisión).
@@ -79,12 +80,12 @@ Los créditos van en la página **Acerca de** (los dos que lo exigen, con autor,
 | Fallo (versión anterior) | lo mismo, si no (incluido no responder) |
 | Pokémon revelado | silueta: al llegar la revelación, **antes** del acierto o el fallo (este suena al terminar la revelación, ~0,6 s después; mi decisión) |
 | Empieza la ronda | al empezar cada ronda (los dos juegos) |
-| Últimos segundos | una vez por ronda, al entrar en los últimos 5 s (cuando el cronómetro se pone en rojo), si aún no respondí |
-| Ganar / Perder | al terminar la partida, según el resultado (empate: ganar) |
-| Botón | al pulsar los botones principales (`Button`) y los «Jugar» del menú |
+| Últimos segundos | una vez por ronda, al entrar en los últimos 5 s del plazo **para responder** (fase `round_active`, cuando el cronómetro se pone en rojo), si aún no respondí. **No** en la elección de tipos (`choosing_types`) (mi decisión) |
+| Ganar / Perder | al terminar la partida, según el resultado: el mismo criterio que la tabla de música (empate completado: ganar; partida sin ganador no completada: ninguno) |
+| Botón | al pulsar los botones principales (`Button`) y los «Jugar» del menú, **en cualquier pantalla** (los efectos dependen solo de su interruptor; la música es la que tiene zonas) (mi decisión) |
 | El rival respondió | cuando el rival envía su respuesta en la ronda abierta (ver abajo) |
 
-**«El rival respondió» necesita un aviso nuevo del servidor** (hoy no existe): un evento de Socket.io `opponent-answered` con `{ round }`, que el servidor envía al **otro** jugador cuando uno responde, en los dos juegos. No dice qué respondió. **Decisión mía, que cambia un poco el juego:** saber que el rival ya respondió mete presión (sobre todo en la silueta, donde la rapidez da puntos). Por la regla de accesibilidad, además del sonido aparece en pantalla un aviso discreto «Tu rival ya respondió».
+**«El rival respondió» necesita un aviso nuevo del servidor** (hoy no existe): un evento de Socket.io `opponent-answered` con `{ round }`, que el servidor envía al **otro** jugador cuando uno responde, en los dos juegos. No dice qué respondió. En «Doble tipo» cuenta solo enviar el Pokémon, no elegir el tipo. Para que el aviso en pantalla siga siendo cierto al recargar o reconectar, el estado de la sala (`room-state`, en los dos juegos) lleva también si el rival ya respondió en la ronda abierta (un campo nuevo en `shared`; el efecto no suena al reconectar, solo se ve el aviso). **Decisión mía, que cambia un poco el juego:** saber que el rival ya respondió mete presión (sobre todo en la silueta, donde la rapidez da puntos). Por la regla de accesibilidad, además del sonido aparece en pantalla un aviso discreto «Tu rival ya respondió».
 
 ## El control
 
