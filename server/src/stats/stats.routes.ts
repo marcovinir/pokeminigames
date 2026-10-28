@@ -1,3 +1,4 @@
+import { isDeletedUsername } from "@pokemon-minigames/shared";
 import { Router } from "express";
 import { createRequireAccount, getAuth } from "../auth/auth.middleware.js";
 import type { TokenService } from "../auth/tokens.js";
@@ -30,7 +31,9 @@ export function createStatsRouter({ service, tokens }: StatsRouterDeps): Router 
   // Bajo /users y no bajo /stats/:username: "history" es un nombre de usuario válido y chocaría.
   router.get("/users/:username/stats", requireAccount, async (req, res) => {
     const username = String(req.params.username);
-    const user = USERNAME_PATTERN.test(username) ? await service.findUserByUsername(username) : null;
+    // Una cuenta borrada no tiene perfil: su nombre de relleno sale en el historial del rival, pero no se puede abrir.
+    const valid = USERNAME_PATTERN.test(username) && !isDeletedUsername(username);
+    const user = valid ? await service.findUserByUsername(username) : null;
     if (!user) throw new AppError(404, "USER_NOT_FOUND", "No existe ese jugador");
     res.json(await service.getStats(user.id));
   });

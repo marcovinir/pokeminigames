@@ -75,6 +75,15 @@ describe("DELETE /auth/me: borrar la cuenta", () => {
     expect(history.games[0].opponent.avatarId).toBeNull();
   });
 
+  it("el perfil público de una cuenta borrada no existe (404), aunque se escriba su nombre de relleno", async () => {
+    const a = await register();
+    const b = await register(app, misty);
+    await remove(a.token, ash.password);
+    const response = await request(app).get(`/users/${deletedUsernameFor(a.userId)}/stats`).set("Authorization", `Bearer ${b.token}`);
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("USER_NOT_FOUND");
+  });
+
   it("con la contraseña incorrecta responde 403 WRONG_PASSWORD (no 401: el cliente renovaría la sesión y repetiría) y no toca nada", async () => {
     const { token, cookie, userId } = await register();
     const response = await remove(token, "otra-cosa-123");
