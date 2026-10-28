@@ -44,7 +44,7 @@ export const NO_STATS: Stats = {
 /** Un par de datos curiosos de ejemplo (los de verdad salen del catálogo del servidor). */
 export const FACTS: PokemonFact[] = [
   { kind: "top_stat", stat: "defense", pokemon: [{ id: 213, es: "Shuckle" }], value: 230 },
-  { kind: "type_count", type: "water", count: 134 },
+  { kind: "type_extreme", which: "most", type: "water", count: 134 },
   { kind: "pair_count", count: 130 },
 ];
 

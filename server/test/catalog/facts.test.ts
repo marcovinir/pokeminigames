@@ -25,9 +25,10 @@ describe("buildFacts con el catálogo de pruebas", () => {
     }
   });
 
-  it("cuenta los tipos: fire 4, flying 3, water 3, ground 2, grass 2, poison 2, electric 1, steel 1, y omite los que nadie tiene", () => {
-    const counts = Object.fromEntries(facts.flatMap((f) => (f.kind === "type_count" ? [[f.type, f.count]] : [])));
-    expect(counts).toEqual({ fire: 4, flying: 3, water: 3, ground: 2, grass: 2, poison: 2, electric: 1, steel: 1 });
+  it("da el tipo con más Pokémon (fuego, 4) y omite el más raro si hay empate (eléctrico y acero, 1); ya no un dato por tipo", () => {
+    const extremes = facts.filter((f) => f.kind === "type_extreme");
+    expect(extremes).toEqual([{ kind: "type_extreme", which: "most", type: "fire", count: 4 }]);
+    expect(facts.some((f) => (f.kind as string) === "type_count")).toBe(false);
   });
 
   it("dual_type_count 8 de 10, pair_count 4 y common_pair flying+fire (orden canónico de los tipos) con 3", () => {
@@ -84,9 +85,9 @@ describe("buildFacts con el catálogo real (data/catalog.snapshot.json)", () => 
   const catalog = new PokemonCatalog(pokemon);
   const facts = buildFacts(catalog);
 
-  it("hay entre 20 y 35 datos, sin NaN ni nombres vacíos, y cada Pokémon citado existe en el catálogo con ese nombre", () => {
-    expect(facts.length).toBeGreaterThanOrEqual(20);
-    expect(facts.length).toBeLessThanOrEqual(35);
+  it("hay entre 8 y 20 datos (uno por tipo ya no), sin NaN ni nombres vacíos, y cada Pokémon citado existe en el catálogo con ese nombre", () => {
+    expect(facts.length).toBeGreaterThanOrEqual(8);
+    expect(facts.length).toBeLessThanOrEqual(20);
     expect(JSON.stringify(facts)).not.toMatch(/NaN|null|undefined/);
     for (const fact of facts) {
       if (fact.kind !== "top_stat" && fact.kind !== "lowest_total") continue;
@@ -126,9 +127,15 @@ describe("buildFacts con el catálogo real (data/catalog.snapshot.json)", () => 
         pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
       }
     }
-    const reported = facts.filter((f): f is Extract<PokemonFact, { kind: "type_count" }> => f.kind === "type_count");
-    expect(reported.length).toBe(typeCounts.size);
-    for (const fact of reported) expect(fact.count, fact.type).toBe(typeCounts.get(fact.type));
+    const reported = facts.filter((f): f is Extract<PokemonFact, { kind: "type_extreme" }> => f.kind === "type_extreme");
+    const most = Math.max(...typeCounts.values());
+    const least = Math.min(...typeCounts.values());
+    const unique = (n: number) => [...typeCounts.values()].filter((count) => count === n).length === 1;
+    expect(reported.length).toBe(Number(unique(most)) + Number(unique(least)));
+    for (const fact of reported) {
+      expect(fact.count, fact.type).toBe(typeCounts.get(fact.type));
+      expect(fact.count).toBe(fact.which === "most" ? most : least);
+    }
     expect(find(facts, "dual_type_count")).toEqual({ kind: "dual_type_count", count: pokemon.filter((p) => p.types.length === 2).length, total: pokemon.length });
     expect(find(facts, "pair_count")?.count).toBe(pairCounts.size);
     const topPair = Math.max(...pairCounts.values());

@@ -38,9 +38,16 @@ export function buildFacts(catalog: PokemonCatalog): PokemonFact[] {
     if (best) facts.push({ kind: "top_stat", stat, ...best });
   }
 
-  for (const type of TYPE_NAMES) {
-    const count = all.filter((pokemon) => pokemon.types.includes(type)).length;
-    if (count > 0) facts.push({ kind: "type_count", type, count });
+  // El tipo más común y el más raro (antes era un dato por tipo: 18 casi iguales). Con empate no se dice ninguno.
+  const typeCounts = TYPE_NAMES.map((type) => ({ type, count: all.filter((pokemon) => pokemon.types.includes(type)).length })).filter(
+    ({ count }) => count > 0,
+  );
+  if (typeCounts.length > 0) {
+    for (const which of ["most", "least"] as const) {
+      const target = which === "most" ? Math.max(...typeCounts.map((t) => t.count)) : Math.min(...typeCounts.map((t) => t.count));
+      const leaders = typeCounts.filter((t) => t.count === target);
+      if (leaders.length === 1) facts.push({ kind: "type_extreme", which, type: leaders[0]!.type, count: target });
+    }
   }
 
   if (all.length > 0) {
