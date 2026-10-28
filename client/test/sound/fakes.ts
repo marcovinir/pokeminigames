@@ -6,6 +6,8 @@ export class FakeAudio {
   /** Si es true, `play()` se rechaza como cuando el navegador aún no deja sonar nada. */
   static blocked = false;
   src: string;
+  /** El archivo con el que se creó (src se vacía al liberarlo). */
+  readonly originalSrc: string;
   loop = false;
   volume = 1;
   currentTime = 0;
@@ -15,6 +17,7 @@ export class FakeAudio {
 
   constructor(src = "") {
     this.src = src;
+    this.originalSrc = src;
     FakeAudio.created.push(this);
   }
 
@@ -28,6 +31,12 @@ export class FakeAudio {
   pause(): void {
     this.paused = true;
   }
+
+  removeAttribute(name: string): void {
+    if (name === "src") this.src = "";
+  }
+
+  load(): void {}
 
   addEventListener(type: string, listener: () => void): void {
     if (type === "ended") this.endedListeners.push(listener);
@@ -63,6 +72,8 @@ export class FakeAudioContext {
   destination = { connect: () => {} };
   oscillators = 0;
   resumes = 0;
+  /** Los nodos de ganancia creados, para ver con qué volumen sonó cada efecto. */
+  gains: { gain: { value: number } }[] = [];
 
   constructor() {
     FakeAudioContext.created.push(this);
@@ -91,7 +102,9 @@ export class FakeAudioContext {
     return this.node();
   }
   createGain() {
-    return this.node();
+    const node = this.node() as unknown as { gain: { value: number } };
+    this.gains.push(node);
+    return node;
   }
   createDelay() {
     return this.node();

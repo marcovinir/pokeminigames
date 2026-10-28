@@ -13,9 +13,12 @@ export function useLastSeconds({ deadline, offset, answered, round, now }: { dea
   const { sound } = useServices();
   const remaining = useCountdown(deadline, offset, now ? { now } : {});
   const warnedRound = useRef<number | null>(null);
+  // Solo avisa al cruzar el umbral: si al montar (recargar, reconectar) ya quedaban menos de 5 s, no suena de golpe.
+  const sawAbove = useRef<number | null>(null);
 
   useEffect(() => {
-    if (answered || deadline === null || warnedRound.current === round) return;
+    if (remaining > LAST_SECONDS_MS) sawAbove.current = round;
+    if (answered || deadline === null || warnedRound.current === round || sawAbove.current !== round) return;
     if (remaining > 0 && remaining <= LAST_SECONDS_MS) {
       warnedRound.current = round;
       sound.play("tick");

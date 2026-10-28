@@ -78,7 +78,14 @@ export function SoundMenu() {
   }, [open]);
 
   return (
-    <div ref={root}>
+    <div
+      ref={root}
+      onBlur={(event) => {
+        // Con Tab fuera del panel, se cierra (un clic fuera ya lo cierra el oyente de mousedown).
+        const next = event.relatedTarget as Node | null;
+        if (open && next && !root.current?.contains(next)) setOpen(false);
+      }}
+    >
       <Button
         variant="header"
         className="shrink-0 px-3"

@@ -52,6 +52,16 @@ describe("musicCueFor: qué música toca", () => {
     expect(musicCueFor("/sala/ABC234", view({ phase: "finished", ended: null }))).toEqual({ zone: "lobby" });
   });
 
+  it("al entrar en una sala, mientras aún no se sabe la fase, no cambia la música (null)", () => {
+    expect(musicCueFor("/sala/ABC234", view({ phase: null }))).toBeNull();
+  });
+
+  it("mientras se recupera la sesión, o sin sesión, silencio (la página va a llevar a la entrada)", () => {
+    expect(musicCueFor("/", view(), "loading")).toEqual({ zone: "none" });
+    expect(musicCueFor("/jugar/silueta", view(), "anonymous")).toEqual({ zone: "none" });
+    expect(musicCueFor("/", view(), "authenticated")).toEqual({ zone: "lobby" });
+  });
+
   it("en el resto de pantallas, silencio", () => {
     for (const path of ["/login", "/registro", "/privacidad", "/faq", "/perfil", "/jugador/misty"]) {
       expect(musicCueFor(path, view({ phase: "round_active" })), path).toEqual({ zone: "none" });

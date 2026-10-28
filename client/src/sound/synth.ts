@@ -28,6 +28,11 @@ export function createSynth(ctx: AudioContext): Synth {
   feedback.connect(delay);
   delay.connect(out);
 
+  // El volumen de cada efecto va en sus propios buses (seco y al eco), fijado al pedirlo: cambiar el volumen después no
+  // afecta a un efecto que ya suena (p. ej. el acierto que espera a la revelación).
+  let dry: AudioNode = out;
+  let wetBus: AudioNode = echo;
+
   /** Las ondas de pulso de la Game Boy (12,5 %, 25 % y 50 % de ciclo), creadas una vez cada una. */
   const pulses = new Map<number, PeriodicWave>();
   const pulse = (duty: number): PeriodicWave => {
@@ -75,8 +80,8 @@ export function createSynth(ctx: AudioContext): Synth {
     gain.gain.setValueAtTime(volume, t + length * 0.6);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + length);
     osc.connect(gain);
-    gain.connect(out);
-    if (wet) gain.connect(echo);
+    gain.connect(dry);
+    if (wet) gain.connect(wetBus);
     osc.start(t);
     osc.stop(t + length + 0.05);
   };
@@ -94,7 +99,7 @@ export function createSynth(ctx: AudioContext): Synth {
     gain.gain.setValueAtTime(volume, t + length * 0.7);
     gain.gain.linearRampToValueAtTime(0, t + length);
     osc.connect(gain);
-    gain.connect(out);
+    gain.connect(dry);
     osc.start(t);
     osc.stop(t + length + 0.02);
   };
@@ -117,7 +122,7 @@ export function createSynth(ctx: AudioContext): Synth {
     gain.gain.exponentialRampToValueAtTime(0.0001, t + length);
     src.connect(band);
     band.connect(gain);
-    gain.connect(out);
+    gain.connect(dry);
     src.start(t);
   };
 
@@ -177,7 +182,15 @@ export function createSynth(ctx: AudioContext): Synth {
   return {
     play(effect, volume) {
       // Los sonidos de referencia están mezclados a volumen 0,9; el ajuste de efectos lo escala.
-      out.gain.value = 0.9 * volume;
+      const level = 0.9 * volume;
+      const dryBus = ctx.createGain();
+      dryBus.gain.value = level;
+      dryBus.connect(out);
+      const sendBus = ctx.createGain();
+      sendBus.gain.value = level;
+      sendBus.connect(echo);
+      dry = dryBus;
+      wetBus = sendBus;
       EFFECTS[effect]();
     },
   };
