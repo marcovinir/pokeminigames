@@ -11,7 +11,8 @@ describe("sala de espera (etapa 6)", () => {
 
   it("el código va en casillas, una por letra, y sigue leyéndose como un solo código", () => {
     renderRoom([alone()]);
-    const code = screen.getByLabelText("Código de la sala");
+    // Un grupo con nombre (ARIA no deja nombrar un párrafo).
+    const code = screen.getByRole("group", { name: "Código de la sala" });
     const tiles = [...code.children];
     expect(tiles.map((tile) => tile.textContent)).toEqual(["A", "B", "C", "2", "3", "4"]);
     expect(code).toHaveTextContent("ABC234");
@@ -143,7 +144,7 @@ describe("sala de espera: configuración y pistas de tipos (etapa 8)", () => {
 
   it("muestra la configuración de la sala, para que quien se une sepa cómo se va a jugar", () => {
     renderRoom([withConfig({})]);
-    expect(screen.getByLabelText("Configuración de la sala")).toHaveTextContent("Tipos aleatorios · 3 rondas");
+    expect(screen.getByRole("group", { name: "Configuración de la sala" })).toHaveTextContent("Tipos aleatorios · 3 rondas");
   });
 
   it("con pistas muestra la insignia «Pistas de tipos»", () => {

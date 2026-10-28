@@ -41,12 +41,16 @@ function SilhouetteImage({ src }: { src: string }) {
 export function SilhouetteScoreboard() {
   const { me, opponent } = useRoom();
   return (
-    <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card">
+    <div role="group" aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card">
       {SILHOUETTE_SCREEN.you} <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
-      {opponent?.username ?? "Rival"}
-      {opponent?.guest ? <GuestTag className="mx-1 align-middle" /> : " "}
+      {opponent?.username ?? "Rival"}{" "}
+      {opponent?.guest ? (
+        <>
+          <GuestTag className="align-middle" />{" "}
+        </>
+      ) : null}
       <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
-    </p>
+    </div>
   );
 }
 
