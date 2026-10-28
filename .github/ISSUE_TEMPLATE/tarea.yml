@@ -1,0 +1,29 @@
+name: Tarea
+description: Trabajo planificado (función, mejora, deuda técnica), autosuficiente para tomarla sin más contexto.
+body:
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto
+      description: Por qué hace falta y qué hay hoy.
+    validations:
+      required: true
+  - type: textarea
+    id: cambios
+    attributes:
+      label: Qué cambiar
+      description: Con rutas de archivos cuando se sepan.
+    validations:
+      required: true
+  - type: textarea
+    id: decisiones
+    attributes:
+      label: Decisiones tomadas y abiertas
+  - type: textarea
+    id: aceptacion
+    attributes:
+      label: Criterios de aceptación
+      description: Una casilla por criterio comprobable.
+      value: "- [ ] "
+    validations:
+      required: true
