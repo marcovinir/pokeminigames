@@ -19,7 +19,9 @@
 (() => {
   const parse = (color) => {
     const m = color.match(/[\d.]+/g).map(Number);
-    return { r: m[0], g: m[1], b: m[2], a: m.length > 3 ? m[3] : 1 };
+    // `color-mix()` se calcula como `color(srgb r g b / a)`, con los canales de 0 a 1.
+    const scale = color.startsWith("color(srgb") ? 255 : 1;
+    return { r: m[0] * scale, g: m[1] * scale, b: m[2] * scale, a: m.length > 3 ? m[3] : 1 };
   };
   const luminance = ({ r, g, b }) => {
     const [R, G, B] = [r, g, b].map((v) => {

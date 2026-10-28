@@ -22,7 +22,7 @@ function GameArt({ game, example }: { game: GameKind; example: DobleTipoExample 
     return (
       <div aria-hidden="true">
         <div
-          className="flex h-28 items-center justify-center overflow-hidden rounded-card"
+          className="flex h-32 items-center justify-center overflow-hidden rounded-card"
           style={{
             background: `linear-gradient(115deg, ${TYPE_STYLES[first].background} 0 50%, ${TYPE_STYLES[second].background} 50% 100%)`,
           }}
@@ -30,9 +30,9 @@ function GameArt({ game, example }: { game: GameKind; example: DobleTipoExample 
           <img
             src={artworkUrl(example.pokemonId)}
             alt=""
-            width={104}
-            height={104}
-            className="size-26 object-contain drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]"
+            width={128}
+            height={128}
+            className="size-32 object-contain drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]"
           />
         </div>
         <div className="mt-2 flex justify-center gap-2">
@@ -43,7 +43,7 @@ function GameArt({ game, example }: { game: GameKind; example: DobleTipoExample 
     );
   }
   return (
-    <div aria-hidden="true" className="silhouette-rays flex h-28 items-center justify-center overflow-hidden rounded-card">
+    <div aria-hidden="true" className="silhouette-rays flex h-32 items-center justify-center overflow-hidden rounded-card">
       <img src={artworkUrl(94)} alt="" width={96} height={96} className="size-24 object-contain brightness-0" />
     </div>
   );
@@ -75,7 +75,8 @@ export function MainMenu({
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5">
       {background ? <MenuBackdrop background={background} /> : null}
-      <div style={rise(0)} className="animate-rise">
+      {/* Con fanart, el título va sobre un panel translúcido: el velo es ligero para que el dibujo luzca. */}
+      <div style={rise(0)} className={background ? "menu-panel animate-rise self-start rounded-card px-4 py-3" : "animate-rise"}>
         {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
         <h1 className="font-display text-3xl font-semibold">{MENU_TEXT.title}</h1>
         <p className="text-muted">{MENU_TEXT.subtitle}</p>
@@ -101,7 +102,7 @@ export function MainMenu({
         );
       })}
       {background ? (
-        <p className="text-xs text-muted">
+        <p className="menu-panel self-start rounded-pill px-3 py-1 text-xs text-muted">
           {MENU_TEXT.backgroundCredit(background.title)}
           <a href={background.authorUrl} target="_blank" rel="noreferrer" className="font-semibold underline">
             {background.author}
