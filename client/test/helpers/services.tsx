@@ -2,7 +2,7 @@ import type { PokemonFact, Stats } from "@pokemon-minigames/shared";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
-import { vi } from "vitest";
+import { type Mock, vi } from "vitest";
 import type { Endpoints } from "../../src/api/endpoints";
 import type { AuthUser, GuestUser, PokemonName, SessionUser } from "../../src/api/types";
 import { createFactsStore } from "../../src/catalog/facts-store";
@@ -10,6 +10,8 @@ import { createNamesStore } from "../../src/catalog/names-store";
 import { createGameStore } from "../../src/game/store";
 import { ServicesProvider, type Services } from "../../src/services";
 import { createSessionStore } from "../../src/session/session-store";
+import { createSoundSettingsStore } from "../../src/sound/settings-store";
+import type { SoundService } from "../../src/sound/sound-service";
 import { createThemeStore } from "../../src/theme/theme-store";
 
 export const ASH: AuthUser = {
@@ -66,6 +68,8 @@ export interface FakeServices extends Services {
     dispose: ReturnType<typeof vi.fn>;
   };
   themeRoot: HTMLElement;
+  /** El sonido como espías: qué efectos y qué música se pidieron. */
+  sound: { [K in keyof SoundService]: Mock<SoundService[K]> };
 }
 
 /** Servicios de mentira: los endpoints son espías y el socket no existe. */
@@ -104,6 +108,7 @@ export function fakeServices(): FakeServices {
     dispose: vi.fn(),
   };
   const themeRoot = document.createElement("html");
+  const sound = { play: vi.fn<SoundService["play"]>(), setMusic: vi.fn<SoundService["setMusic"]>(), unlock: vi.fn<SoundService["unlock"]>(), dispose: vi.fn<SoundService["dispose"]>() };
   return {
     endpoints,
     client,
@@ -112,6 +117,8 @@ export function fakeServices(): FakeServices {
     names: createNamesStore(endpoints),
     facts: createFactsStore(endpoints),
     game: { store: createGameStore(), client },
+    sound,
+    soundSettings: createSoundSettingsStore({ storage: null }),
     theme: createThemeStore({
       storage: null,
       root: themeRoot,

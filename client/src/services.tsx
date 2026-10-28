@@ -8,6 +8,8 @@ import { type NamesState, createNamesStore } from "./catalog/names-store";
 import { GameClient, type GameClientApi, type SocketLike } from "./game/game-client";
 import { type GameStoreState, createGameStore } from "./game/store";
 import { type SessionState, createSessionStore } from "./session/session-store";
+import { type SoundSettingsState, createSoundSettingsStore } from "./sound/settings-store";
+import { type SoundService, createSoundService } from "./sound/sound-service";
 import { type ThemeState, createThemeStore } from "./theme/theme-store";
 import { syncThemeWithSession } from "./theme/theme-sync";
 
@@ -19,6 +21,8 @@ export interface Services {
   names: StoreApi<NamesState>;
   facts: StoreApi<FactsState>;
   game: { store: StoreApi<GameStoreState>; client: GameClientApi };
+  sound: SoundService;
+  soundSettings: StoreApi<SoundSettingsState>;
 }
 
 const ServicesContext = createContext<Services | null>(null);
@@ -76,6 +80,20 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
   // Dura lo que dura la aplicación: la preferencia del perfil y la del navegador se mantienen de acuerdo.
   syncThemeWithSession({ session, theme, endpoints });
 
+  const soundSettings = createSoundSettingsStore({ storage: safeStorage() });
+  const sound = createSoundService({
+    settings: soundSettings,
+    createAudio: (src) => {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      return audio;
+    },
+    createContext: () => new AudioContext(),
+    random: Math.random,
+    document,
+    timers: { setTimeout: (fn, ms) => window.setTimeout(fn, ms), clearTimeout: (id) => window.clearTimeout(id as number) },
+  });
+
   return {
     endpoints,
     session,
@@ -83,5 +101,7 @@ export function createServices(options: { baseUrl?: string } = {}): Services {
     facts: createFactsStore(endpoints),
     game: { store: gameStore, client },
     theme,
+    sound,
+    soundSettings,
   };
 }
