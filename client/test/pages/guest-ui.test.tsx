@@ -80,6 +80,9 @@ describe("etiqueta «Invitado» junto al jugador invitado", () => {
       }),
     ]);
     expect(within(screen.getByLabelText("Marcador")).getByText("Invitado")).toBeInTheDocument();
+    // Los lectores de pantalla leen el texto seguido: nombre, etiqueta y cifra separados, y la barra es un grupo con nombre.
+    const bar = screen.getByRole("group", { name: "Marcador" });
+    expect(bar.textContent!.replace(/\s+/g, " ")).toMatch(/misty Invitado 400$/);
     expect(within(screen.getByRole("region", { name: "Tu rival" })).getByText("Invitado")).toBeInTheDocument();
     expect(tags()).toHaveLength(2);
   });
