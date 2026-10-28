@@ -8,7 +8,7 @@ import { rise } from "../../components/rise";
 import { Timer } from "../../components/Timer";
 import { namesInGenerations } from "../../catalog/generations";
 import { ROUND_MS } from "../../game/durations";
-import { SILHOUETTE_SCREEN, silhouetteAnsweredIn, silhouetteRoundOf } from "../../i18n/es";
+import { OPPONENT_ANSWERED, SILHOUETTE_SCREEN, silhouetteAnsweredIn, silhouetteRoundOf } from "../../i18n/es";
 import { useNames } from "../../services";
 import { LeaveButton } from "./LeaveButton";
 import { useRoom } from "./use-room";
@@ -67,6 +67,7 @@ export function SilhouetteRoundView() {
         <h1 className="font-display text-2xl font-semibold">{SILHOUETTE_SCREEN.question}</h1>
         <Timer deadline={round.deadline} offset={view.clockOffset} totalMs={ROUND_MS} label="Tiempo de la ronda" />
         {round.answered && round.answeredMs !== null ? <Notice tone="success">{silhouetteAnsweredIn(round.answeredMs)}</Notice> : null}
+        {round.opponentAnswered ? <Notice>{OPPONENT_ANSWERED}</Notice> : null}
         <div className="text-left">
           <Autocomplete names={names} showSprites={false} submitted={round.answered} autoFocus onSubmit={(text) => client.submit(text)} />
         </div>

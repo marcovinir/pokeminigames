@@ -3,6 +3,7 @@ import { Autocomplete } from "../../components/Autocomplete";
 import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
 import { Notice } from "../../components/Notice";
+import { OPPONENT_ANSWERED } from "../../i18n/es";
 import { rise } from "../../components/rise";
 import { OpponentPanel, TeamPanel } from "../../components/Panels";
 import { Timer } from "../../components/Timer";
@@ -82,6 +83,8 @@ export function RoundView() {
           {round.typesNotice === "pair_replaced" ? (
             <Notice>El par elegido no tenía suficientes Pokémon; el servidor sorteó otro.</Notice>
           ) : null}
+
+          {round.opponentAnswered ? <Notice>{OPPONENT_ANSWERED}</Notice> : null}
 
           <Autocomplete
             names={names}

@@ -406,3 +406,29 @@ describe("la silueta en la vista", () => {
     expect(view.roundsPlayed).toBe(1);
   });
 });
+
+describe("el rival ya respondió", () => {
+  const roundActive = (opponentAnswered = false) =>
+    event.roomState({ phase: "round_active", round: { number: 1, pair: ["flying", "fire"], deadline: 1, answered: false, typeChosen: false, opponentAnswered } });
+
+  it("opponent-answered de la ronda abierta lo marca; de otra ronda, no", () => {
+    const view = play([[roundActive()], [event.opponentAnswered(1)]]);
+    expect(view.round?.opponentAnswered).toBe(true);
+    const other = play([[roundActive()], [event.opponentAnswered(2)]]);
+    expect(other.round?.opponentAnswered).toBe(false);
+  });
+
+  it("se lee del room-state (al reconectar) y vuelve a false al empezar otra ronda", () => {
+    const view = play([[roundActive(true)]]);
+    expect(view.round?.opponentAnswered).toBe(true);
+    const next = play([[roundActive(true)], [event.roundStarted(2)]]);
+    expect(next.round?.opponentAnswered).toBe(false);
+  });
+
+  it("en la silueta, igual en su ronda", () => {
+    const view = play([[event.roomState({ phase: "round_active", silhouette: { totalRounds: 10, round: null, reveals: [] } })], [event.silhouetteRoundStarted(1)], [event.opponentAnswered(1)]]);
+    expect(view.silhouette?.round?.opponentAnswered).toBe(true);
+    const other = play([[event.roomState({ phase: "round_active", silhouette: { totalRounds: 10, round: null, reveals: [] } })], [event.silhouetteRoundStarted(1)], [event.opponentAnswered(3)]]);
+    expect(other.silhouette?.round?.opponentAnswered).toBe(false);
+  });
+});

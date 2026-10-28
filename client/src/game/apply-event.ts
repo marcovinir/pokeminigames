@@ -24,6 +24,8 @@ export interface RoundView {
   answered: boolean;
   /** Ya elegí mi tipo en esta ronda. */
   typeChosen: boolean;
+  /** El rival ya respondió en esta ronda (sin saber qué). */
+  opponentAnswered: boolean;
   /** El par elegido no era válido y el servidor sorteó otro. */
   typesNotice?: "pair_replaced";
 }
@@ -140,6 +142,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
           deadline: state.round.deadline,
           answered: state.round.answered,
           typeChosen: state.round.typeChosen,
+          opponentAnswered: state.round.opponentAnswered,
         },
         // Si se reconecta durante la pausa del resultado, el último resultado todavía sirve.
         lastResult: view.lastResult?.round === state.roundsPlayed ? view.lastResult : null,
@@ -189,7 +192,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         ...view,
         phase: "choosing_types",
         startsAt: null,
-        round: { number: event.payload.round, pair: null, deadline: event.payload.deadline, answered: false, typeChosen: false },
+        round: { number: event.payload.round, pair: null, deadline: event.payload.deadline, answered: false, typeChosen: false, opponentAnswered: false },
         clockOffset: clockOffset(event.payload.serverNow, receivedAt),
         lastError: null,
       };
@@ -209,6 +212,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
           deadline,
           answered: false,
           typeChosen: view.round?.number === round ? view.round.typeChosen : false,
+          opponentAnswered: false,
           ...(typesNotice ? { typesNotice } : {}),
         },
         lastResult: null,
@@ -217,9 +221,16 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       };
     }
 
-    case "opponent-answered":
-      // El aviso «Tu rival ya respondió» llega en la tarea siguiente; por ahora no cambia nada.
+    case "opponent-answered": {
+      // Solo cuenta para la ronda abierta: un aviso atrasado de otra ronda no se muestra.
+      const { round } = event.payload;
+      if (view.round?.number === round) return { ...view, round: { ...view.round, opponentAnswered: true } };
+      const silhouetteRound = view.silhouette?.round;
+      if (view.silhouette && silhouetteRound?.number === round) {
+        return { ...view, silhouette: { ...view.silhouette, round: { ...silhouetteRound, opponentAnswered: true } } };
+      }
       return view;
+    }
 
     case "answer-received":
       return view.round ? { ...view, round: { ...view.round, answered: true } } : view;

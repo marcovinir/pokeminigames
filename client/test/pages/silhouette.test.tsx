@@ -23,6 +23,14 @@ function inRound(overrides: Partial<SilhouetteStateView> = {}, config = SILHOUET
 const gengar = () => silhouetteReveal({ round: 3, pokemon: pokemon(94, 500, { names: { es: "Gengar", en: "Gengar" } }) });
 
 describe("la ronda de la silueta", () => {
+  it("dice «Tu rival ya respondió» solo cuando es cierto", () => {
+    const { unmount } = renderRoom([inRound()]);
+    expect(screen.queryByText("Tu rival ya respondió")).not.toBeInTheDocument();
+    unmount();
+    renderRoom([inRound({ round: { number: 3, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok3", answered: false, answeredMs: null, opponentAnswered: true } })]);
+    expect(screen.getByText("Tu rival ya respondió").closest("[role='status']")).not.toBeNull();
+  });
+
   it("muestra la ronda, la silueta, la pregunta, el reloj y el campo", () => {
     renderRoom([inRound()]);
     expect(screen.getByText("Ronda 3 de 10")).toBeInTheDocument();

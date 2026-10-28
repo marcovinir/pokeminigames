@@ -132,6 +132,7 @@ export const event = {
     },
   }),
   answerReceived: (round: number): ServerEvent => ({ name: "answer-received", payload: { round } }),
+  opponentAnswered: (round: number): ServerEvent => ({ name: "opponent-answered", payload: { round } }),
   roundResult: (overrides?: Partial<RoundResultPayload>): ServerEvent => ({ name: "round-result", payload: roundResult(overrides) }),
   gameEnded: (overrides?: Partial<GameEndedPayload>): ServerEvent => ({ name: "game-ended", payload: gameEnded(overrides) }),
   opponentDisconnected: (graceEndsAt: number, serverNow = SERVER_NOW): ServerEvent => ({
