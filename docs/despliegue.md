@@ -46,9 +46,9 @@ Espera a que el servicio despierte (hasta 90 segundos) y comprueba, sin crear cu
 
 Después abre la dirección en dos navegadores (o uno normal y otro privado), crea una cuenta en cada uno, crea una sala en uno y únete con el código desde el otro.
 
-## 5. Verificar `TRUST_PROXY` (una sola vez, tras el primer despliegue)
+## 5. Verificar `TRUST_PROXY` (una sola vez, tras el primer despliegue; hecho: `3`, verificado el 2026-10-28)
 
-Los límites de intentos dependen de que el servidor lea bien la IP de cada visitante, y eso depende de cuántos proxies hay entre internet y el servicio. El `render.yaml` está en `3`: con `1` y con `2` la prueba 1 dio seis `401` en el sitio en vivo (2026-10-28 para el `2`) (Render no documenta la cifra y hay informes de la comunidad de que hacen falta más, hasta 3: [hilo de la comunidad de Render](https://community.render.com/t/what-number-of-proxies-sit-in-front-of-an-express-app-deployed-on-render/35981)). Un valor equivocado es grave en los dos sentidos, y la prueba E2E y la de humo no pueden detectarlo porque en local no hay proxy: se comprueba a mano.
+Los límites de intentos dependen de que el servidor lea bien la IP de cada visitante, y eso depende de cuántos proxies hay entre internet y el servicio. El `render.yaml` está en `3`, **verificado en el sitio en vivo el 2026-10-28: pasa las dos pruebas**. Con `1` y con `2` la prueba 1 dio seis `401` en el sitio en vivo (2026-10-28 para el `2`) (Render no documenta la cifra y hay informes de la comunidad de que hacen falta más, hasta 3: [hilo de la comunidad de Render](https://community.render.com/t/what-number-of-proxies-sit-in-front-of-an-express-app-deployed-on-render/35981)). Un valor equivocado es grave en los dos sentidos, y la prueba E2E y la de humo no pueden detectarlo porque en local no hay proxy: se comprueba a mano.
 
 **Prueba 1: ¿el valor es demasiado alto?** (el servidor se fiaría de una IP inventada por el visitante y se podrían esquivar todos los límites). Seis intentos de login fallidos, cada uno con una IP falsa distinta en `X-Forwarded-For`:
 
@@ -90,7 +90,7 @@ No se puede deshacer.
 | `NODE_ENV` | `production` | Activa las comprobaciones de producción: el servidor se niega a arrancar si algo de lo siguiente falta o es inseguro |
 | `COOKIE_SECURE` | `true` | La cookie de sesión solo viaja por HTTPS |
 | `COOKIE_SAME_SITE` | `lax` | Con un solo origen basta `lax` (`none` se rechaza en producción) |
-| `TRUST_PROXY` | `2` de partida (verifícalo en la sección 5) | Cuántos proxies hay delante; si es menor que los reales el servidor ve la IP de un proxy de Render y los límites de intentos afectan a todo el mundo a la vez, y si es mayor cualquiera puede falsear su IP |
+| `TRUST_PROXY` | `3` (verificado en la sección 5) | Cuántos proxies hay delante; si es menor que los reales el servidor ve la IP de un proxy de Render y los límites de intentos afectan a todo el mundo a la vez, y si es mayor cualquiera puede falsear su IP |
 | `JWT_ACCESS_SECRET` | generado por Render | Firma de los tokens de acceso (mínimo 32 caracteres) |
 | `DATABASE_URL` | la cadena de Neon | Conexión a la base de datos |
 | `NODE_VERSION` | `24` | Versión de Node |
