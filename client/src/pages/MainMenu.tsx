@@ -1,4 +1,5 @@
 import { GAME_KINDS, type GameKind } from "@pokemon-minigames/shared";
+import { useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/Badge";
 import { Card } from "../components/Card";
@@ -7,16 +8,37 @@ import { TypeChip } from "../components/TypeChip";
 import { artworkUrl } from "../catalog/artwork";
 import { GAME_CARDS, MENU_TEXT } from "../i18n/es";
 import { useSession } from "../services";
+import { TYPE_STYLES } from "../theme/type-styles";
 import { lobbyPath } from "./lobby-path";
+import { DOBLE_TIPO_EXAMPLES, type DobleTipoExample, MENU_BACKGROUNDS, type MenuBackground, pickRandom } from "./menu-art";
 
-/** El dibujo de cada tarjeta: los dos tipos de «Doble tipo» y una silueta sobre los rayos de la silueta. */
-function GameArt({ game }: { game: GameKind }) {
+/**
+ * El dibujo de cada tarjeta. «Doble tipo»: el arte de un Pokémon de ejemplo sobre un fondo partido en los colores de
+ * sus dos tipos, con los tipos debajo. La silueta: un Pokémon en negro sobre los rayos.
+ */
+function GameArt({ game, example }: { game: GameKind; example: DobleTipoExample }) {
   if (game === "doble_tipo") {
+    const [first, second] = example.types;
     return (
-      <div aria-hidden="true" className="flex h-28 items-center justify-center gap-2 rounded-card bg-surface-2">
-        <TypeChip type="flying" />
-        <span className="font-display text-xl font-semibold text-muted">+</span>
-        <TypeChip type="fire" />
+      <div aria-hidden="true">
+        <div
+          className="flex h-28 items-center justify-center overflow-hidden rounded-card"
+          style={{
+            background: `linear-gradient(115deg, ${TYPE_STYLES[first].background} 0 50%, ${TYPE_STYLES[second].background} 50% 100%)`,
+          }}
+        >
+          <img
+            src={artworkUrl(example.pokemonId)}
+            alt=""
+            width={104}
+            height={104}
+            className="size-26 object-contain drop-shadow-[0_4px_6px_rgb(0_0_0/0.35)]"
+          />
+        </div>
+        <div className="mt-2 flex justify-center gap-2">
+          <TypeChip type={first} />
+          <TypeChip type={second} />
+        </div>
       </div>
     );
   }
@@ -27,11 +49,32 @@ function GameArt({ game }: { game: GameKind }) {
   );
 }
 
+/** El fanart de fondo: llena la pantalla detrás del menú, con un velo del color del tema para que todo se lea. */
+function MenuBackdrop({ background }: { background: MenuBackground }) {
+  return (
+    <div data-menu-background aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10">
+      <img src={background.src} alt="" className="size-full object-cover object-[center_30%]" />
+      <div className="menu-veil absolute inset-0" />
+    </div>
+  );
+}
+
 /** «¿A qué jugamos?»: una tarjeta por minijuego; «Jugar» lleva a su lobby. */
-export function MainMenu() {
+export function MainMenu({
+  random = Math.random,
+  backgrounds = MENU_BACKGROUNDS,
+}: {
+  /** El azar que elige el ejemplo y el fondo (las pruebas lo fijan). */
+  random?: () => number;
+  backgrounds?: readonly MenuBackground[];
+} = {}) {
   const user = useSession((s) => s.user);
+  // Se eligen una vez al abrir el menú: no cambian mientras se está en él.
+  const [example] = useState(() => pickRandom(DOBLE_TIPO_EXAMPLES, random)!);
+  const [background] = useState(() => pickRandom(backgrounds, random));
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5">
+      {background ? <MenuBackdrop background={background} /> : null}
       <div style={rise(0)} className="animate-rise">
         {user ? <p className="text-sm font-semibold text-muted">Hola, {user.username}</p> : null}
         <h1 className="font-display text-3xl font-semibold">{MENU_TEXT.title}</h1>
@@ -41,7 +84,7 @@ export function MainMenu() {
         const card = GAME_CARDS[game];
         return (
           <Card as="article" key={game} style={rise(index + 1)} className="animate-rise p-5">
-            <GameArt game={game} />
+            <GameArt game={game} example={example} />
             <h2 className="mt-4 flex flex-wrap items-center gap-2 font-display text-xl font-semibold">
               {card.name}
               {card.isNew ? <Badge tone="gold">{MENU_TEXT.newBadge}</Badge> : null}
@@ -57,6 +100,14 @@ export function MainMenu() {
           </Card>
         );
       })}
+      {background ? (
+        <p className="text-xs text-muted">
+          {MENU_TEXT.backgroundCredit(background.title)}
+          <a href={background.authorUrl} target="_blank" rel="noreferrer" className="font-semibold underline">
+            {background.author}
+          </a>
+        </p>
+      ) : null}
     </div>
   );
 }

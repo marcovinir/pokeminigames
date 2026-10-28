@@ -224,6 +224,8 @@ export const MENU_TEXT = {
   play: "Jugar",
   newBadge: "NUEVO",
   backToMenu: "Volver al menú",
+  /** El crédito del fanart de fondo; el nombre del autor va después, enlazado a su perfil. */
+  backgroundCredit: (title: string) => `Fondo: «${title}», de `,
 } as const;
 
 /** Las tarjetas del menú: nombre, frase y si es nuevo. */
