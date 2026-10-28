@@ -48,7 +48,7 @@ Después abre la dirección en dos navegadores (o uno normal y otro privado), cr
 
 ## 5. Verificar `TRUST_PROXY` (una sola vez, tras el primer despliegue)
 
-Los límites de intentos dependen de que el servidor lea bien la IP de cada visitante, y eso depende de cuántos proxies hay entre internet y el servicio. El `render.yaml` parte de `2`: con `1` la prueba 1 dio seis `401` en el sitio en vivo (Render no documenta la cifra y hay informes de la comunidad de que hacen falta más, hasta 3: [hilo de la comunidad de Render](https://community.render.com/t/what-number-of-proxies-sit-in-front-of-an-express-app-deployed-on-render/35981)). Un valor equivocado es grave en los dos sentidos, y la prueba E2E y la de humo no pueden detectarlo porque en local no hay proxy: se comprueba a mano.
+Los límites de intentos dependen de que el servidor lea bien la IP de cada visitante, y eso depende de cuántos proxies hay entre internet y el servicio. El `render.yaml` está en `3`: con `1` y con `2` la prueba 1 dio seis `401` en el sitio en vivo (2026-10-28 para el `2`) (Render no documenta la cifra y hay informes de la comunidad de que hacen falta más, hasta 3: [hilo de la comunidad de Render](https://community.render.com/t/what-number-of-proxies-sit-in-front-of-an-express-app-deployed-on-render/35981)). Un valor equivocado es grave en los dos sentidos, y la prueba E2E y la de humo no pueden detectarlo porque en local no hay proxy: se comprueba a mano.
 
 **Prueba 1: ¿el valor es demasiado alto?** (el servidor se fiaría de una IP inventada por el visitante y se podrían esquivar todos los límites). Seis intentos de login fallidos, cada uno con una IP falsa distinta en `X-Forwarded-For`:
 
