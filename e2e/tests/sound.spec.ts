@@ -10,7 +10,10 @@ test("la música sigue a la partida, el rival avisa al responder y el panel de s
   const ash = await newPlayer(browser, "ash");
   const misty = await newPlayer(browser, "misty");
   const errors: string[] = [];
-  for (const page of [ash.page, misty.page]) page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
+  // Los 401 de red al recuperar una sesión que aún no existe son normales (los registra el navegador, no el código).
+  for (const page of [ash.page, misty.page]) {
+    page.on("console", (message) => message.type() === "error" && !message.text().startsWith("Failed to load resource") && errors.push(message.text()));
+  }
   const music = (page: typeof ash.page) => expect(page.locator("html"));
   try {
     await register(ash);
