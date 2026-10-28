@@ -8,6 +8,7 @@ import type { AuthUser, GuestUser, PokemonName, SessionUser } from "../../src/ap
 import { createFactsStore } from "../../src/catalog/facts-store";
 import { createNamesStore } from "../../src/catalog/names-store";
 import { createGameStore } from "../../src/game/store";
+import { soundEffectsListener } from "../../src/sound/play-effects";
 import { ServicesProvider, type Services } from "../../src/services";
 import { createSessionStore } from "../../src/session/session-store";
 import { createSoundSettingsStore } from "../../src/sound/settings-store";
@@ -116,7 +117,7 @@ export function fakeServices(): FakeServices {
     session: createSessionStore(endpoints),
     names: createNamesStore(endpoints),
     facts: createFactsStore(endpoints),
-    game: { store: createGameStore(), client },
+    game: { store: createGameStore({ onEvent: soundEffectsListener(sound) }), client },
     sound,
     soundSettings: createSoundSettingsStore({ storage: null }),
     theme: createThemeStore({

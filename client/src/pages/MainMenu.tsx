@@ -6,7 +6,7 @@ import { Card } from "../components/Card";
 import { rise } from "../components/rise";
 import { GameArt } from "../components/GameArt";
 import { GAME_CARDS, MENU_TEXT } from "../i18n/es";
-import { useSession } from "../services";
+import { useServices, useSession } from "../services";
 import { lobbyPath } from "./lobby-path";
 import { DOBLE_TIPO_EXAMPLES, MENU_BACKGROUNDS, type MenuBackground, pickRandom } from "./menu-art";
 
@@ -73,6 +73,7 @@ export function MainMenu({
   backgrounds?: readonly MenuBackground[];
 } = {}) {
   const user = useSession((s) => s.user);
+  const { sound } = useServices();
   // Se eligen una vez al abrir el menú: no cambian mientras se está en él.
   const [example] = useState(() => pickRandom(DOBLE_TIPO_EXAMPLES, random)!);
   const [portrait] = useState(() => pickRandom(backgrounds.filter((b) => b.shape === "portrait"), random));
@@ -99,6 +100,7 @@ export function MainMenu({
             <p className="mt-1 text-sm text-muted">{card.description}</p>
             <Link
               to={lobbyPath(game)}
+              onClick={() => sound.play("click")}
               className="mt-4 inline-flex items-center justify-center rounded-pill border-(length:--frame) border-accent-edge bg-accent px-7 py-3 font-display font-semibold text-accent-fg shadow-[0_var(--depth)_0_0_var(--accent-edge)] transition-transform duration-(--dur-fast) hover:-translate-y-px"
             >
               {MENU_TEXT.play}

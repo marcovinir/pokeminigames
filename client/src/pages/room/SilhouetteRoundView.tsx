@@ -12,6 +12,7 @@ import { OPPONENT_ANSWERED, SILHOUETTE_SCREEN, silhouetteAnsweredIn, silhouetteR
 import { useNames } from "../../services";
 import { LeaveButton } from "./LeaveButton";
 import { useRoom } from "./use-room";
+import { useLastSeconds } from "../../sound/use-last-seconds";
 
 /** La imagen de la silueta (la genera el servidor en negro). Si no carga, un aviso y la ronda sigue. */
 function SilhouetteImage({ src }: { src: string }) {
@@ -54,6 +55,8 @@ export function SilhouetteRoundView() {
   const { view, client } = useRoom();
   const allNames = useNames((s) => s.names);
   const round = view.silhouette?.round;
+  // Antes del primer `return`: los hooks van siempre en el mismo orden.
+  useLastSeconds({ deadline: round?.deadline ?? null, offset: view.clockOffset, answered: round?.answered ?? true, round: round?.number ?? 0 });
   if (!round || !view.config || !isSilhouetteConfig(view.config)) return null;
   const names = namesInGenerations(allNames, view.config.generations);
 
