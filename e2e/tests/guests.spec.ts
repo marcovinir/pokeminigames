@@ -159,7 +159,7 @@ test("dos invitados juegan; el segundo con el mismo nombre (con otras mayúscula
     const code = await createOneRoundRoom(first.page);
 
     await joinRoom(second.page, code);
-    await expect(second.page.getByText("Ya hay alguien con ese nombre en la sala. Entra con otro nombre.")).toBeVisible();
+    await expect(second.page.getByText("Ya hay alguien con ese nombre en la sala. Cierra sesión (arriba a la derecha) y entra como invitado con otro nombre.")).toBeVisible();
     await expect(second.page).not.toHaveURL(/\/sala\//);
     await expect(first.page.getByRole("heading", { name: "Sala de espera" })).toBeVisible();
 
