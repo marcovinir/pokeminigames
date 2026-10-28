@@ -24,6 +24,8 @@ export interface SilhouetteRoundView {
   silhouetteUrl: string;
   answered: boolean;
   answeredMs: number | null;
+  /** El rival ya respondió en esta ronda (sin decir qué). */
+  opponentAnswered: boolean;
 }
 
 /** Lo propio de la silueta en el estado de la sala. */

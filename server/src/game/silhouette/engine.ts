@@ -264,6 +264,8 @@ function onSubmit(c: Ctx, seat: Seat, text: string): void {
   round.answers[seat] = { text, at: c.now };
   // Solo a quien respondió: si acertó, su texto es el nombre del Pokémon.
   emit(c, seat, { name: "silhouette-answer-received", payload: { ms: c.now - round.startedAt } });
+  // Al rival, solo que ya respondió: su texto podría ser el nombre del Pokémon.
+  emit(c, seat === 1 ? 2 : 1, { name: "opponent-answered", payload: { round: round.number } });
   if (round.answers[1] && round.answers[2]) closeRound(c);
 }
 

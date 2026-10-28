@@ -82,6 +82,16 @@ describe("silueta: rondas", () => {
     expect(h.payloads("silhouette-answer-received", 2)).toEqual([]);
   });
 
+  it("avisa al rival (opponent-answered) sin decir qué respondió; un envío rechazado no avisa", () => {
+    const h = new SilhouetteHarness();
+    h.startGame();
+    h.submit(1, "Beto");
+    expect(h.payloads("opponent-answered", 2)).toEqual([{ round: 1 }]);
+    expect(h.payloads("opponent-answered", 1)).toEqual([]);
+    h.submit(1, "Alfa");
+    expect(h.payloads("opponent-answered", 2)).toHaveLength(1);
+  });
+
   it("un solo intento: el segundo envío no cambia nada", () => {
     const h = new SilhouetteHarness();
     h.startGame();

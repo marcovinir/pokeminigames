@@ -47,6 +47,7 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   "type-received": true,
   "round-started": true,
   "answer-received": true,
+  "opponent-answered": true,
   "round-result": true,
   "game-ended": true,
   "opponent-disconnected": true,

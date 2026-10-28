@@ -13,7 +13,7 @@ function inRound(overrides: Partial<SilhouetteStateView> = {}, config = SILHOUET
     players: [ash(), misty()],
     silhouette: {
       totalRounds: 10,
-      round: { number: 3, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok3", answered: false, answeredMs: null },
+      round: { number: 3, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok3", answered: false, answeredMs: null, opponentAnswered: false },
       reveals: [],
       ...overrides,
     },
@@ -49,7 +49,7 @@ describe("la ronda de la silueta", () => {
   });
 
   it("tras responder dice en cuánto respondí", () => {
-    renderRoom([inRound({ round: { number: 3, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok3", answered: true, answeredMs: 3200 } })]);
+    renderRoom([inRound({ round: { number: 3, deadline: SERVER_NOW + 15_000, silhouetteUrl: "/silhouettes/tok3", answered: true, answeredMs: 3200, opponentAnswered: false } })]);
     expect(screen.getByText("Respondiste en 3,2 s")).toBeInTheDocument();
   });
 

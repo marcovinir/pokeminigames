@@ -217,6 +217,10 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       };
     }
 
+    case "opponent-answered":
+      // El aviso «Tu rival ya respondió» llega en la tarea siguiente; por ahora no cambia nada.
+      return view;
+
     case "answer-received":
       return view.round ? { ...view, round: { ...view.round, answered: true } } : view;
 
@@ -277,7 +281,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       return {
         ...view,
         phase: "round_active",
-        silhouette: { ...base, totalRounds, round: { number: round, deadline, silhouetteUrl, answered: false, answeredMs: null }, nextRoundAt: null },
+        silhouette: { ...base, totalRounds, round: { number: round, deadline, silhouetteUrl, answered: false, answeredMs: null, opponentAnswered: false }, nextRoundAt: null },
         clockOffset: clockOffset(serverNow, receivedAt),
       };
     }

@@ -371,6 +371,8 @@ function onSubmit(c: Ctx, seat: Seat, text: string): void {
   }
   round.picks[seat] = { text, at: c.now };
   emit(c, seat, { name: "answer-received", payload: { round: round.number } });
+  // Al rival, solo que ya respondió: nada de qué ni de si acertó.
+  emit(c, seat === 1 ? 2 : 1, { name: "opponent-answered", payload: { round: round.number } });
   if (round.picks[1] && round.picks[2]) closeRound(c);
 }
 

@@ -14,6 +14,7 @@ const roundState = (overrides: object = {}) => ({
   deadline: SERVER_NOW + 15_000,
   answered: false,
   typeChosen: false,
+  opponentAnswered: false,
   ...overrides,
 });
 
@@ -157,7 +158,7 @@ describe("elección de tipo (modo elegido)", () => {
   });
 
   it("tras recargar (ya había elegido) no sabe cuál fue, pero bloquea y lo dice", () => {
-    renderRoom([choosing({ typeChosen: true })]);
+    renderRoom([choosing({ typeChosen: true, opponentAnswered: false })]);
     expect(screen.getByRole("status")).toHaveTextContent("Ya elegiste tu tipo. Esperando a tu oponente…");
     expect(screen.getByRole("button", { name: "fuego" })).toBeDisabled();
   });

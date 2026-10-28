@@ -14,6 +14,7 @@ export const roundState = (overrides: object = {}) => ({
   deadline: SERVER_NOW + 15_000,
   answered: false,
   typeChosen: false,
+  opponentAnswered: false,
   ...overrides,
 });
 
