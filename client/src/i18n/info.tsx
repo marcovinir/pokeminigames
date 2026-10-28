@@ -63,6 +63,26 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
           Es un proyecto de fans, no oficial: Pokémon y sus personajes son de Nintendo, Game Freak y The Pokémon Company, sin
           relación con ellos.
         </p>
+        <Section title="Música">
+          <p>
+            Toda la música es original y de licencia libre, de OpenGameArt; ninguna es de los juegos de Pokémon. Los efectos
+            de sonido se generan con código.
+          </p>
+          <List>
+            <li>
+              <External href="https://opengameart.org/content/town-center">«Town Center»</External>, de Trevor Lentz, con
+              licencia CC-BY-SA 3.0.
+            </li>
+            <li>
+              <External href="https://opengameart.org/content/6-chiptune-loops">«Menu»</External>, de SuperGamersGames, con
+              licencia CC-BY 4.0.
+            </li>
+            <li>
+              Y gracias a Joth, Aureolus_Omicron, Wolfgang_ y Centurion_of_war, que publicaron el resto de los temas en dominio
+              público (CC0).
+            </li>
+          </List>
+        </Section>
       </>
     ),
   },

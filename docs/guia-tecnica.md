@@ -153,6 +153,15 @@ En **Elegir tipo** y en todos los chips de tipo se ve el símbolo oficial de cad
 
 En **Mi perfil** (`/perfil`) cada persona ve sus partidas jugadas, ganadas, empatadas y perdidas, el porcentaje de victorias, la racha actual y la mejor, sus 3 Pokémon más ganados, el poder promedio de los Pokémon que ganó, su mejor partida y el historial de sus partidas (con el motivo del fin: abandono, desconexión, etc.). Al terminar una partida se puede abrir el perfil del rival (`/jugador/:username`), que solo muestra estadísticas. Solo cuentan las partidas completadas; las abandonadas no. Todo se calcula al pedirlo a partir de las partidas guardadas (no hay tablas de estadísticas aparte).
 
+## Música y sonido
+
+El juego suena desde el principio; el altavoz del encabezado abre un panel con **Música** y **Efectos** (interruptor y volumen), que se guarda en el navegador (`pokeminigames:sonido`). El código está en [`client/src/sound/`](../client/src/sound/).
+
+- **Música** (temas libres de OpenGameArt, en MP3 en [`client/public/audio/`](../client/public/audio/), con sus créditos en `CREDITOS.md`): en el menú, los lobbies y la espera suena un tema de sala al azar; desde la cuenta atrás hasta la última ronda, uno de combate (*Porkymon Battle Theme* toca su entrada y después el bucle); en el resumen, *Menu* si ganas o empatas una partida completa y *Game Over* si pierdes, una sola vez y después del efecto de final. Una partida que no se completó y no tiene ganador vuelve a la música de sala. Fuera de esas pantallas, silencio. Al cambiar de zona hay un fundido corto y se elige otro tema sin repetir el último; con la pestaña oculta se pausa. Qué música toca lo decide `musicCueFor` (`cues.ts`) y la zona queda en `<html data-music>` para la E2E.
+- **Efectos de 8 bits**, generados con Web Audio (`synth.ts`), sin archivos: acierto, fallo, ganar, perder, empieza la ronda, últimos segundos (una vez por ronda, al quedar 5 s si no respondiste), botón, Pokémon revelado (silueta) y el rival respondió. Qué efectos dispara cada evento lo decide `effectsForEvent` (`cues.ts`); un `room-state` (entrar, recargar o reconectar) nunca suena.
+- **El rival respondió:** al aceptar una respuesta, el servidor envía `opponent-answered` `{ round }` solo al otro jugador (en los dos juegos, sin decir qué respondió); el estado de la sala lleva `opponentAnswered` para recuperarlo al reconectar, y la ronda muestra «Tu rival ya respondió».
+- El navegador no deja sonar nada hasta la primera interacción: el servicio lo reintenta con el primer clic o tecla.
+
 ## Temas y accesibilidad
 
 Cada jugador elige entre dos temas, **Clásico** (moderno y colorido: esquinas muy redondeadas, relieve, fondo con degradado y tipografía Fredoka) y **Pokédex** (la piel retro del mismo diseño: bordes marcados, sin sombras difusas y letra monoespaciada JetBrains Mono), y entre modo automático, claro u oscuro desde el botón «Apariencia» del encabezado; la preferencia se guarda en el navegador y, con la sesión iniciada, también en tu perfil (al entrar en otro navegador se aplica la del perfil). Los colores de todos los temas y de los 18 tipos cumplen el contraste AA de WCAG (lo comprueban las pruebas). Para revisar lo que realmente se ve, pega [`client/scripts/contrast-audit.js`](../client/scripts/contrast-audit.js) en la consola del navegador y ejecuta `__contrastAuditAll()`.
@@ -206,6 +215,7 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `room-state` | Al entrar o reconectar: estado completo de la partida, con tu equipo y el del rival (solo lo ya revelado). Cada jugador lleva `avatarId` solo si eligió uno |
 | `player-joined`, `game-starting`, `choose-types`, `round-started` | Avance de la partida (`player-joined` trae el nombre del rival y, si los tiene, `guest` y `avatarId`) |
 | `type-received`, `answer-received` | Confirman la recepción, sin decir si acertaste |
+| `opponent-answered` | Al otro jugador: su rival ya respondió en la ronda abierta, `{ round }`, sin decir qué (en los dos juegos) |
 | `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` y, si acertaron 0 o 1 jugadores, un `example`: un Pokémon libre de ese par que servía |
 | `game-ended` | Ganador, motivo, equipos y totales |
 | `opponent-disconnected`, `opponent-reconnected` | Caída y vuelta del rival |

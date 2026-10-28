@@ -89,6 +89,19 @@ describe("las páginas de información", () => {
     }
   });
 
+  it("Acerca de da el crédito de la música que lo exige, con su licencia y enlace, y agradece a los demás", () => {
+    renderAt("/acerca", "anónimo");
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("Trevor Lentz");
+    expect(text).toContain("CC-BY-SA 3.0");
+    expect(text).toContain("SuperGamersGames");
+    expect(text).toContain("CC-BY 4.0");
+    const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(hrefs).toContain("https://opengameart.org/content/town-center");
+    expect(hrefs).toContain("https://opengameart.org/content/6-chiptune-loops");
+    for (const author of ["Joth", "Aureolus_Omicron", "Wolfgang_", "Centurion_of_war"]) expect(text).toContain(author);
+  });
+
   it("Acerca de enlaza al perfil de GitHub de Marco", () => {
     renderAt("/acerca", "anónimo");
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toContain("https://github.com/marcovinir");
