@@ -75,11 +75,11 @@ describe("DELETE /auth/me: borrar la cuenta", () => {
     expect(history.games[0].opponent.avatarId).toBeNull();
   });
 
-  it("con la contraseña incorrecta responde 401 y no toca nada", async () => {
+  it("con la contraseña incorrecta responde 403 WRONG_PASSWORD (no 401: el cliente renovaría la sesión y repetiría) y no toca nada", async () => {
     const { token, cookie, userId } = await register();
     const response = await remove(token, "otra-cosa-123");
-    expect(response.status).toBe(401);
-    expect(response.body.error.code).toBe("INVALID_CREDENTIALS");
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("WRONG_PASSWORD");
     const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     expect(row.email).toBe(ash.email);
     expect(row.username).toBe(ash.username);
@@ -89,7 +89,7 @@ describe("DELETE /auth/me: borrar la cuenta", () => {
   it("con la contraseña de otra cuenta tampoco borra nada", async () => {
     const { token, userId } = await register();
     await register(app, misty);
-    expect((await remove(token, misty.password)).status).toBe(401);
+    expect((await remove(token, misty.password)).status).toBe(403);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).email).toBe(ash.email);
   });
 
@@ -109,8 +109,8 @@ describe("DELETE /auth/me: borrar la cuenta", () => {
   it("los intentos fallidos cuentan en el límite por IP del inicio de sesión", async () => {
     const limited = buildTestContext({}, { rateLimits: { ...DEFAULT_RATE_LIMITS, loginFailuresByIp: { limit: 2, windowMs: 60_000 } } });
     const { token } = await register(limited.app);
-    expect((await remove(token, "mal-1-xxxx", limited.app)).status).toBe(401);
-    expect((await remove(token, "mal-2-xxxx", limited.app)).status).toBe(401);
+    expect((await remove(token, "mal-1-xxxx", limited.app)).status).toBe(403);
+    expect((await remove(token, "mal-2-xxxx", limited.app)).status).toBe(403);
     const third = await remove(token, ash.password, limited.app);
     expect(third.status).toBe(429);
     expect(third.body.error.code).toBe("RATE_LIMITED");

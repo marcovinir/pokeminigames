@@ -151,7 +151,7 @@ export class AuthService {
       throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
     }
     if (!(await this.hasher.verify(password, user.passwordHash))) {
-      throw new AppError(401, "INVALID_CREDENTIALS", "La contraseña no es correcta");
+      throw new AppError(403, "WRONG_PASSWORD", "La contraseña no es correcta");
     }
     if (!(await anonymizeAccount(this.prisma, this.hasher, userId))) {
       throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");

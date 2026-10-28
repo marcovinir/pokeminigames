@@ -41,6 +41,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   EMAIL_TAKEN: "Ese email ya está registrado.",
   USERNAME_TAKEN: "Ese nombre de usuario ya está en uso.",
   INVALID_CREDENTIALS: "Email o contraseña incorrectos.",
+  WRONG_PASSWORD: "La contraseña no es correcta.",
   UNAUTHORIZED: "Tu sesión expiró. Inicia sesión de nuevo.",
   FORBIDDEN: "Esa petición no está permitida desde este sitio.",
   ACCOUNT_REQUIRED: "Necesitas una cuenta para esto.",

@@ -211,7 +211,7 @@ export function createAuthRouter({ env, authService, tokens, guests, limiters = 
     try {
       await authService.deleteAccount(getAuth(res).userId, password);
     } catch (error) {
-      if (!(error instanceof AppError && error.code === "INVALID_CREDENTIALS")) loginFailuresByIp?.release(ip);
+      if (!(error instanceof AppError && error.code === "WRONG_PASSWORD")) loginFailuresByIp?.release(ip);
       throw error;
     }
     loginFailuresByIp?.release(ip);
