@@ -23,6 +23,8 @@ export interface MenuBackground {
   /** Ruta de la imagen (en `client/public/menu/`). */
   src: string;
   title: string;
+  /** Vertical (para el teléfono) u horizontal (para pantallas anchas). */
+  shape: "portrait" | "landscape";
   /** Su autor, si se sabe; sin él, el crédito dice «autor desconocido» y ofrece «¿Es tuyo?» (lleva a Contacto). */
   author?: string;
   /** Perfil del autor, enlazado en el crédito (solo con `author`). */
@@ -34,8 +36,10 @@ export interface MenuBackground {
  * `client/public/menu/CREDITOS.md`; si un autor pide retirarlo o que se le dé crédito, se hace aquí.
  */
 export const MENU_BACKGROUNDS: readonly MenuBackground[] = [
-  { src: "/menu/umbreon.webp", title: "Umbreon" },
-  { src: "/menu/espeon.webp", title: "Espeon" },
+  { src: "/menu/umbreon.webp", title: "Umbreon", shape: "portrait" },
+  { src: "/menu/espeon.webp", title: "Espeon", shape: "portrait" },
+  { src: "/menu/eevee.webp", title: "Eevee", shape: "landscape" },
+  { src: "/menu/lucario.webp", title: "Lucario", shape: "landscape" },
 ];
 
 /** Uno al azar (o nada si la lista está vacía). */
