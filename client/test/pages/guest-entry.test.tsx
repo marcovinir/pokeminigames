@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../src/api/client";
 import { rateLimitMessage } from "../../src/i18n/es";
 import { LoginPage } from "../../src/pages/AuthPages";
-import { validateGuestName } from "../../src/pages/auth-validation";
-import { GUEST, fakeServices, renderRoute } from "../helpers/services";
+import { validateUsername } from "../../src/pages/auth-validation";
+import { GUEST, fakeServices, renderRoute, signIn } from "../helpers/services";
 
 const NAME_ERROR = "Usa de 3 a 30 letras, números o guion bajo.";
 
@@ -18,13 +18,13 @@ function setup(route: string | { pathname: string; state?: unknown } = "/login")
   return { guest: vi.mocked(services.endpoints.auth.guest), user, nameField, enter, ...utils };
 }
 
-describe("validateGuestName", () => {
+describe("validateUsername", () => {
   it("acepta de 3 a 30 letras, números o guion bajo, con espacios en los extremos", () => {
-    for (const name of ["abc", "a".repeat(30), "ash_01", "  ash  "]) expect(validateGuestName(name), name).toBeUndefined();
+    for (const name of ["abc", "a".repeat(30), "ash_01", "  ash  "]) expect(validateUsername(name), name).toBeUndefined();
   });
 
   it("rechaza lo demás con el mensaje de siempre", () => {
-    for (const name of ["", "ab", "a".repeat(31), "a b", "ash🙂", "ñandú", "a-b"]) expect(validateGuestName(name), name).toBe(NAME_ERROR);
+    for (const name of ["", "ab", "a".repeat(31), "a b", "ash🙂", "ñandú", "a-b"]) expect(validateUsername(name), name).toBe(NAME_ERROR);
   });
 });
 
@@ -118,5 +118,26 @@ describe("entrar como invitado desde /login", () => {
     expect(guest).toHaveBeenCalledTimes(1);
     release();
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/"));
+  });
+});
+
+describe("detalles de la entrada como invitado", () => {
+  it("el nombre reservado de las cuentas borradas se rechaza también aquí", () => {
+    expect(validateUsername("borrada_abc")).toBe("Ese nombre está reservado.");
+    expect(validateUsername("Borrada_x")).toBe("Ese nombre está reservado.");
+  });
+
+  it("el campo «Nombre» enseña la regla como pista, igual que el registro", () => {
+    setup();
+    expect(screen.getByText("De 3 a 30 letras, números o guion bajo.")).toBeInTheDocument();
+  });
+
+  it("si ya juegas como invitado (desde otra pestaña), no ofrece otra identidad: lo dice y lleva al menú", () => {
+    const services = fakeServices();
+    signIn(services, GUEST);
+    renderRoute("/login", <LoginPage />, { services, route: "/login" });
+    expect(screen.queryByLabelText("Nombre")).not.toBeInTheDocument();
+    expect(screen.getByText(`Ya juegas como invitado ${GUEST.username}.`)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Seguir jugando" })).toHaveAttribute("href", "/");
   });
 });

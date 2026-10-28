@@ -1,3 +1,4 @@
+import { isDeletedUsername } from "@pokemon-minigames/shared";
 import type { ApiError } from "../api/client";
 
 export interface FieldErrors {
@@ -24,16 +25,18 @@ export function validateLogin(input: { email: string; password: string }): Field
   return errors;
 }
 
-/** El nombre de quien entra como invitado sigue la misma regla que el de usuario. */
-export function validateGuestName(name: string): string | undefined {
-  return USERNAME.test(name.trim()) ? undefined : USERNAME_ERROR;
+/** El nombre de usuario (de una cuenta o de un invitado): la misma regla que el servidor, incluido el prefijo reservado. */
+export function validateUsername(name: string): string | undefined {
+  const clean = name.trim();
+  if (!USERNAME.test(clean)) return USERNAME_ERROR;
+  return isDeletedUsername(clean) ? "Ese nombre está reservado." : undefined;
 }
 
 export function validateRegistration(input: { email: string; username: string; password: string }): FieldErrors {
   const errors: FieldErrors = {};
   const email = emailError(input.email);
   if (email) errors.email = email;
-  const username = validateGuestName(input.username);
+  const username = validateUsername(input.username);
   if (username) errors.username = username;
   if (input.password.length < 8) {
     errors.password = "La contraseña debe tener al menos 8 caracteres.";

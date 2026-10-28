@@ -7,12 +7,15 @@ import { Notice } from "../components/Notice";
 import { rise } from "../components/rise";
 import { TextField } from "../components/TextField";
 import { errorMessage } from "../i18n/es";
-import { useServices } from "../services";
-import { validateGuestName } from "./auth-validation";
+import { Link } from "react-router";
+import { isGuest } from "../api/types";
+import { useServices, useSession } from "../services";
+import { validateUsername } from "./auth-validation";
 
 /** «Juega como invitado»: solo un nombre, sin correo ni contraseña. Entra al lobby (o a donde se iba) y no guarda nada. */
 export function GuestEntry({ returnTo }: { returnTo: string }) {
   const { session } = useServices();
+  const user = useSession((s) => s.user);
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -25,7 +28,7 @@ export function GuestEntry({ returnTo }: { returnTo: string }) {
     event.preventDefault();
     if (sending.current) return;
     const clean = name.trim();
-    const found = validateGuestName(clean);
+    const found = validateUsername(clean);
     setError(found);
     setFormError(null);
     if (found) return;
@@ -42,6 +45,18 @@ export function GuestEntry({ returnTo }: { returnTo: string }) {
     }
   }
 
+  // Ya invitado (p. ej. desde otra pestaña): entrar otra vez crearía otra identidad y la partida en curso perdería el asiento.
+  if (isGuest(user)) {
+    return (
+      <Card as="section" style={rise(2)} className="animate-rise mx-auto w-full max-w-sm p-6">
+        <p>Ya juegas como invitado {user.username}.</p>
+        <Link to="/" className="mt-3 inline-block font-semibold text-accent underline">
+          Seguir jugando
+        </Link>
+      </Card>
+    );
+  }
+
   return (
     <Card as="section" style={rise(2)} className="animate-rise mx-auto w-full max-w-sm p-6">
       <h2 className="font-display text-lg font-semibold">¿Sin cuenta? Juega como invitado</h2>
@@ -51,6 +66,7 @@ export function GuestEntry({ returnTo }: { returnTo: string }) {
         <TextField
           label="Nombre"
           autoComplete="off"
+          hint="De 3 a 30 letras, números o guion bajo."
           value={name}
           error={error}
           onChange={(event) => {
