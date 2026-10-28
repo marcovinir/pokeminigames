@@ -5,6 +5,7 @@ import { Avatar } from "./Avatar";
 import { Button } from "./Button";
 import { GuestTag } from "./GuestTag";
 import { Logo } from "./Logo";
+import { SoundMenu } from "./SoundMenu";
 import { ThemeMenu } from "./ThemeMenu";
 
 function UserIcon() {
@@ -54,6 +55,7 @@ export function Header() {
           <Logo hideNameOnMobile={Boolean(user)} />
         </Link>
         <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-3">
+          <SoundMenu />
           <ThemeMenu compact={Boolean(user)} />
           {user ? (
             <>
