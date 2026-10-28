@@ -63,3 +63,16 @@ describe("guestSchema", () => {
     expect(guestSchema.safeParse(undefined).success).toBe(false);
   });
 });
+
+describe("nombre reservado de las cuentas borradas", () => {
+  it.each(["borrada_ash", "BORRADA_x1"])("registro e invitado rechazan «%s»", (username) => {
+    for (const result of [registerSchema.safeParse({ ...valid, username }), guestSchema.safeParse({ username })]) {
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.message).toBe("Ese nombre está reservado");
+    }
+  });
+
+  it("un nombre que solo se parece sigue valiendo", () => {
+    expect(registerSchema.safeParse({ ...valid, username: "borradaX" }).success).toBe(true);
+  });
+});
