@@ -9,7 +9,7 @@ import {
   minutes,
   seconds,
 } from "../constants.js";
-import { type Effect, type GameEvent, type GameOutcome, type PlayerState, SEATS, type TimerId, otherSeat } from "../engine/types.js";
+import { type Effect, type GameEvent, type GameOutcome, type PlayerState, type SeatOccupant, SEATS, type TimerId, otherSeat } from "../engine/types.js";
 import { toPokemonView } from "../engine/view.js";
 import { pickOne } from "../rng.js";
 import { silhouettePoints } from "./points.js";
@@ -23,12 +23,6 @@ import { buildSilhouetteGameEnded } from "./view.js";
  * allí; lo propio son las rondas: una silueta, un solo intento y puntos por rapidez. Nada se guarda en la base de datos.
  */
 
-interface PlayerIdentity {
-  userId: string;
-  username: string;
-  guest?: boolean;
-  avatarId?: number;
-}
 
 interface Ctx {
   s: SilhouetteState;
@@ -42,7 +36,7 @@ export interface SilhouetteResult {
   effects: Effect[];
 }
 
-function newPlayer(seat: Seat, { userId, username, guest, avatarId }: PlayerIdentity): PlayerState {
+function newPlayer(seat: Seat, { userId, username, guest, avatarId }: SeatOccupant): PlayerState {
   return { seat, userId, username, ...(guest ? { guest: true } : {}), ...(avatarId ? { avatarId } : {}), connected: false, totalStats: 0, team: [] };
 }
 
@@ -65,7 +59,7 @@ function reject(c: Ctx, seat: Seat, code: ErrorCode, message: string): void {
 /** Estado inicial de una sala de silueta: el creador ocupa el asiento 1. */
 export function createSilhouetteGame(
   config: SilhouetteConfig,
-  creator: PlayerIdentity,
+  creator: SeatOccupant,
   now: number,
   options: { rematch?: boolean } = {},
 ): SilhouetteResult {
@@ -118,7 +112,7 @@ export function reduceSilhouette(prev: SilhouetteState, event: GameEvent, now: n
 
 // --- Sala y conexiones (como en «Doble tipo») -------------------------------------------
 
-function onJoined(c: Ctx, joiner: PlayerIdentity): void {
+function onJoined(c: Ctx, joiner: SeatOccupant): void {
   if (c.s.phase !== "waiting" || c.s.players[2]) return;
   const player = newPlayer(2, joiner);
   c.s.players[2] = player;

@@ -118,6 +118,8 @@ export class StatsService {
           lengthMode: game.lengthMode,
           roundsLimit: game.roundsLimit,
           statsGoal: game.statsGoal,
+          // Las pistas de tipos no se guardan: la configuración del historial las da por apagadas.
+          typeHints: false,
         },
       };
     });

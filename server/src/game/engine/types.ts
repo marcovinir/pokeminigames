@@ -51,6 +51,14 @@ export interface GameOutcome {
   reason: GameEndReason;
 }
 
+/** Quién ocupa un asiento en los motores: `guest` y `avatarId` solo están cuando aplican. */
+export interface SeatOccupant {
+  userId: string;
+  username: string;
+  guest?: boolean;
+  avatarId?: number;
+}
+
 export interface GameState {
   phase: GamePhase;
   config: DobleTipoConfig;

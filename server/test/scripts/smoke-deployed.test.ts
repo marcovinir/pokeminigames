@@ -7,6 +7,7 @@ import { createApp } from "../../src/app.js";
 import { type SmokeCheck, runSmoke } from "../../scripts/smoke-deployed.js";
 import { buildTestContext } from "../helpers/app.js";
 import { prisma, resetDatabase } from "../helpers/db.js";
+import { createSilhouetteRegistry } from "../../src/silhouettes/registry.js";
 
 const INDEX = '<!doctype html><html><body><div id="root"></div><script type="module" src="/assets/app.abc123.js"></script></body></html>';
 
@@ -23,7 +24,7 @@ beforeAll(async () => {
   writeFileSync(join(workdir, "assets", "app.abc123.js"), "console.log('cliente');");
 
   const { env, tokens, roomManager, catalog } = buildTestContext({ NODE_ENV: "production", COOKIE_SECURE: "true", TRUST_PROXY: "1" });
-  const app = createApp({ env, prisma, tokens, roomManager, catalog, clientDist: workdir });
+  const app = createApp({ env, prisma, tokens, roomManager, catalog, clientDist: workdir, silhouettes: createSilhouetteRegistry() });
   // Anota todo lo que llega, para comprobar que la prueba de humo no escribe nada.
   const logged = (await import("express")).default();
   logged.use((req, _res, next) => {
