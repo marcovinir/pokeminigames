@@ -4,6 +4,7 @@ import type {
   GamePhase,
   PickResult,
   DobleTipoConfig,
+  RoundResultPayload,
   Seat,
   ServerEvent,
   TypeName,
@@ -67,6 +68,8 @@ export interface GameState {
   /** Si un jugador está desconectado en plena partida: hasta cuándo puede volver. */
   graceEndsAt: Partial<Record<Seat, number>>;
   outcome: GameOutcome | null;
+  /** El último resultado emitido: se reenvía en el estado de la sala a quien reconecta durante la pausa. */
+  lastResult?: RoundResultPayload;
 }
 
 /** Identifica un temporizador. Los datos que lleva sirven para ignorarlo si ya quedó obsoleto. */

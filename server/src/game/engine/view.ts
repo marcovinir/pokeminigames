@@ -81,6 +81,7 @@ export function buildRoomState(
     startsAt: state.phase === "starting" ? state.startsAt : null,
     ...(state.rematch ? { rematch: true as const } : {}),
     opponentGraceEndsAt: state.graceEndsAt[otherSeat(seat)] ?? null,
+    ...(state.phase === "round_result" && state.lastResult ? { lastResult: structuredClone(state.lastResult) } : {}),
     round,
   };
 }

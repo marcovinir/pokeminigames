@@ -425,17 +425,16 @@ function closeRound(c: Ctx): void {
   // Si acertaron 0 o 1 jugadores se enseña un Pokémon libre que sí servía (ya repartidos los de esta ronda: nunca es uno ganado).
   const hits = SEATS.filter((seat) => results[seat].result === "VALID").length;
   const example = hits <= 1 ? pickExample(c.deps.catalog, pair, claimedIds(s), c.deps.rng) : null;
-  emit(c, "all", {
-    name: "round-result",
-    payload: {
-      round: round.number,
-      nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),
-      type1: pair[0],
-      type2: pair[1],
-      results,
-      ...(example ? { example: toPokemonView(example) } : {}),
-    },
-  });
+  const payload = {
+    round: round.number,
+    nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),
+    type1: pair[0],
+    type2: pair[1],
+    results,
+    ...(example ? { example: toPokemonView(example) } : {}),
+  };
+  s.lastResult = structuredClone(payload);
+  emit(c, "all", { name: "round-result", payload });
   c.fx.push({ kind: "persist_round", record: { number: round.number, pair, picks: records } });
 
   if (over) {
