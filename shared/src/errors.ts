@@ -4,6 +4,8 @@ export const ERROR_CODES = [
   "EMAIL_TAKEN",
   "USERNAME_TAKEN",
   "INVALID_CREDENTIALS",
+  /** Al borrar la cuenta, la contraseña de confirmación no es la suya (403: un 401 haría que el cliente renovara la sesión y repitiera). */
+  "WRONG_PASSWORD",
   "UNAUTHORIZED",
   "FORBIDDEN",
   /** Un invitado intentó algo que es solo de cuentas (perfil, estadísticas, preferencias). */

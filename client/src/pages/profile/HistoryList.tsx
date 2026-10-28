@@ -1,11 +1,11 @@
-import type { GameResult, HistoryEntry } from "@pokemon-minigames/shared";
+import { type GameResult, type HistoryEntry, isDeletedUsername } from "@pokemon-minigames/shared";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
 import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
-import { RESULT_LABELS, describeConfig, historyReason } from "../../i18n/es";
+import { DELETED_ACCOUNT_NAME, RESULT_LABELS, describeConfig, historyReason } from "../../i18n/es";
 import { useServices } from "../../services";
 import { formatDate, formatScore } from "./format";
 import { useLoad } from "./use-load";
@@ -17,17 +17,23 @@ const RESULT_TONE: Record<GameResult, "success" | "neutral" | "danger"> = {
 };
 
 function HistoryRow({ game }: { game: HistoryEntry }) {
+  // Una cuenta borrada no tiene perfil ni nombre que enseñar.
+  const deleted = isDeletedUsername(game.opponent.username);
   return (
     // tabIndex -1: se puede enfocar por código (al cargar más partidas) sin entrar en el orden de tabulación.
     <li tabIndex={-1} className="framed rounded-card bg-surface p-4 shadow-card">
       <div className="flex items-center gap-3">
-        <Avatar name={game.opponent.username} avatarId={game.opponent.avatarId} size="md" />
+        <Avatar name={deleted ? DELETED_ACCOUNT_NAME : game.opponent.username} avatarId={game.opponent.avatarId} size="md" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm">
             contra{" "}
-            <Link to={`/jugador/${encodeURIComponent(game.opponent.username)}`} className="font-semibold underline">
-              {game.opponent.username}
-            </Link>
+            {deleted ? (
+              <span className="font-semibold">{DELETED_ACCOUNT_NAME}</span>
+            ) : (
+              <Link to={`/jugador/${encodeURIComponent(game.opponent.username)}`} className="font-semibold underline">
+                {game.opponent.username}
+              </Link>
+            )}
           </p>
           <p className="text-sm text-muted">{historyReason(game.reason, game.result)}</p>
         </div>

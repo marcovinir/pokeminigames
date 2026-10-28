@@ -39,6 +39,8 @@ export interface Endpoints {
     savePreferences(preferences: ThemePreferences): Promise<void>;
     /** Guarda el avatar (uno de los 24, o `null` para volver a las iniciales); devuelve lo guardado. */
     saveAvatar(avatarId: number | null): Promise<number | null>;
+    /** Borra (anonimiza) la cuenta con su contraseña; si sale bien, el token se olvida. */
+    deleteAccount(password: string): Promise<void>;
   };
   rooms: {
     create(config: CreateRoomRequest): Promise<CreateRoomResponse>;
@@ -90,6 +92,10 @@ export function createEndpoints(api: ApiClient): Endpoints {
       async saveAvatar(avatarId) {
         const saved = await api.request<{ avatarId: number | null }>("PUT", "/auth/me/avatar", { body: { avatarId } });
         return saved.avatarId;
+      },
+      async deleteAccount(password) {
+        await api.request<void>("DELETE", "/auth/me", { body: { password } });
+        api.setToken(null);
       },
     },
     rooms: {

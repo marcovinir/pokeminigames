@@ -3,7 +3,7 @@ import type { Env } from "../config/env.js";
 import { AppError } from "../http/errors.js";
 import { type KeyedLimiter, tooManyRequests } from "../http/rate-limit.js";
 import { createRequireAccount, getAuth } from "./auth.middleware.js";
-import { avatarSchema, guestSchema, loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
+import { avatarSchema, deleteAccountSchema, guestSchema, loginSchema, preferencesSchema, registerSchema } from "./auth.schemas.js";
 import type { AuthResult, AuthService, AuthUser } from "./auth.service.js";
 import { GUEST_COOKIE, type GuestSessions, type IssuedGuestSession } from "./guest-sessions.js";
 import type { TokenService } from "./tokens.js";
@@ -194,6 +194,29 @@ export function createAuthRouter({ env, authService, tokens, guests, limiters = 
   router.put("/me/avatar", requireAccount, async (req, res) => {
     const { avatarId } = avatarSchema.parse(req.body);
     res.json({ avatarId: await authService.saveAvatar(getAuth(res).userId, avatarId) });
+  });
+
+  router.delete("/me", requireAccount, async (req, res) => {
+    const { password } = deleteAccountSchema.parse(req.body);
+    // Probar contraseñas aquí es lo mismo que probarlas en /login: cuenta en el mismo límite de fallos por IP, con el
+    // hueco reservado antes de bcrypt y devuelto si el fallo no es de la persona o si acierta.
+    const ip = clientIp(req);
+    const { loginFailuresByIp } = limiters;
+    const status = loginFailuresByIp?.check(ip);
+    if (status && !status.allowed) {
+      res.set("Retry-After", String(status.retryAfterSeconds));
+      throw tooManyRequests(status.retryAfterSeconds, "Demasiados intentos. Inténtalo de nuevo más tarde.");
+    }
+    loginFailuresByIp?.record(ip);
+    try {
+      await authService.deleteAccount(getAuth(res).userId, password);
+    } catch (error) {
+      if (!(error instanceof AppError && error.code === "WRONG_PASSWORD")) loginFailuresByIp?.release(ip);
+      throw error;
+    }
+    loginFailuresByIp?.release(ip);
+    endSession(res);
+    res.status(204).end();
   });
 
   return router;

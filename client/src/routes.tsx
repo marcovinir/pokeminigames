@@ -3,6 +3,8 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { isGuest } from "./api/types";
 import { useSession } from "./services";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
+import { INFO_PAGES, INFO_SLUGS } from "./i18n/info";
+import { InfoPage } from "./pages/InfoPage";
 import { LobbyRoute } from "./pages/Lobby";
 import { MainMenu } from "./pages/MainMenu";
 import { ProfilePage } from "./pages/profile/ProfilePage";
@@ -52,6 +54,10 @@ export function AppRoutes() {
           <Route path="/jugador/:username" element={<ProfilePage />} />
         </Route>
       </Route>
+      {/* Las páginas de información son públicas: se ven con sesión, sin ella y como invitado. */}
+      {INFO_SLUGS.map((slug) => (
+        <Route key={slug} path={INFO_PAGES[slug].path} element={<InfoPage slug={slug} />} />
+      ))}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

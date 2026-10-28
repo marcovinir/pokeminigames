@@ -1,4 +1,5 @@
 export * from "./avatars.js";
+export * from "./deleted-account.js";
 export * from "./errors.js";
 export * from "./games.js";
 export * from "./silhouette.js";

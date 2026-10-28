@@ -1,4 +1,4 @@
-import { THEME_MODES, THEME_NAMES, isAvatarPokemon } from "@pokemon-minigames/shared";
+import { THEME_MODES, THEME_NAMES, isAvatarPokemon, isDeletedUsername } from "@pokemon-minigames/shared";
 import { z } from "zod";
 import { MAX_PASSWORD_BYTES } from "./password.js";
 
@@ -8,7 +8,9 @@ const email = z.string().trim().toLowerCase().pipe(z.email("Email inválido").ma
 const usernameSchema = z
   .string()
   .trim()
-  .regex(/^[A-Za-z0-9_]{3,30}$/, "Usa de 3 a 30 letras, números o guion bajo");
+  .regex(/^[A-Za-z0-9_]{3,30}$/, "Usa de 3 a 30 letras, números o guion bajo")
+  // El prefijo de las cuentas borradas: así un nombre de relleno nunca se confunde con el de una persona.
+  .refine((name) => !isDeletedUsername(name), "Ese nombre está reservado");
 
 export const registerSchema = z.object({
   email,
@@ -38,6 +40,9 @@ export const preferencesSchema = z.object({
 export const avatarSchema = z.object({
   avatarId: z.union([z.null(), z.number().refine(isAvatarPokemon, "Ese Pokémon no está entre los avatares")]),
 });
+
+/** Borrar la cuenta: se confirma con la contraseña (la comprobación es la misma que la del inicio de sesión). */
+export const deleteAccountSchema = z.object({ password: z.string().min(1, "Escribe tu contraseña") });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

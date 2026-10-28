@@ -1,27 +1,60 @@
+import { GAME_KINDS } from "@pokemon-minigames/shared";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { GAME_CARDS } from "../../src/i18n/es";
 import { LoginPage, RegisterPage } from "../../src/pages/AuthPages";
 import { renderWithServices } from "../helpers/services";
 
-describe("pantallas de acceso (etapa 6)", () => {
-  it.each([
-    ["inicio de sesión", <LoginPage key="l" />, "Iniciar sesión"],
-    ["registro", <RegisterPage key="r" />, "Crear cuenta"],
-  ])("%s: junto al formulario hay un lema y una explicación breve de cómo se juega", (_name, page, heading) => {
-    renderWithServices(page);
-    expect(screen.getByText(/Nombra el Pokémon,/)).toBeInTheDocument();
+const PAGES = [
+  ["inicio de sesión", <LoginPage key="l" />, "Iniciar sesión"],
+  ["registro", <RegisterPage key="r" />, "Crear cuenta"],
+] as const;
+
+describe("pantallas de acceso: la presentación de PokeMiniGames", () => {
+  it.each(PAGES)("%s: el lema habla de minijuegos 1 vs 1 con amigos, no de un solo juego", (_name, page, heading) => {
+    const { container } = renderWithServices(page);
+    const lema = screen.getByText(/Minijuegos Pokémon para jugar/);
+    expect(lema).toHaveTextContent("1 vs 1");
+    expect(lema).toHaveTextContent("amigos");
     expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
-    const steps = screen.getByRole("list", { name: "Cómo se juega" });
-    expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
-    expect(steps).toHaveTextContent("15 segundos");
-    expect(steps).toHaveTextContent("más stats");
+    const hero = container.querySelector("[data-hero]")!;
+    expect(hero).not.toHaveTextContent(/veneno|15 segundos|Nombra el Pokémon/);
+    expect(screen.queryByRole("list", { name: "Cómo se juega" })).not.toBeInTheDocument();
   });
 
-  it("la tarjeta de ejemplo es decorativa: la ocultan los lectores de pantalla y lleva dos tipos de muestra", () => {
-    const { container } = renderWithServices(<LoginPage />);
-    const preview = container.querySelector("[data-preview]")!;
-    expect(preview).toHaveAttribute("aria-hidden", "true");
-    expect(preview.querySelectorAll("[data-type]")).toHaveLength(2);
+  it.each(PAGES)("%s: hay un elemento por minijuego, con su nombre y su frase", (_name, page) => {
+    renderWithServices(page);
+    const list = screen.getByRole("list", { name: "Minijuegos" });
+    const items = within(list).getAllByRole("listitem");
+    expect(items).toHaveLength(GAME_KINDS.length);
+    GAME_KINDS.forEach((game, index) => {
+      expect(items[index]).toHaveTextContent(GAME_CARDS[game].name);
+      expect(items[index]).toHaveTextContent(GAME_CARDS[game].description);
+    });
+  });
+
+  it("los dibujos de los minijuegos son decorativos", () => {
+    renderWithServices(<LoginPage />);
+    const list = screen.getByRole("list", { name: "Minijuegos" });
+    const arts = list.querySelectorAll("img");
+    expect(arts.length).toBeGreaterThanOrEqual(GAME_KINDS.length);
+    for (const img of arts) expect(img.closest("[aria-hidden='true']")).not.toBeNull();
+  });
+
+  it("el juego nuevo lleva su insignia", () => {
+    renderWithServices(<LoginPage />);
+    const items = within(screen.getByRole("list", { name: "Minijuegos" })).getAllByRole("listitem");
+    GAME_KINDS.forEach((game, index) => {
+      if (GAME_CARDS[game].isNew) expect(items[index]).toHaveTextContent("NUEVO");
+      else expect(items[index]).not.toHaveTextContent("NUEVO");
+    });
+  });
+
+  it("la lista se oculta en pantallas estrechas; el lema se queda", () => {
+    renderWithServices(<LoginPage />);
+    const list = screen.getByRole("list", { name: "Minijuegos" });
+    expect(list.closest("[class*='hidden']")!.className).toContain("md:block");
+    expect(screen.getByText(/Minijuegos Pokémon para jugar/).closest("[class*='hidden']")).toBeNull();
   });
 
   it("el formulario está en una tarjeta elevada y conserva sus campos y su botón", () => {
@@ -32,14 +65,6 @@ describe("pantallas de acceso (etapa 6)", () => {
     expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Crea una" })).toHaveAttribute("href", "/registro");
-  });
-
-  it("la explicación larga se oculta en pantallas estrechas; el lema se queda", () => {
-    renderWithServices(<LoginPage />);
-    const steps = screen.getByRole("list", { name: "Cómo se juega" });
-    expect(steps.parentElement!.className).toContain("hidden");
-    expect(steps.parentElement!.className).toContain("md:block");
-    expect(screen.getByText(/Nombra el Pokémon,/).closest("[class*='hidden']")).toBeNull();
   });
 
   it("no añade avisos de estado que se mezclen con los del formulario", () => {

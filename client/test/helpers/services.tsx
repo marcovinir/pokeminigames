@@ -79,6 +79,7 @@ export function fakeServices(): FakeServices {
       logout: vi.fn(async () => {}),
       savePreferences: vi.fn(async () => {}),
       saveAvatar: vi.fn(async (avatarId: number | null) => avatarId),
+      deleteAccount: vi.fn(async () => {}),
     },
     rooms: {
       create: vi.fn(async () => ({ code: "ABC234" })),

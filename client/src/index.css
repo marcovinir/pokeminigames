@@ -251,6 +251,18 @@ body::before {
   .silhouette-rays {
     background: repeating-conic-gradient(#fde047 0deg 10deg, #facc15 10deg 20deg);
   }
+  /* El velo sobre el fanart del menú: el color de fondo del tema, ligero para que el dibujo luzca. */
+  .menu-veil {
+    background: linear-gradient(
+      color-mix(in srgb, var(--bg) 40%, transparent),
+      color-mix(in srgb, var(--bg) 70%, transparent)
+    );
+  }
+  /* Detrás del título y del crédito: casi opaco, para que el texto cumpla el contraste sobre cualquier dibujo. */
+  .menu-panel {
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: blur(6px);
+  }
 
   .pokeball {
     position: relative;

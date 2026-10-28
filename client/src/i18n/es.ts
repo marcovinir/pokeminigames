@@ -41,6 +41,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   EMAIL_TAKEN: "Ese email ya está registrado.",
   USERNAME_TAKEN: "Ese nombre de usuario ya está en uso.",
   INVALID_CREDENTIALS: "Email o contraseña incorrectos.",
+  WRONG_PASSWORD: "La contraseña no es correcta.",
   UNAUTHORIZED: "Tu sesión expiró. Inicia sesión de nuevo.",
   FORBIDDEN: "Esa petición no está permitida desde este sitio.",
   ACCOUNT_REQUIRED: "Necesitas una cuenta para esto.",
@@ -207,6 +208,28 @@ export function recordHeadline(record: RematchRecord, rivalName: string): string
   return `${record.played} partidas jugadas · ${verdict}`;
 }
 
+/** El lema de las pantallas de acceso (la parte resaltada va en el color de acento). */
+export const AUTH_HERO_TEXT = {
+  lead: "Minijuegos Pokémon para jugar",
+  highlight: "1 vs 1",
+  tail: "con tus amigos.",
+  gamesLabel: "Minijuegos",
+} as const;
+
+/** «Borrar mi cuenta», al final del perfil propio. */
+export const DELETE_ACCOUNT_TEXT = {
+  title: "Borrar mi cuenta",
+  warning:
+    "No se puede deshacer: se borran tu correo, tu nombre y tu contraseña, y se cierran tus sesiones. Tus partidas seguirán en el historial de tus rivales como «Cuenta borrada».",
+  confirm: "Borrar mi cuenta para siempre",
+  cancel: "Cancelar",
+  missingPassword: "Escribe tu contraseña.",
+  done: "Tu cuenta se borró.",
+} as const;
+
+/** Cómo se ve una cuenta borrada (su nombre de relleno, `borrada_…`, no se enseña). */
+export const DELETED_ACCOUNT_NAME = "Cuenta borrada";
+
 export const AVATAR_TEXT = {
   change: "Cambiar avatar",
   title: "Elige tu avatar",
@@ -224,6 +247,8 @@ export const MENU_TEXT = {
   play: "Jugar",
   newBadge: "NUEVO",
   backToMenu: "Volver al menú",
+  /** El crédito del fanart de fondo; el nombre del autor va después, enlazado a su perfil. */
+  backgroundCredit: (title: string) => `Fondo: «${title}», de `,
 } as const;
 
 /** Las tarjetas del menú: nombre, frase y si es nuevo. */

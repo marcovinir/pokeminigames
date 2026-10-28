@@ -10,7 +10,7 @@ Colección de minijuegos de Pokémon para 2 jugadores en tiempo real. **Doble ti
 
 Tema Clásico oscuro, en un navegador de 1280 × 720 (las genera la prueba `e2e/tests/screenshots.spec.ts`).
 
-![Pantalla de acceso con el lema, cómo se juega, una tarjeta de ejemplo y el formulario](docs/img/login.jpg)
+![Pantalla de acceso: «Minijuegos Pokémon para jugar 1 vs 1 con tus amigos», un dibujo por minijuego y el formulario](docs/img/login.jpg)
 
 ![Menú principal: «¿A qué jugamos?» con las tarjetas de Doble tipo y de ¿Quién es ese Pokémon?](docs/img/menu.jpg)
 
@@ -104,6 +104,16 @@ En `/login`, bajo el formulario, «¿Sin cuenta? Juega como invitado» pide solo
 - **Se nota.** Donde aparece el nombre de un invitado (sala de espera, cuenta atrás, panel del rival y barra «Marcador», resultado de la ronda y resumen final) lleva la etiqueta «Invitado», y su encabezado muestra «Invitado» y «Crear cuenta» en lugar de «Mi perfil». En una sala no puede haber dos jugadores con el mismo nombre (sin distinguir mayúsculas): quien se une con uno repetido recibe `409 NAME_IN_USE`. El resumen no ofrece «Ver perfil de …» si alguno de los dos es invitado, y `/perfil` y `/jugador/:username` llevan a un invitado al lobby.
 - **Límite.** Hasta 20 sesiones de invitado por hora y por IP (429 `RATE_LIMITED`).
 
+## Página de inicio y pie
+
+La entrada (`/login` y `/registro`) presenta la colección: «Minijuegos Pokémon para jugar **1 vs 1** con tus amigos» y, en pantallas anchas, cada minijuego con su dibujo, su nombre y su frase (salen de `GAME_KINDS` y `GAME_CARDS`: un juego nuevo aparece solo). En el teléfono queda solo el lema, para que el formulario esté a la vista.
+
+Todas las pantallas llevan un pie con **Acerca de, Contacto, FAQ, Privacidad, Términos, Aviso legal y Apoya el proyecto** (`/acerca`, `/contacto`, `/faq`, `/privacidad`, `/terminos`, `/aviso-legal`, `/apoya`): páginas públicas (se ven con sesión, sin ella y como invitado) cuyos textos están en [`client/src/i18n/info.tsx`](client/src/i18n/info.tsx) y describen lo que el juego hace de verdad con los datos. El contacto es el repositorio público [pokeminigames-comentarios](https://github.com/marcovinir/pokeminigames-comentarios), con plantillas de «Idea» y «Error». No hay donaciones: el apoyo es compartir el juego, proponer ideas y avisar de errores.
+
+## Borrar la cuenta
+
+Al final de **Mi perfil**, «Borrar mi cuenta» pide la contraseña y **anonimiza** la cuenta: el correo, el nombre (pasa a uno de relleno, `borrada_` + 12 caracteres del id, y el original queda libre), la contraseña, el avatar y el tema; además cierra todas sus sesiones. Sus partidas se quedan porque también son de sus rivales: en su historial aparece como «Cuenta borrada», sin enlace. Nadie puede registrarse ni entrar como invitado con un nombre que empiece por `borrada_`. Una contraseña equivocada responde `403 WRONG_PASSWORD` y cuenta en el mismo límite de fallos por IP que el inicio de sesión. Para moderación (un nombre ofensivo) está `npm run account:delete -w server -- <nombre>`, explicado en [`docs/despliegue.md`](docs/despliegue.md).
+
 ## Menú y juegos
 
 Al entrar se llega al **menú principal** («¿A qué jugamos?»), con una tarjeta por juego. «Jugar» lleva a su lobby: `/jugar/doble-tipo` o `/jugar/silueta` (crear sala con las opciones de ese juego, unirse con código y la sala activa). Un código de sala lleva a la sala de su juego desde cualquier lobby, y «Volver al lobby» del resumen vuelve al lobby del juego de esa sala.
@@ -162,6 +172,7 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `POST /auth/logout` | Cierra la sesión y borra las cookies (de cuenta y de invitado) |
 | `GET /auth/me` | Usuario actual |
 | `PUT /auth/me/preferences` | Guarda el tema: `{ theme: "clasico" \| "pokedex", themeMode: "auto" \| "claro" \| "oscuro" }` |
+| `DELETE /auth/me` | Borra (anonimiza) la cuenta: `{ password }`. 204 y borra las cookies de sesión; contraseña equivocada: `403 WRONG_PASSWORD` (cuenta en el límite de fallos de login por IP); un invitado: `403 ACCOUNT_REQUIRED` |
 | `PUT /auth/me/avatar` | Guarda el avatar: `{ avatarId }`, el número de Pokédex de uno de los 24 de `shared/src/avatars.ts` o `null` para volver a las iniciales; devuelve `{ avatarId }`. Cualquier otro valor: `400 VALIDATION_ERROR` |
 | `POST /rooms` | Crea una sala de «Doble tipo»: `{ game?: "doble_tipo", typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`, o de silueta: `{ game: "silueta", rounds?: 5 \| 10 \| 15, generations?: number[] }` (por defecto 10 y `[1]`); devuelve `{ code }`. Sin `game` es «Doble tipo». `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |

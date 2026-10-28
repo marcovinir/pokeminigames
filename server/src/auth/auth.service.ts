@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { ThemeMode, ThemeName, ThemePreferences } from "@pokemon-minigames/shared";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { AppError } from "../http/errors.js";
+import { anonymizeAccount } from "./delete-account.js";
 import type { PasswordHasher } from "./password.js";
 import type { TokenService } from "./tokens.js";
 
@@ -138,6 +139,23 @@ export class AuthService {
       where: { tokenHash, revokedAt: null },
       data: { revokedAt: this.now() },
     });
+  }
+
+  /**
+   * Borra (anonimiza) la cuenta si la contraseña es la suya; si no, lanza el mismo error que un inicio de sesión
+   * fallido y no toca nada.
+   */
+  async deleteAccount(userId: string, password: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } });
+    if (!user) {
+      throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
+    }
+    if (!(await this.hasher.verify(password, user.passwordHash))) {
+      throw new AppError(403, "WRONG_PASSWORD", "La contraseña no es correcta");
+    }
+    if (!(await anonymizeAccount(this.prisma, this.hasher, userId))) {
+      throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
+    }
   }
 
   async me(userId: string): Promise<AuthUser> {
