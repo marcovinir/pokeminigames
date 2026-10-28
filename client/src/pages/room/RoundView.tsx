@@ -53,12 +53,17 @@ export function RoundView() {
   return (
     <section className="flex flex-col gap-4">
       {/* En pantallas estrechas los paneles de equipo se resumen en una sola barra que se queda pegada bajo el encabezado al desplazarse. */}
-      <p aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
-        Tú <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> ·{" "}
-        {opponent?.username ?? "Rival"}
-        {opponent?.guest ? <GuestTag className="mx-1 align-middle" /> : " "}
+      {/* Un grupo con nombre (ARIA no deja nombrar un párrafo) y espacios reales entre nombre, etiqueta y cifra: los
+          lectores de pantalla leían «inv_1Invitado400». */}
+      <div role="group" aria-label="Marcador" className="framed sticky top-(--header-h) z-10 rounded-pill bg-surface px-4 py-2 text-center text-sm shadow-card md:hidden">
+        Tú <span className="font-num font-semibold tabular-nums">{me?.totalStats ?? 0}</span> · {opponent?.username ?? "Rival"}{" "}
+        {opponent?.guest ? (
+          <>
+            <GuestTag className="align-middle" />{" "}
+          </>
+        ) : null}
         <span className="font-num font-semibold tabular-nums">{opponent?.totalStats ?? 0}</span>
-      </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
         <div style={rise(0)} className="animate-rise hidden md:block">

@@ -7,7 +7,7 @@ import * as durations from "../../src/game/durations";
 import { LobbyPage } from "../../src/pages/Lobby";
 import { DEFAULT_FORM, buildRequest, formFromConfig } from "../../src/pages/room-form";
 import * as serverConstants from "../../../server/src/game/constants";
-import { fakeServices, renderRoute } from "../helpers/services";
+import { fakeServices, renderRoute, ASH, GUEST, signIn } from "../helpers/services";
 
 describe("límites y duraciones del cliente", () => {
   it("coinciden con los del servidor", () => {
@@ -215,6 +215,21 @@ describe("lobby: unirse a una sala", () => {
     await user.click(screen.getByRole("button", { name: "Unirse" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(screen.getByTestId("location")).toHaveTextContent("/");
+  });
+});
+
+describe("lobby: nombre repetido en la sala", () => {
+  it.each([
+    ["una cuenta", ASH, "Ya hay alguien con tu mismo nombre en esa sala: con esta cuenta no puedes unirte a ella."],
+    ["un invitado", GUEST, "Ya hay alguien con ese nombre en la sala. Cierra sesión (arriba a la derecha) y entra como invitado con otro nombre."],
+  ] as const)("NAME_IN_USE se explica según quién se une: %s", async (_who, who, message) => {
+    const services = fakeServices();
+    signIn(services, who);
+    const { user } = renderLobby({ services });
+    vi.mocked(services.endpoints.rooms.join).mockRejectedValueOnce(new ApiError(409, "NAME_IN_USE"));
+    await user.type(screen.getByLabelText("Código de sala"), "ZZZZZZ");
+    await user.click(screen.getByRole("button", { name: "Unirse" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
   });
 });
 
