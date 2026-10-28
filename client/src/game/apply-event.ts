@@ -145,7 +145,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
           opponentAnswered: state.round.opponentAnswered,
         },
         // Si se reconecta durante la pausa del resultado, el último resultado todavía sirve.
-        lastResult: view.lastResult?.round === state.roundsPlayed ? view.lastResult : null,
+        lastResult: state.lastResult ?? (view.lastResult?.round === state.roundsPlayed ? view.lastResult : null),
         opponentGraceEndsAt: state.opponentGraceEndsAt,
         silhouette: state.silhouette ? silhouetteFrom(state.silhouette, view.silhouette) : null,
         ended: null,

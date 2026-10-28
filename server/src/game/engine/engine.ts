@@ -27,6 +27,7 @@ import {
   SEATS,
   type TimerId,
   otherSeat,
+  type SeatOccupant
 } from "./types.js";
 import { buildGameEnded, toPokemonView } from "./view.js";
 
@@ -39,15 +40,8 @@ interface Ctx {
 
 const ABANDONED_REASONS = new Set(["cancelled", "expired", "abandoned"]);
 
-/** Quién ocupa un asiento: `guest` y `avatarId` solo están cuando aplican. */
-interface PlayerIdentity {
-  userId: string;
-  username: string;
-  guest?: boolean;
-  avatarId?: number;
-}
 
-function newPlayer(seat: Seat, { userId, username, guest, avatarId }: PlayerIdentity): PlayerState {
+function newPlayer(seat: Seat, { userId, username, guest, avatarId }: SeatOccupant): PlayerState {
   return {
     seat,
     userId,
@@ -88,7 +82,7 @@ function randomPlayablePair(c: Ctx): TypePair | null {
 /** Estado inicial de una sala recién creada: el creador ocupa el asiento 1. */
 export function createGame(
   config: DobleTipoConfig,
-  creator: PlayerIdentity,
+  creator: SeatOccupant,
   now: number,
   /** `rematch`: la sala nace de una revancha y los dos ya están dentro; si el rival no entra caduca pronto. */
   options: { rematch?: boolean } = {},
@@ -148,7 +142,7 @@ export function reduce(prev: GameState, event: GameEvent, now: number, deps: Eng
 
 // --- Sala y conexiones -------------------------------------------------------------
 
-function onJoined(c: Ctx, joiner: PlayerIdentity): void {
+function onJoined(c: Ctx, joiner: SeatOccupant): void {
   if (c.s.phase !== "waiting" || c.s.players[2]) return;
   const player = newPlayer(2, joiner);
   c.s.players[2] = player;
@@ -425,17 +419,16 @@ function closeRound(c: Ctx): void {
   // Si acertaron 0 o 1 jugadores se enseña un Pokémon libre que sí servía (ya repartidos los de esta ronda: nunca es uno ganado).
   const hits = SEATS.filter((seat) => results[seat].result === "VALID").length;
   const example = hits <= 1 ? pickExample(c.deps.catalog, pair, claimedIds(s), c.deps.rng) : null;
-  emit(c, "all", {
-    name: "round-result",
-    payload: {
-      round: round.number,
-      nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),
-      type1: pair[0],
-      type2: pair[1],
-      results,
-      ...(example ? { example: toPokemonView(example) } : {}),
-    },
-  });
+  const payload = {
+    round: round.number,
+    nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),
+    type1: pair[0],
+    type2: pair[1],
+    results,
+    ...(example ? { example: toPokemonView(example) } : {}),
+  };
+  s.lastResult = structuredClone(payload);
+  emit(c, "all", { name: "round-result", payload });
   c.fx.push({ kind: "persist_round", record: { number: round.number, pair, picks: records } });
 
   if (over) {

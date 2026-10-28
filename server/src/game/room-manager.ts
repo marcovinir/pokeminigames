@@ -51,8 +51,7 @@ export class RoomManager {
     });
   }
 
-  async createRoom(user: RoomUser, roomConfig: RoomConfig): Promise<{ code: string }> {
-    const config = roomConfig;
+  async createRoom(user: RoomUser, config: RoomConfig): Promise<{ code: string }> {
     // Solo se guardan las partidas de «Doble tipo» entre cuentas (la silueta no cuenta en estadísticas por ahora).
     const saved = asDobleTipo(config);
     if (this.deps.store.findByUser(user.userId) || this.pendingCreates.has(user.userId)) {

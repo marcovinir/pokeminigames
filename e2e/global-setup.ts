@@ -68,9 +68,10 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       COOKIE_SAME_SITE: "lax",
       TRUST_PROXY: "1",
       // Las siluetas salen siempre de la misma imagen local (la E2E no depende de PokeAPI), salvo con imágenes reales.
+      // El servidor exige `{id}` en la plantilla: va en la consulta, que se ignora al leer un archivo.
       ...(process.env.E2E_REAL_IMAGES || process.env.E2E_SCREENSHOTS
         ? {}
-        : { SILHOUETTE_ART_URL: pathToFileURL(join(root, "e2e", "fixtures", "pokemon-art.png")).href }),
+        : { SILHOUETTE_ART_URL: `${pathToFileURL(join(root, "e2e", "fixtures", "pokemon-art.png")).href}?id={id}` }),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

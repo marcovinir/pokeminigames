@@ -16,10 +16,10 @@ const sqlOf = (name: string): string => readFileSync(join(migrationsDir, name, "
  * que ya hay en producción y se aplica la nueva.
  */
 describe("la migración que añade el avatar", () => {
-  const last = migrations.at(-1)!;
-  const previous = migrations.slice(0, -1);
+  const last = migrations.find((name) => /add_user_avatar$/.test(name)) ?? "";
+  const previous = migrations.slice(0, migrations.indexOf(last));
 
-  it("es la última y se llama como lo que hace", () => {
+  it("existe y se llama como lo que hace", () => {
     expect(last).toMatch(/add_user_avatar$/);
   });
 

@@ -88,6 +88,18 @@ describe("vistas de la partida", () => {
     expect(mine).toEqual([1, 5]);
   });
 
+  it("en la pausa entre rondas incluye el último resultado (al reconectar se ve en vez de «Resultado de la ronda…»)", () => {
+    const h = new Harness({ config: RANDOM_3, rng: [0] });
+    h.startGame();
+    h.submit(1, "Alfa");
+    h.submit(2, "zzz");
+    expect(h.state.phase).toBe("round_result");
+    const state = buildRoomState(h.state, 2, "X", h.catalog, h.now);
+    expect(state.lastResult).toEqual(h.last("round-result"));
+    h.advance(6000);
+    expect(buildRoomState(h.state, 2, "X", h.catalog, h.now).lastResult).toBeUndefined();
+  });
+
   it("en una ronda activa incluye el par, el plazo y si ya respondí", () => {
     const h = new Harness({ config: RANDOM_3, rng: [0] });
     h.startGame();

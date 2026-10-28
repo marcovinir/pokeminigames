@@ -174,7 +174,7 @@ describe("GET /stats/history", () => {
         opponent: { username: "misty", avatarId: null },
         myScore: 1100,
         opponentScore: 0,
-        config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null },
+        config: { typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3, statsGoal: null, typeHints: false },
       },
     ]);
     expect(JSON.stringify(response.body)).not.toContain("SECRET");

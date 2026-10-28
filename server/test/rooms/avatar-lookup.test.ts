@@ -24,3 +24,19 @@ describe("avatarForRoom", () => {
     expect(logger.warn).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("avatarForRoom con la base lenta", () => {
+  it("si la lectura tarda más del límite, entra con iniciales en vez de esperar", async () => {
+    vi.useFakeTimers();
+    try {
+      const never = () => new Promise<number | null>(() => {});
+      const logger = { warn: vi.fn() };
+      const pending = avatarForRoom(never, { userId: "u1", isGuest: false }, logger, 1500);
+      await vi.advanceTimersByTimeAsync(1500);
+      await expect(pending).resolves.toBeNull();
+      expect(logger.warn).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

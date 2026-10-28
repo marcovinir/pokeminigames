@@ -31,8 +31,8 @@ export function factText(fact: PokemonFact): string {
       return extreme(true, STAT_WORDS[fact.stat], fact.pokemon, fact.value);
     case "lowest_total":
       return extreme(false, STAT_WORDS.total, fact.pokemon, fact.value);
-    case "type_count":
-      return fact.count === 1 ? `Solo hay 1 Pokémon de tipo ${TYPE_LABELS[fact.type]}.` : `Hay ${fact.count} Pokémon de tipo ${TYPE_LABELS[fact.type]}.`;
+    case "type_extreme":
+      return `El tipo con ${fact.which === "most" ? "más" : "menos"} Pokémon es ${TYPE_LABELS[fact.type]}: ${fact.count}.`;
     case "dual_type_count":
       return `${fact.count} de los ${fact.total} Pokémon tienen dos tipos.`;
     case "pair_count":

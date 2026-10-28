@@ -45,7 +45,8 @@ export interface FactPokemon {
 export type PokemonFact =
   | { kind: "top_stat"; stat: keyof BaseStats | "total"; pokemon: FactPokemon[]; value: number }
   | { kind: "lowest_total"; pokemon: FactPokemon[]; value: number }
-  | { kind: "type_count"; type: TypeName; count: number }
+  /** El tipo con más (o con menos) Pokémon; solo si no hay empate. */
+  | { kind: "type_extreme"; which: "most" | "least"; type: TypeName; count: number }
   | { kind: "dual_type_count"; count: number; total: number }
   | { kind: "pair_count"; count: number }
   | { kind: "common_pair"; pair: [TypeName, TypeName]; count: number };

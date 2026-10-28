@@ -44,6 +44,8 @@ export interface RoomStateView {
   silhouette?: SilhouetteStateView;
   /** Hasta cuándo puede volver el rival si está desconectado. */
   opponentGraceEndsAt: number | null;
+  /** Solo en la pausa entre rondas de «Doble tipo»: el último resultado, para quien reconecta en ese momento. */
+  lastResult?: RoundResultPayload;
   round: {
     number: number;
     pair: [TypeName, TypeName] | null;

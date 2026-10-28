@@ -45,6 +45,19 @@ describe("silueta: sala y conexiones", () => {
     expect(h.state.outcome).toEqual({ winnerSeat: 1, reason: "forfeit" });
   });
 
+  it("abandonar en la pausa de la última revelación no es un abandono: ya se jugaron todas las rondas", () => {
+    const h = new SilhouetteHarness();
+    h.startGame();
+    for (let round = 1; round <= 5; round++) {
+      h.submit(1, "x");
+      h.submit(2, "y");
+      expect(h.state.phase).toBe("round_result");
+      if (round < 5) h.advance(6000);
+    }
+    h.dispatch({ type: "LEAVE", seat: 2 });
+    expect(h.state.outcome?.reason).toBe("completed");
+  });
+
   it("desconectado más de 30 s en plena partida: gana el otro por desconexión", () => {
     const h = new SilhouetteHarness();
     h.startGame();

@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/** Si el texto es un origen exacto: esquema http(s), host y puerto opcional, sin ruta ni comodines. */
+function isOrigin(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") && url.origin === value;
+  } catch {
+    return false;
+  }
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -11,11 +21,17 @@ const envSchema = z
     SILHOUETTE_ART_URL: z
       .string()
       .min(1)
+      // Sin {id} todas las siluetas serían la misma imagen.
+      .refine((url) => url.includes("{id}"), "SILHOUETTE_ART_URL debe llevar {id} donde va el número de Pokédex")
       .default("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png"),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
     BCRYPT_COST: z.coerce.number().int().min(4).max(15).default(12),
     // Con un solo origen (producción) no hay CORS que configurar; en desarrollo el valor por defecto es Vite.
-    CORS_ORIGIN: z.string().min(1).optional(),
+    // Un origen exacto (esquema://host[:puerto]). «*» no sirve con cookies y la comprobación de origen lo bloquearía todo.
+    CORS_ORIGIN: z
+      .string()
+      .refine(isOrigin, "CORS_ORIGIN debe ser un origen como https://juego.example (sin «*» ni ruta)")
+      .optional(),
     // Cuántos proxies hay delante del servidor (en Render se verifica tras desplegar): sin eso la IP y el protocolo que se leen son los del proxy.
     TRUST_PROXY: z.coerce.number().int().min(0).max(10).optional(),
     COOKIE_SECURE: z

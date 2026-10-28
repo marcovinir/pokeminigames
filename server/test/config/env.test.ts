@@ -130,3 +130,18 @@ describe("loadEnv", () => {
     expect(loadEnv({ ...valid, COOKIE_SAME_SITE: "none", COOKIE_SECURE: "true" }).COOKIE_SAME_SITE).toBe("none");
   });
 });
+
+describe("loadEnv: valores que romperían algo en silencio", () => {
+  it("rechaza CORS_ORIGIN=* y cualquier valor que no sea un origen (con cookies, «*» no funciona y la comprobación de origen lo bloquearía todo)", () => {
+    expect(() => loadEnv({ ...valid, CORS_ORIGIN: "*" })).toThrow(/CORS_ORIGIN/);
+    expect(() => loadEnv({ ...valid, CORS_ORIGIN: "juego.example" })).toThrow(/CORS_ORIGIN/);
+    expect(() => loadEnv({ ...valid, CORS_ORIGIN: "https://juego.example/ruta" })).toThrow(/CORS_ORIGIN/);
+    expect(loadEnv({ ...valid, CORS_ORIGIN: "https://juego.example" }).CORS_ORIGIN).toBe("https://juego.example");
+    expect(loadEnv({ ...valid, CORS_ORIGIN: "http://localhost:5173" }).CORS_ORIGIN).toBe("http://localhost:5173");
+  });
+
+  it("rechaza una SILHOUETTE_ART_URL sin {id} (todas las siluetas serían la misma imagen)", () => {
+    expect(() => loadEnv({ ...valid, SILHOUETTE_ART_URL: "https://arte.example/pokemon.png" })).toThrow(/SILHOUETTE_ART_URL/);
+    expect(loadEnv({ ...valid, SILHOUETTE_ART_URL: "file:///tmp/{id}.png" }).SILHOUETTE_ART_URL).toBe("file:///tmp/{id}.png");
+  });
+});
