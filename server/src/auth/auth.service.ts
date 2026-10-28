@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { ThemeMode, ThemeName, ThemePreferences } from "@pokemon-minigames/shared";
+import { DELETED_USERNAME_PREFIX, type ThemeMode, type ThemeName, type ThemePreferences, isDeletedUsername } from "@pokemon-minigames/shared";
 import { Prisma, type PrismaClient } from "../generated/prisma/client.js";
 import { AppError } from "../http/errors.js";
 import { anonymizeAccount } from "./delete-account.js";
@@ -160,7 +160,7 @@ export class AuthService {
 
   async me(userId: string): Promise<AuthUser> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
+    if (!user || isDeletedUsername(user.username)) {
       throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
     }
     return toAuthUser(user);
@@ -168,31 +168,26 @@ export class AuthService {
 
   /** Guarda la preferencia de tema; si la cuenta ya no existe es lo mismo que una sesión inválida. */
   async savePreferences(userId: string, preferences: ThemePreferences): Promise<ThemePreferences> {
-    try {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { theme: preferences.theme, themeMode: preferences.themeMode },
-      });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-        throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
-      }
-      throw error;
-    }
+    await this.updateLiveAccount(userId, { theme: preferences.theme, themeMode: preferences.themeMode });
     return { theme: preferences.theme, themeMode: preferences.themeMode };
   }
 
   /** Guarda (o quita, con `null`) el avatar; la validación contra la lista la hace la ruta. */
   async saveAvatar(userId: string, avatarId: number | null): Promise<number | null> {
-    try {
-      await this.prisma.user.update({ where: { id: userId }, data: { avatarPokemonId: avatarId } });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-        throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
-      }
-      throw error;
-    }
+    await this.updateLiveAccount(userId, { avatarPokemonId: avatarId });
     return avatarId;
+  }
+
+  /**
+   * Guarda en una cuenta que sigue viva. Una borrada (anonimizada) es lo mismo que una que no existe: un access token aún
+   * vigente de antes de borrarla no puede volver a escribir en su fila.
+   */
+  private async updateLiveAccount(userId: string, data: Prisma.UserUpdateManyMutationInput): Promise<void> {
+    const updated = await this.prisma.user.updateMany({
+      where: { id: userId, NOT: { username: { startsWith: DELETED_USERNAME_PREFIX, mode: "insensitive" } } },
+      data,
+    });
+    if (updated.count === 0) throw new AppError(401, "UNAUTHORIZED", "El usuario ya no existe");
   }
 
   /** El avatar de una cuenta para mostrarlo en una sala; nulo si no tiene o si la cuenta ya no existe. */
