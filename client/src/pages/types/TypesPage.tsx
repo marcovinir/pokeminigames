@@ -1,48 +1,13 @@
-import { type DamageGroups, TYPE_NAMES, type TypeName, damageTaken, typeEffectiveness } from "@pokemon-minigames/shared";
-import { useId } from "react";
+import { TYPE_NAMES, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
 import { useSearchParams } from "react-router";
 import { Card } from "../../components/Card";
+import { DamageList } from "../../components/DamageList";
 import { PlayPrompt } from "../../components/PlayPrompt";
-import { TypeChip } from "../../components/TypeChip";
 import { TypeSelect } from "../../components/TypeSelect";
 import { rise } from "../../components/rise";
 import { TYPES_TEXT, TYPE_ABBREVIATIONS, TYPE_LABELS } from "../../i18n/es";
 import { typeChipStyle } from "../../theme/type-styles";
 import { parseTypeSelection, typeSelectionParams } from "./type-selection";
-
-const DAMAGE_ROWS: { key: keyof DamageGroups; label: string }[] = [
-  { key: "x4", label: "×4" },
-  { key: "x2", label: "×2" },
-  { key: "x05", label: "×½" },
-  { key: "x025", label: "×¼" },
-  { key: "x0", label: "×0" },
-];
-
-function DamageBlock({ types }: { types: TypeName[] }) {
-  const titleId = useId();
-  const groups = damageTaken(types);
-  return (
-    <section aria-labelledby={titleId} className="mt-5">
-      <h2 id={titleId} className="font-display text-lg font-semibold">
-        {TYPES_TEXT.damageTitle}
-      </h2>
-      <div className="mt-2 flex flex-col gap-2">
-        {DAMAGE_ROWS.filter(({ key }) => groups[key].length > 0).map(({ key, label }) => (
-          <div key={key} role="group" aria-label={label} className="flex items-start gap-3">
-            <span aria-hidden="true" className="w-8 shrink-0 font-num font-semibold">
-              {label}
-            </span>
-            <div className="flex min-w-0 flex-wrap gap-1.5">
-              {groups[key].map((type) => (
-                <TypeChip key={type} type={type} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 const CELL_STYLE = {
   2: "bg-success-bg text-success",
@@ -131,7 +96,7 @@ export function TypesPage() {
           <TypeSelect label={TYPES_TEXT.second} value={second} disabled={!first} exclude={first} onChange={(type) => choose([first, type])} />
         </div>
         {/* La región viva existe desde el principio: si naciera con el contenido, el cambio no se anunciaría. */}
-        <div aria-live="polite">{first ? <DamageBlock types={selected} /> : null}</div>
+        <div aria-live="polite">{first ? <DamageList types={selected} /> : null}</div>
       </Card>
       <Card as="section" aria-labelledby="types-chart-title" className="min-w-0 p-5">
         <h2 id="types-chart-title" className="font-display text-lg font-semibold">
