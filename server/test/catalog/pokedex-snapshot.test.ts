@@ -166,3 +166,41 @@ describe("fetchPokedex", () => {
     expect(new Set(asked).size).toBe(asked.length);
   });
 });
+
+describe("toEvolutionCondition con varias vías y formas regionales", () => {
+  const group = (id: number) => ({ name: `g${id}`, url: `https://pokeapi.co/api/v2/version-group/${id}/` });
+  const detail = (id: number, extra: Record<string, unknown>) => ({ trigger: { name: "level-up" }, version_group: group(id), ...extra });
+
+  it("manda la vía de los juegos más recientes: Leafeon evoluciona con piedra, no en un lugar de juegos viejos", () => {
+    const details = [detail(5, { location: { name: "bosque" } }), { ...detail(20, {}), trigger: { name: "use-item" }, item: { name: "water-stone" } }];
+    expect(toEvolutionCondition(details, itemName)).toEqual({ kind: "item", item: "Piedra Agua" });
+  });
+
+  it("varias vías a la vez no se reducen a una: Lycanroc de día, de noche y al atardecer", () => {
+    const details = [detail(17, { min_level: 25, time_of_day: "day" }), detail(17, { min_level: 25, time_of_day: "night" })];
+    expect(toEvolutionCondition(details, itemName)).toEqual({ kind: "other" });
+  });
+
+  it("la misma vía repetida en varios juegos sigue siendo una", () => {
+    const details = [detail(20, { min_level: 16 }), detail(20, { min_level: 16 }), detail(5, { min_level: 16 })];
+    expect(toEvolutionCondition(details, itemName)).toEqual({ kind: "level", level: 16 });
+  });
+
+  it("si exige una forma regional no se presenta como una evolución normal: Clodsire pide un Wooper de Paldea", () => {
+    const details = [detail(25, { min_level: 20, required_pokemon_form: { name: "wooper-paldea" } })];
+    expect(toEvolutionCondition(details, itemName)).toEqual({ kind: "other" });
+  });
+
+  it("una forma base con nombre propio no cuenta como regional", () => {
+    const details = [detail(25, { min_level: 20, required_pokemon_form: { name: "burmy-plant" } })];
+    expect(toEvolutionCondition(details, itemName)).toEqual({ kind: "level", level: 20 });
+  });
+
+  it("las vías que llevan a una forma regional no cuentan: la ficha es de la forma base", () => {
+    const details = [
+      { ...detail(20, {}), trigger: { name: "use-item" }, item: { name: "water-stone" } },
+      { ...detail(20, { location: { name: "alola" } }), evolved_pokemon_form: { name: "raichu-alola" } },
+    ];
+    expect(toEvolutionCondition(details, itemName)).toEqual({ kind: "item", item: "Piedra Agua" });
+  });
+});

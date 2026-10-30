@@ -52,8 +52,7 @@ const roomManager = new RoomManager({
   silhouettes,
 });
 
-// El cliente construido vive en client/dist, a la misma distancia desde server/src y desde el servidor empaquetado (server/dist).
-// Vive a la misma distancia desde server/src y desde el servidor empaquetado (server/dist).
+// El cliente construido y estos datos viven a la misma distancia desde server/src y desde el servidor empaquetado (server/dist).
 const pokedex = loadPokedex(new URL("../data/pokedex.snapshot.json", import.meta.url));
 const app = createApp({ pokedex, env, prisma, tokens, roomManager, catalog, rateLimits: rateLimitsFor(env.NODE_ENV), clientDist: join(import.meta.dirname, "../../client/dist"), silhouettes });
 const server = createServer(app);

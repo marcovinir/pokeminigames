@@ -62,17 +62,38 @@ function hasOtherRequirement(details: PokeApiEvolutionDetails): boolean {
   return Object.entries(details).some(([key, value]) => !KNOWN_FIELDS.has(key) && value !== null && value !== false && value !== "" && value !== undefined);
 }
 
-export function toEvolutionCondition(details: PokeApiEvolutionDetails[], itemName: (name: string) => string): EvolutionCondition {
-  const first = details[0];
-  if (!first || hasOtherRequirement(first)) return { kind: "other" };
-  const time = first.time_of_day ?? "";
+const REGIONAL_FORM = /-(alola|galar|hisui|paldea)\b/;
+const isRegional = (form: unknown): boolean => REGIONAL_FORM.test((form as { name?: string } | null | undefined)?.name ?? "");
+
+function oneCondition(details: PokeApiEvolutionDetails, itemName: (name: string) => string): EvolutionCondition {
+  // Exigir una forma regional es un requisito que la ficha no dice: «nivel 20» engañaría (Clodsire pide un Wooper de Paldea).
+  if (hasOtherRequirement(details) || isRegional(details.required_pokemon_form)) return { kind: "other" };
+  const time = details.time_of_day ?? "";
   if (time !== "" && time !== "day" && time !== "night") return { kind: "other" };
   const timeOfDay = time === "" ? {} : { timeOfDay: time as "day" | "night" };
-  if (first.trigger.name === "use-item" && first.item) return { kind: "item", item: itemName(first.item.name) };
-  if (first.trigger.name === "trade") return { kind: "trade" };
-  if (first.trigger.name === "level-up" && first.min_level) return { kind: "level", level: first.min_level, ...timeOfDay };
-  if (first.trigger.name === "level-up" && first.min_happiness) return { kind: "friendship", ...timeOfDay };
+  if (details.trigger.name === "use-item" && details.item) return { kind: "item", item: itemName(details.item.name) };
+  if (details.trigger.name === "trade") return { kind: "trade" };
+  if (details.trigger.name === "level-up" && details.min_level) return { kind: "level", level: details.min_level, ...timeOfDay };
+  if (details.trigger.name === "level-up" && details.min_happiness) return { kind: "friendship", ...timeOfDay };
   return { kind: "other" };
+}
+
+/**
+ * Cómo se evoluciona hoy. Manda lo de los juegos más recientes (Leafeon evolucionaba en un lugar y ahora con piedra) y no
+ * cuenta lo que lleva a una forma regional, porque la ficha es de la forma base. Si quedan varias vías a la vez (Lycanroc),
+ * reducirlas a una mentiría: es una condición especial.
+ */
+export function toEvolutionCondition(details: PokeApiEvolutionDetails[], itemName: (name: string) => string): EvolutionCondition {
+  const base = details.filter((one) => !isRegional(one.evolved_pokemon_form));
+  if (base.length === 0) return { kind: "other" };
+  const groupOf = (one: PokeApiEvolutionDetails) => {
+    const group = one.version_group as { url?: string } | null | undefined;
+    return group?.url ? idFromUrl(group.url) : -1;
+  };
+  const latest = Math.max(...base.map(groupOf));
+  const conditions = base.filter((one) => groupOf(one) === latest).map((one) => oneCondition(one, itemName));
+  const distinct = new Set(conditions.map((condition) => JSON.stringify(condition)));
+  return distinct.size === 1 ? conditions[0]! : { kind: "other" };
 }
 
 /** La cadena desde su primera etapa, con sus ramas. Lo que está fuera de la Pokédex se descarta. */

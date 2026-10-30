@@ -185,3 +185,58 @@ describe("la ficha de un Pokémon", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Squirtle" })).toBeInTheDocument();
   });
 });
+
+describe("la cadena con ramas se entiende en cualquier ancho", () => {
+  it("cada etapa queda dentro de la anterior, con sangría, también en el teléfono", async () => {
+    const wurmple: EvolutionNode = {
+      id: 265,
+      name: "Wurmple",
+      condition: null,
+      next: [
+        { id: 266, name: "Silcoon", condition: { kind: "level", level: 7 }, next: [{ id: 267, name: "Beautifly", condition: { kind: "level", level: 10 }, next: [] }] },
+        { id: 268, name: "Cascoon", condition: { kind: "level", level: 7 }, next: [{ id: 269, name: "Dustox", condition: { kind: "level", level: 10 }, next: [] }] },
+      ],
+    };
+    renderAt("/pokedex/265", { ...charizard, id: 265, evolution: wurmple });
+    const evolutions = await screen.findByRole("region", { name: "Evoluciones" });
+    const silcoon = within(evolutions).getByRole("link", { name: "Silcoon" }).closest("li")!;
+    expect(within(silcoon).getByRole("link", { name: "Beautifly" })).toBeInTheDocument();
+    expect(within(silcoon).queryByRole("link", { name: "Dustox" })).toBeNull();
+    const nested = silcoon.querySelector("ul")!;
+    expect(nested.className).toContain("border-l-2");
+    expect(nested.className).toContain("ml-");
+    expect(nested.className).not.toContain("sm:");
+  });
+});
+
+describe("volver a la lista", () => {
+  function renderFrom(state: unknown) {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dexEntry).mockResolvedValue(charizard);
+    renderWithServices(
+      <Routes>
+        <Route path="/pokedex/:id" element={<PokemonPage />} />
+      </Routes>,
+      { route: { pathname: "/pokedex/6", state }, services },
+    );
+  }
+
+  it("«Volver a la Pokédex» lleva a la búsqueda de la que se vino", async () => {
+    renderFrom({ fromSearch: "?tipo1=fire&ver=120" });
+    await screen.findByRole("heading", { level: 1, name: "Charizard" });
+    expect(screen.getByRole("link", { name: "Volver a la Pokédex" })).toHaveAttribute("href", "/pokedex?tipo1=fire&ver=120");
+  });
+
+  it("sin venir de la lista, va a la lista entera", async () => {
+    renderFrom(null);
+    await screen.findByRole("heading", { level: 1, name: "Charizard" });
+    expect(screen.getByRole("link", { name: "Volver a la Pokédex" })).toHaveAttribute("href", "/pokedex");
+  });
+
+  it("la búsqueda se conserva al pasar a otro Pokémon", async () => {
+    renderFrom({ fromSearch: "?tipo1=fire" });
+    await screen.findByRole("heading", { level: 1, name: "Charizard" });
+    await userEvent.click(screen.getByRole("link", { name: "Siguiente" }));
+    await waitFor(() => expect(screen.getByRole("link", { name: "Volver a la Pokédex" })).toHaveAttribute("href", "/pokedex?tipo1=fire"));
+  });
+});

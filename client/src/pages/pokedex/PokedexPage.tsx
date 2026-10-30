@@ -1,6 +1,6 @@
 import { type PokedexEntry, TYPE_NAMES, type TypeName } from "@pokemon-minigames/shared";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigationType, useSearchParams } from "react-router";
 import { pokedexNumber } from "../../catalog/pokedex";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
@@ -33,10 +33,10 @@ function saveScroll(key: string, value: number): void {
   }
 }
 
-function PokemonTile({ pokemon, onOpen }: { pokemon: PokedexEntry; onOpen: () => void }) {
+function PokemonTile({ pokemon, fromSearch, onOpen }: { pokemon: PokedexEntry; fromSearch: string; onOpen: () => void }) {
   return (
     <li className="min-w-0">
-      <Link to={`/pokedex/${pokemon.id}`} onClick={onOpen} className="framed flex h-full flex-col items-center gap-1 rounded-card bg-surface p-3 text-center shadow-card hover:bg-surface-2">
+      <Link to={`/pokedex/${pokemon.id}`} state={{ fromSearch }} onClick={onOpen} className="framed flex h-full flex-col items-center gap-1 rounded-card bg-surface p-3 text-center shadow-card hover:bg-surface-2">
         <img src={pokemon.spriteUrl} alt="" loading="lazy" decoding="async" width={72} height={72} className="size-18" />
         <span className="font-num text-xs text-muted">{pokedexNumber(pokemon.id)}</span>
         <span className="max-w-full font-display font-semibold [overflow-wrap:anywhere]">{pokemon.names.es}</span>
@@ -54,7 +54,9 @@ function PokemonTile({ pokemon, onOpen }: { pokemon: PokedexEntry; onOpen: () =>
 export function PokedexPage() {
   const { endpoints } = useServices();
   const [params, setParams] = useSearchParams();
-  const { search } = useLocation();
+  const { search, state } = useLocation();
+  // La posición guardada es de quien vuelve (Atrás, recargar o «Volver a la Pokédex»): entrar por otro enlace empieza arriba.
+  const returning = useNavigationType() === "POP" || (state as { restoreScroll?: boolean } | null)?.restoreScroll === true;
   const [entries, setEntries] = useState<PokedexEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
   const searchId = useId();
@@ -75,8 +77,8 @@ export function PokedexPage() {
     if (!entries || restored.current) return;
     restored.current = true;
     const saved = readScroll(scrollKey(search));
-    if (saved !== null) window.scrollTo(0, saved);
-  }, [entries, search]);
+    if (returning && saved !== null) window.scrollTo(0, saved);
+  }, [entries, search, returning]);
 
   // Sin apilar historial: «Atrás» sale de la lista en vez de deshacer cada filtro. Cambiar un filtro vuelve a la primera tanda.
   const change = (changes: Partial<typeof query>) => setParams(pokedexQueryParams({ ...query, visible: DEX_PAGE_SIZE, ...changes }), { replace: true });
@@ -152,7 +154,7 @@ export function PokedexPage() {
         <>
           <ul aria-label={POKEDEX_TEXT.listLabel} className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {matches.slice(0, query.visible).map((pokemon) => (
-              <PokemonTile key={pokemon.id} pokemon={pokemon} onOpen={() => saveScroll(scrollKey(search), window.scrollY)} />
+              <PokemonTile key={pokemon.id} pokemon={pokemon} fromSearch={search} onOpen={() => saveScroll(scrollKey(search), window.scrollY)} />
             ))}
           </ul>
           {query.visible < matches.length ? (

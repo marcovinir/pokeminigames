@@ -1,7 +1,7 @@
 import type { PokedexEntry, TypeName } from "@pokemon-minigames/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Route, Routes, useLocation } from "react-router";
+import { Link, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../src/api/client";
 import { PokedexPage } from "../../src/pages/pokedex/PokedexPage";
@@ -204,5 +204,53 @@ describe("/pokedex es pública", () => {
     renderList("/pokedex", SAMPLE, account);
     await screen.findByRole("link", { name: /Charizard/ });
     expect(screen.queryByRole("link", { name: "Entrar a jugar" })).toBeNull();
+  });
+});
+
+describe("la posición guardada solo se aplica al volver", () => {
+  function renderWithEntry() {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dex).mockResolvedValue(SAMPLE);
+    return renderWithServices(
+      <Routes>
+        <Route path="/otra" element={<Link to="/pokedex">Ir a la Pokédex</Link>} />
+        <Route path="/volver" element={<Link to="/pokedex" state={{ restoreScroll: true }}>Volver</Link>} />
+        <Route path="/pokedex" element={<PokedexPage />} />
+      </Routes>,
+      { route: "/otra", services },
+    );
+  }
+
+  it("entrar por un enlace normal (el del encabezado) empieza arriba, aunque haya una posición guardada", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    sessionStorage.setItem("pokedex-scroll:", "5864");
+    renderWithEntry();
+    await userEvent.click(screen.getByRole("link", { name: "Ir a la Pokédex" }));
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("volver con el enlace de la ficha sí la restaura", async () => {
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    sessionStorage.setItem("pokedex-scroll:", "840");
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dex).mockResolvedValue(SAMPLE);
+    renderWithServices(
+      <Routes>
+        <Route path="/volver" element={<Link to="/pokedex" state={{ restoreScroll: true }}>Volver</Link>} />
+        <Route path="/pokedex" element={<PokedexPage />} />
+      </Routes>,
+      { route: "/volver", services },
+    );
+    await userEvent.click(screen.getByRole("link", { name: "Volver" }));
+    await screen.findByRole("link", { name: /Charizard/ });
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 840));
+  });
+
+  it("cada tarjeta le dice a la ficha de qué búsqueda viene", async () => {
+    const { user } = renderList("/pokedex?tipo1=fire");
+    const link = await screen.findByRole("link", { name: /Charizard/ });
+    await user.click(link);
+    expect(where()).toBe("/pokedex/6");
   });
 });

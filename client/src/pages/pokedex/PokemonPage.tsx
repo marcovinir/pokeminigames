@@ -1,6 +1,6 @@
 import type { BaseStats, EvolutionNode, LocalizedText, PokedexDetail } from "@pokemon-minigames/shared";
 import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import { ApiError } from "../../api/client";
 import { pokedexNumber } from "../../catalog/pokedex";
 import { ArtImage } from "../../components/ArtImage";
@@ -13,6 +13,11 @@ import { TypeChip } from "../../components/TypeChip";
 import { rise } from "../../components/rise";
 import { POKEDEX_TEXT, STAT_LABELS, evolutionConditionText } from "../../i18n/es";
 import { useServices } from "../../services";
+
+/** De qué búsqueda de la lista se vino: se conserva al pasar de un Pokémon a otro. */
+interface DexLinkState {
+  fromSearch: string;
+}
 
 const LAST_POKEMON = 1025;
 /** La stat más alta posible: las barras se comparan entre Pokémon, no solo dentro de uno. */
@@ -42,23 +47,26 @@ function OfficialText({ text }: { text: LocalizedText }) {
   );
 }
 
-function Evolution({ node, current }: { node: EvolutionNode; current: number }) {
+/** Una etapa y, dentro de ella, lo que sale de ella: la sangría y la línea dicen de quién viene cada rama, en cualquier ancho. */
+function Evolution({ node, current, state }: { node: EvolutionNode; current: number; state: DexLinkState | null }) {
   return (
-    <li className="flex min-w-0 flex-col items-center gap-2 sm:flex-row">
-      {node.condition ? <span className="text-center text-xs text-muted">{evolutionConditionText(node.condition)}</span> : null}
-      {node.id === current ? (
-        <span aria-current="page" className="rounded-ui bg-surface-2 px-3 py-1.5 font-display font-semibold">
-          {node.name}
-        </span>
-      ) : (
-        <Link to={`/pokedex/${node.id}`} className="rounded-ui px-3 py-1.5 font-display font-semibold text-accent underline underline-offset-4">
-          {node.name}
-        </Link>
-      )}
+    <li className="min-w-0">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {node.id === current ? (
+          <span aria-current="page" className="rounded-ui bg-surface-2 px-3 py-1.5 font-display font-semibold">
+            {node.name}
+          </span>
+        ) : (
+          <Link to={`/pokedex/${node.id}`} state={state} className="rounded-ui px-3 py-1.5 font-display font-semibold text-accent underline underline-offset-4">
+            {node.name}
+          </Link>
+        )}
+        {node.condition ? <span className="text-xs text-muted">{evolutionConditionText(node.condition)}</span> : null}
+      </div>
       {node.next.length > 0 ? (
-        <ul className="flex min-w-0 flex-col items-center gap-2 sm:items-start">
+        <ul className="mt-2 ml-3 flex min-w-0 flex-col gap-2 border-l-2 border-line pl-3">
           {node.next.map((next) => (
-            <Evolution key={next.id} node={next} current={current} />
+            <Evolution key={next.id} node={next} current={current} state={state} />
           ))}
         </ul>
       ) : null}
@@ -66,7 +74,7 @@ function Evolution({ node, current }: { node: EvolutionNode; current: number }) 
   );
 }
 
-function Details({ detail }: { detail: PokedexDetail }) {
+function Details({ detail, state }: { detail: PokedexDetail; state: DexLinkState | null }) {
   return (
     <>
       <header className="flex flex-wrap items-center gap-4">
@@ -110,8 +118,8 @@ function Details({ detail }: { detail: PokedexDetail }) {
         {detail.evolution.next.length === 0 ? (
           <p className="text-sm">{POKEDEX_TEXT.noEvolution}</p>
         ) : (
-          <ul className="flex flex-col items-center gap-2 sm:items-start">
-            <Evolution node={detail.evolution} current={detail.id} />
+          <ul className="flex flex-col gap-2">
+            <Evolution node={detail.evolution} current={detail.id} state={state} />
           </ul>
         )}
       </Block>
@@ -153,6 +161,8 @@ export function PokemonPage() {
   const id = /^\d+$/.test(rawId) && Number(rawId) >= 1 && Number(rawId) <= LAST_POKEMON ? Number(rawId) : null;
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const fromList = useLocation().state as DexLinkState | null;
+  const linkState = fromList?.fromSearch ? fromList : null;
 
   const load = useCallback(
     (wanted: number, isCurrent: () => boolean) => {
@@ -180,7 +190,7 @@ export function PokemonPage() {
   // Lo guardado de otro Pokémon no vale: mientras llega el nuevo, se dice que carga.
   const shown = loaded?.id === id ? loaded : null;
   const backToList = (
-    <Link to="/pokedex" className="font-semibold text-accent underline underline-offset-4">
+    <Link to={`/pokedex${linkState?.fromSearch ?? ""}`} state={{ restoreScroll: true }} className="font-semibold text-accent underline underline-offset-4">
       {POKEDEX_TEXT.backToList}
     </Link>
   );
@@ -192,12 +202,12 @@ export function PokemonPage() {
         {id !== null ? (
           <span className="flex gap-3">
             {id > 1 ? (
-              <Link to={`/pokedex/${id - 1}`} className="font-semibold text-accent underline underline-offset-4">
+              <Link to={`/pokedex/${id - 1}`} state={linkState} className="font-semibold text-accent underline underline-offset-4">
                 {POKEDEX_TEXT.previous}
               </Link>
             ) : null}
             {id < LAST_POKEMON ? (
-              <Link to={`/pokedex/${id + 1}`} className="font-semibold text-accent underline underline-offset-4">
+              <Link to={`/pokedex/${id + 1}`} state={linkState} className="font-semibold text-accent underline underline-offset-4">
                 {POKEDEX_TEXT.next}
               </Link>
             ) : null}
@@ -212,7 +222,7 @@ export function PokemonPage() {
           {POKEDEX_TEXT.loadDetailError}
         </Notice>
       ) : shown?.status === "ready" ? (
-        <Details detail={shown.detail} />
+        <Details detail={shown.detail} state={linkState} />
       ) : (
         <p role="status" className="text-center text-muted">
           {POKEDEX_TEXT.loadingDetail}
