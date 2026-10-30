@@ -216,7 +216,7 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `player-joined`, `game-starting`, `choose-types`, `round-started` | Avance de la partida (`player-joined` trae el nombre del rival y, si los tiene, `guest` y `avatarId`) |
 | `type-received`, `answer-received` | Confirman la recepción, sin decir si acertaste |
 | `opponent-answered` | Al otro jugador: su rival ya respondió en la ronda abierta, `{ round }`, sin decir qué (en los dos juegos) |
-| `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` y, si acertaron 0 o 1 jugadores, un `example`: un Pokémon libre de ese par que servía |
+| `round-result` | Resultado de ambos jugadores al cerrar la ronda, con `nextRoundAt` y, si acertaron 0 o 1 jugadores y la partida sigue, un `example`: un Pokémon libre de ese par que servía (en la última ronda no, porque el resumen sale al instante) |
 | `game-ended` | Ganador, motivo, equipos y totales |
 | `opponent-disconnected`, `opponent-reconnected` | Caída y vuelta del rival |
 | `rematch-state` | Tras una partida terminada con normalidad: el estado de la oferta (`open`, `mine`, `theirs`, `starting` o `closed` con su `closedReason`), su `deadline` con `serverNow` y, entre dos cuentas, el `record` |
