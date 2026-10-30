@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { isGuest } from "../api/types";
-import { HEADER_MENU_TEXT, TYPES_TEXT } from "../i18n/es";
+import { HEADER_MENU_TEXT, POKEDEX_TEXT, TYPES_TEXT } from "../i18n/es";
 import { useSession } from "../services";
 import { Avatar } from "./Avatar";
 import { GuestTag } from "./GuestTag";
@@ -15,6 +15,18 @@ function GridIcon() {
   );
 }
 
+/** Mini logo de la Pokédex: una consola de bolsillo con su pantalla y su luz (dibujo propio). */
+function PokedexLogo() {
+  return (
+    <svg data-pokedex-logo viewBox="0 0 24 24" className="size-5 shrink-0" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <rect x="8" y="9" width="8" height="6" rx="1" />
+      <circle cx="9" cy="5.5" r="1" fill="currentColor" stroke="none" />
+      <path d="M9 18.5h6" />
+    </svg>
+  );
+}
+
 const TILE = "flex items-center gap-2 rounded-ui border-2 px-3 py-1.5 font-display text-sm font-semibold";
 const BAR_TILE = `${TILE} border-header-fg/40 hover:bg-header-fg/15`;
 const PANEL_TILE = `${TILE} border-line hover:bg-surface-2`;
@@ -22,10 +34,16 @@ const PANEL_TILE = `${TILE} border-line hover:bg-surface-2`;
 /** Los accesos a las secciones: rectángulos con su icono, en la barra (escritorio) o dentro del menú (pantallas estrechas). */
 function Shortcuts({ tileClassName, onChoose }: { tileClassName: string; onChoose?: () => void }) {
   return (
-    <Link to="/tipos" onClick={onChoose} className={tileClassName}>
-      <GridIcon />
-      {TYPES_TEXT.link}
-    </Link>
+    <>
+      <Link to="/pokedex" onClick={onChoose} className={tileClassName}>
+        <PokedexLogo />
+        {POKEDEX_TEXT.title}
+      </Link>
+      <Link to="/tipos" onClick={onChoose} className={tileClassName}>
+        <GridIcon />
+        {TYPES_TEXT.link}
+      </Link>
+    </>
   );
 }
 

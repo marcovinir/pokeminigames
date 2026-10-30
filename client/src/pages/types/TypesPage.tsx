@@ -1,5 +1,5 @@
 import { TYPE_NAMES, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Card } from "../../components/Card";
 import { DamageList } from "../../components/DamageList";
 import { PlayPrompt } from "../../components/PlayPrompt";
@@ -97,6 +97,13 @@ export function TypesPage() {
         </div>
         {/* La región viva existe desde el principio: si naciera con el contenido, el cambio no se anunciaría. */}
         <div aria-live="polite">{first ? <DamageList types={selected} /> : null}</div>
+        {first ? (
+          <p className="mt-4 text-sm">
+            <Link to={`/pokedex?${typeSelectionParams(selected).toString()}`} className="font-semibold text-accent underline underline-offset-4">
+              {TYPES_TEXT.seeInPokedex}
+            </Link>
+          </p>
+        ) : null}
       </Card>
       <Card as="section" aria-labelledby="types-chart-title" className="min-w-0 p-5">
         <h2 id="types-chart-title" className="font-display text-lg font-semibold">

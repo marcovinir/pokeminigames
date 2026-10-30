@@ -102,7 +102,9 @@ function Details({ detail }: { detail: PokedexDetail }) {
         </dl>
       </Block>
 
-      <DamageList types={detail.types} />
+      <Card className="min-w-0 p-5">
+        <DamageList types={detail.types} />
+      </Card>
 
       <Block title={POKEDEX_TEXT.evolutions}>
         {detail.evolution.next.length === 0 ? (

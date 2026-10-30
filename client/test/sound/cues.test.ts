@@ -136,3 +136,11 @@ describe("música en la tabla de tipos", () => {
     expect(musicCueFor("/tipos", initialGameView, "anonymous")).toEqual({ zone: "none" });
   });
 });
+
+describe("música en la Pokédex", () => {
+  it.each(["/pokedex", "/pokedex/6"])("%s suena como el menú con sesión y en silencio sin ella", (path) => {
+    expect(musicCueFor(path, initialGameView, "authenticated")).toEqual({ zone: "lobby" });
+    expect(musicCueFor(path, initialGameView, "anonymous")).toEqual({ zone: "none" });
+  });
+});
+

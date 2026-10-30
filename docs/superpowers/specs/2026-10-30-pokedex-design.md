@@ -54,7 +54,7 @@ El script guarda la entrada de lore más reciente en español (o, si no hay, en 
 
 **Encabezado.** Igual que el enlace de la tabla de tipos: icono y texto «Pokédex» (solo icono con nombre accesible en pantallas estrechas), oculto en `/sala/:code`. Debe caber a 360 y 375 px con un nombre de 30 letras y como invitado; si no cabe, se decide con Marco antes de seguir.
 
-**Sonido.** Suena la música de sala, como en el menú.
+**Sonido.** Con sesión suena la música de sala, como en el menú; sin sesión, silencio, como en el resto de la página.
 
 ## 5. Decisiones del implementador (de Claude, revisables por Marco)
 

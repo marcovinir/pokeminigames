@@ -186,3 +186,14 @@ describe("el camino para entrar a jugar", () => {
     expect(cta()).toBeNull();
   });
 });
+
+describe("de la Matriz de Tipos a la Pokédex", () => {
+  it("con tipos elegidos enlaza a esos Pokémon; sin elegir, no", () => {
+    const first = renderAt("/tipos");
+    expect(screen.queryByRole("link", { name: "Ver estos Pokémon en la Pokédex" })).toBeNull();
+    first.unmount();
+    renderAt("/tipos?tipo1=fire&tipo2=flying");
+    expect(screen.getByRole("link", { name: "Ver estos Pokémon en la Pokédex" })).toHaveAttribute("href", "/pokedex?tipo1=fire&tipo2=flying");
+  });
+});
+
