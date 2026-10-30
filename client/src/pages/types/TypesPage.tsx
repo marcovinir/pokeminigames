@@ -1,11 +1,12 @@
 import { type DamageGroups, TYPE_NAMES, type TypeName, damageTaken, typeEffectiveness } from "@pokemon-minigames/shared";
 import { useId } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { Card } from "../../components/Card";
+import { PlayPrompt } from "../../components/PlayPrompt";
 import { TypeChip } from "../../components/TypeChip";
+import { TypeSelect } from "../../components/TypeSelect";
 import { rise } from "../../components/rise";
 import { TYPES_TEXT, TYPE_ABBREVIATIONS, TYPE_LABELS } from "../../i18n/es";
-import { useSession } from "../../services";
 import { typeChipStyle } from "../../theme/type-styles";
 import { parseTypeSelection, typeSelectionParams } from "./type-selection";
 
@@ -16,43 +17,6 @@ const DAMAGE_ROWS: { key: keyof DamageGroups; label: string }[] = [
   { key: "x025", label: "×¼" },
   { key: "x0", label: "×0" },
 ];
-
-function TypeSelect({
-  label,
-  value,
-  disabled = false,
-  exclude,
-  onChange,
-}: {
-  label: string;
-  value: TypeName | undefined;
-  disabled?: boolean;
-  exclude?: TypeName;
-  onChange: (type: TypeName | undefined) => void;
-}) {
-  const id = useId();
-  return (
-    <div className="min-w-40 flex-1">
-      <label htmlFor={id} className="mb-1 block text-sm font-semibold">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value ?? ""}
-        disabled={disabled}
-        onChange={(event) => onChange((event.target.value || undefined) as TypeName | undefined)}
-        className="framed-field w-full rounded-ui bg-surface px-4 py-3 text-fg disabled:opacity-50"
-      >
-        <option value="">{TYPES_TEXT.none}</option>
-        {TYPE_NAMES.filter((type) => type !== exclude).map((type) => (
-          <option key={type} value={type}>
-            {TYPE_LABELS[type]}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 function DamageBlock({ types }: { types: TypeName[] }) {
   const titleId = useId();
@@ -153,7 +117,6 @@ export function TypesPage() {
   const [params, setParams] = useSearchParams();
   const selected = parseTypeSelection(params);
   const [first, second] = selected;
-  const anonymous = useSession((s) => s.status === "anonymous");
   // Sin apilar historial: «Atrás» sale de la página en vez de deshacer cada cambio de una lista.
   const choose = (types: (TypeName | undefined)[]) =>
     setParams(typeSelectionParams([...new Set(types.filter((type) => type !== undefined))]), { replace: true });
@@ -161,14 +124,7 @@ export function TypesPage() {
   return (
     <div style={rise(0)} className="animate-rise mx-auto flex max-w-4xl flex-col gap-5">
       <h1 className="font-display text-3xl font-semibold">{TYPES_TEXT.title}</h1>
-      {anonymous ? (
-        <p className="text-sm">
-          {TYPES_TEXT.playPrompt}{" "}
-          <Link to="/login" className="font-semibold text-accent underline underline-offset-4">
-            {TYPES_TEXT.playLink}
-          </Link>
-        </p>
-      ) : null}
+      <PlayPrompt />
       <Card as="section" className="p-5">
         <div className="flex flex-wrap gap-3">
           <TypeSelect label={TYPES_TEXT.first} value={first} onChange={(type) => choose([type, second])} />

@@ -141,6 +141,27 @@ export const LOAD_ERROR_TEXT = {
   reload: "Recargar",
 } as const;
 
+export const POKEDEX_TEXT = {
+  title: "Pokédex",
+  filters: "Filtros",
+  search: "Buscar",
+  searchHint: "Nombre o número",
+  firstType: "Tipo 1",
+  secondType: "Tipo 2",
+  generation: "Generación",
+  allGenerations: "Todas",
+  generationName: (generation: number) => `${generation}.ª generación`,
+  sort: "Ordenar por",
+  sorts: { numero: "Número", nombre: "Nombre", total: "Total de stats" },
+  listLabel: "Pokémon",
+  showMore: "Ver más",
+  noMatches: "No hay Pokémon con esos filtros.",
+  clearFilters: "Limpiar filtros",
+  loading: "Cargando la Pokédex…",
+  loadError: "No se pudo cargar la Pokédex. Revisa tu conexión.",
+  retry: "Reintentar",
+} as const;
+
 export const HEADER_MENU_TEXT = {
   button: "Menú",
   sections: "Secciones",
