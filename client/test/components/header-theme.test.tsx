@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { Header } from "../../src/components/Header";
 import { ThemeMenu } from "../../src/components/ThemeMenu";
-import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
+import { ASH, GUEST, fakeServices, renderWithServices, signIn } from "../helpers/services";
 
 const openMenu = async () => userEvent.click(screen.getByRole("button", { name: "Apariencia" }));
 

@@ -104,7 +104,8 @@ function TypeHeader({ type, scope, selected = false }: { type: TypeName; scope: 
 function TypeChart({ selected }: { selected: TypeName[] }) {
   return (
     // La tabla no cabe en un teléfono: se desplaza dentro de su caja, que se alcanza con Tab para moverla con las flechas.
-    <div role="region" aria-label={TYPES_TEXT.chartLabel} tabIndex={0} className="mt-3 overflow-x-auto rounded-ui">
+    // `relative`: sin él, los textos `sr-only` (absolutos) de los encabezados escapan de la caja y ensanchan la página.
+    <div role="region" aria-label={TYPES_TEXT.chartLabel} tabIndex={0} className="relative mt-3 overflow-x-auto rounded-ui">
       <table className="mx-auto border-collapse font-num text-sm">
         <thead>
           <tr>
