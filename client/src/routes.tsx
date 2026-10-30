@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { LoadBoundary } from "./components/LoadBoundary";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { isGuest } from "./api/types";
 import { useSession } from "./services";
@@ -65,9 +66,11 @@ export function AppRoutes() {
       <Route
         path="/tipos"
         element={
-          <Suspense fallback={<LoadingScreen />}>
-            <TypesPage />
-          </Suspense>
+          <LoadBoundary>
+            <Suspense fallback={<LoadingScreen />}>
+              <TypesPage />
+            </Suspense>
+          </LoadBoundary>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

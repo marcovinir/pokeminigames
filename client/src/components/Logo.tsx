@@ -19,7 +19,7 @@ export function Logo({ size = 30, hideNameOnMobile = false }: { size?: number; h
   return (
     <span className="inline-flex items-center gap-2">
       <LogoMark size={size} />
-      <span className={`font-display text-xl font-semibold tracking-tight ${hideNameOnMobile ? "max-sm:sr-only" : ""}`}>PokeMiniGames</span>
+      <span className={`font-display text-xl font-semibold tracking-tight max-[380px]:in-data-[theme=pokedex]:text-base ${hideNameOnMobile ? "max-sm:sr-only" : ""}`}>PokeMiniGames</span>
     </span>
   );
 }

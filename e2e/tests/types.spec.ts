@@ -54,3 +54,42 @@ for (const width of [360, 375]) {
     }
   });
 }
+
+const WIDTHS = [360, 375, 414, 640, 700, 768, 900, 1024, 1280];
+
+/** Lo que más a la derecha queda del encabezado, por si la fila se parte o algo se sale sin ensanchar el documento. */
+async function expectHeaderFits(page: Page, where: string): Promise<void> {
+  const { scroll, client, right } = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+    right: Math.max(...[...document.querySelectorAll("header a, header button")].map((element) => element.getBoundingClientRect().right)),
+  }));
+  expect.soft(scroll, where + ": ancho de la página").toBe(client);
+  expect.soft(right, where + ": lo último del encabezado").toBeLessThanOrEqual(client);
+}
+
+for (const theme of ["clasico", "pokedex"]) {
+  test(`el encabezado cabe en todos los anchos con el tema ${theme}, sin sesión, como invitado y con cuenta`, async ({ browser }) => {
+    test.setTimeout(120_000);
+    const visitor = await newPlayer(browser, "visita");
+    const account = await newPlayer(browser, "c".repeat(24));
+    const guest = await playAsGuest(browser, "d".repeat(24));
+    try {
+      await register(account);
+      for (const [page, who] of [[visitor.page, "sin sesión"], [guest.page, "invitado"], [account.page, "cuenta"]] as const) {
+        await page.goto("/tipos");
+        await page.evaluate((name) => localStorage.setItem("pokemon-minigames:theme", JSON.stringify({ theme: name, mode: "claro" })), theme);
+        await page.reload();
+        await expect(page.getByRole("heading", { level: 1, name: "Tabla de tipos" })).toBeVisible();
+        for (const width of WIDTHS) {
+          await page.setViewportSize({ width, height: 740 });
+          await expectHeaderFits(page, `${theme}, ${who}, ${width} px`);
+        }
+      }
+    } finally {
+      await visitor.context.close();
+      await account.context.close();
+      await guest.context.close();
+    }
+  });
+}

@@ -135,6 +135,11 @@ export const TYPE_ABBREVIATIONS: Record<TypeName, string> = {
   fairy: "Had",
 };
 
+export const LOAD_ERROR_TEXT = {
+  message: "No se pudo cargar esta página. Puede que haya una versión nueva o que falle la conexión.",
+  reload: "Recargar",
+} as const;
+
 export const TYPES_TEXT = {
   title: "Tabla de tipos",
   first: "Tipo 1",
