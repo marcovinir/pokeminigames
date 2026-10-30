@@ -129,3 +129,10 @@ describe("effectsForEvent: qué efectos suenan", () => {
     expect(effects(event.roundStarted(1, 1), watcher)).toEqual([["round", 0]]);
   });
 });
+
+describe("música en la tabla de tipos", () => {
+  it("/tipos suena como el menú con sesión y en silencio sin ella", () => {
+    expect(musicCueFor("/tipos", initialGameView, "authenticated")).toEqual({ zone: "lobby" });
+    expect(musicCueFor("/tipos", initialGameView, "anonymous")).toEqual({ zone: "none" });
+  });
+});

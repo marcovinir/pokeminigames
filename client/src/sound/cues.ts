@@ -33,14 +33,14 @@ export function endOutcome(ended: GameEndedPayload, mySeat: Seat | null): "win" 
 }
 
 /**
- * La música según la pantalla: sala en el menú, los lobbies y la espera; partida desde la cuenta atrás hasta la última
+ * La música según la pantalla: sala en el menú, los lobbies, la tabla de tipos y la espera; partida desde la cuenta atrás hasta la última
  * ronda; el tema de final en el resumen; silencio en el resto (acceso, información, perfiles) y mientras no hay sesión
  * (la página va a llevar a la entrada). `null` = sin cambio: al entrar en una sala, hasta saber su fase, sigue lo que
  * sonaba (así no se cuela un trozo de música de sala entre el final y la revancha).
  */
 export function musicCueFor(pathname: string, view: GameView, session: SessionStatus = "authenticated"): MusicCue | null {
   if (session !== "authenticated") return { zone: "none" };
-  if (pathname === "/" || pathname.startsWith("/jugar/")) return { zone: "lobby" };
+  if (pathname === "/" || pathname === "/tipos" || pathname.startsWith("/jugar/")) return { zone: "lobby" };
   if (!pathname.startsWith("/sala/")) return { zone: "none" };
   if (view.phase === null) return null;
   if (BATTLE_PHASES.has(view.phase)) return { zone: "battle" };

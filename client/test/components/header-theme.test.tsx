@@ -187,3 +187,25 @@ describe("Header", () => {
     expect(screen.getByRole("banner")).toBeInTheDocument();
   });
 });
+
+describe("Header: enlace a la tabla de tipos", () => {
+  const link = () => screen.queryByRole("link", { name: "Tipos" });
+
+  it("sin sesión, como invitado y con cuenta enlaza a /tipos", () => {
+    const anon = renderWithServices(<Header />);
+    expect(link()).toHaveAttribute("href", "/tipos");
+    anon.unmount();
+    for (const user of [GUEST, ASH]) {
+      const services = fakeServices();
+      signIn(services, user);
+      const view = renderWithServices(<Header />, { services });
+      expect(link()).toHaveAttribute("href", "/tipos");
+      view.unmount();
+    }
+  });
+
+  it("en una sala no hay enlace: salir cerraría la conexión", () => {
+    renderWithServices(<Header />, { route: "/sala/ABC234" });
+    expect(link()).toBeNull();
+  });
+});
