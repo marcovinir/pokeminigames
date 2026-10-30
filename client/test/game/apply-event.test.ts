@@ -396,6 +396,12 @@ describe("la silueta en la vista", () => {
     expect(applyServerEvent(open, event.silhouetteAnswerReceived(3200), SERVER_NOW).silhouette?.round).toMatchObject({ answered: true, answeredMs: 3200, opponentAnswered: false });
   });
 
+  it("silhouette-round-result sin estado previo de la silueta toma el total de rondas de la configuración, no el número de la ronda", () => {
+    const start = play([[event.roomState({ phase: "round_active", config: { game: "silueta", rounds: 10, generations: [1] } })]]);
+    const view = applyServerEvent({ ...start, silhouette: null }, event.silhouetteRoundResult(silhouetteReveal({ round: 3 }), { 1: 0, 2: 0 }, SERVER_NOW + 6000), SERVER_NOW);
+    expect(view.silhouette?.totalRounds).toBe(10);
+  });
+
   it("silhouette-round-result añade la revelación, actualiza los puntos y pasa al resultado", () => {
     const open = applyServerEvent(inRoom(), event.silhouetteRoundStarted(), SERVER_NOW);
     const reveal = silhouetteReveal();

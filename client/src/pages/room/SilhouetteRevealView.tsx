@@ -1,4 +1,5 @@
 import type { RoomPlayerView, SilhouetteAnswer } from "@pokemon-minigames/shared";
+import { rivalSeat } from "../../game/seats";
 import { ArtImage } from "../../components/ArtImage";
 import { Avatar } from "../../components/Avatar";
 import { Card } from "../../components/Card";
@@ -41,7 +42,6 @@ export function SilhouetteRevealView() {
   const untilNext = useCountdown(nextRoundAt, view.clockOffset);
   if (!reveal || view.mySeat === null) return null;
   const mySeat = view.mySeat;
-  const rivalSeat = mySeat === 1 ? 2 : 1;
 
   return (
     <section className="mx-auto flex w-full max-w-xl flex-col gap-4">
@@ -54,7 +54,7 @@ export function SilhouetteRevealView() {
         <h1 className="font-display text-3xl font-semibold [overflow-wrap:anywhere]">{silhouetteReveal(reveal.pokemon.names.es)}</h1>
         <ul aria-label={SILHOUETTE_SCREEN.answers} className="w-full">
           <AnswerRow player={me} label={SILHOUETTE_SCREEN.you} answer={reveal.answers[mySeat]} />
-          <AnswerRow player={opponent} label={opponent?.username ?? "Tu rival"} answer={reveal.answers[rivalSeat]} />
+          <AnswerRow player={opponent} label={opponent?.username ?? "Tu rival"} answer={reveal.answers[rivalSeat(mySeat)]} />
         </ul>
         <p className="text-sm text-muted">{nextRoundAt === null ? "Calculando el resultado final…" : `Siguiente ronda en ${secondsLeft(untilNext)} s`}</p>
       </Card>

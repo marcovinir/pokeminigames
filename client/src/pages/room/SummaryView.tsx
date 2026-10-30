@@ -1,15 +1,15 @@
-import { gameOf } from "@pokemon-minigames/shared";
-import { lobbyPath } from "../lobby-path";
-import type { GameEndedPayload, PokemonView, Seat } from "@pokemon-minigames/shared";
+import { type GameEndedPayload, type PokemonView, type Seat, gameOf } from "@pokemon-minigames/shared";
 import { useNavigate } from "react-router";
 import { isGuest } from "../../api/types";
-import { useSession } from "../../services";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
 import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
+import { rivalSeat } from "../../game/seats";
 import { endReasonLabel } from "../../i18n/es";
+import { useSession } from "../../services";
+import { lobbyPath } from "../lobby-path";
 import { RematchLoadingView } from "./RematchLoadingView";
 import { RematchPanel } from "./RematchPanel";
 import { SilhouetteSummary } from "./SilhouetteSummary";
@@ -47,7 +47,7 @@ export function verdictLabel(ended: GameEndedPayload, mySeat: Seat): string {
 
 /** El marcador final leído desde el lado propio: "800 – 400". */
 export function scoreLabel(ended: GameEndedPayload, mySeat: Seat): string {
-  return `${ended.totals[mySeat]} – ${ended.totals[mySeat === 1 ? 2 : 1]}`;
+  return `${ended.totals[mySeat]} – ${ended.totals[rivalSeat(mySeat)]}`;
 }
 
 function TrophyIcon() {
@@ -77,7 +77,7 @@ export function SummaryView() {
 
   const mySeat = view.mySeat;
   const offerPending = view.rematchOffer?.status === "mine" || view.rematchOffer?.status === "theirs";
-  const rivalSeat: Seat = mySeat === 1 ? 2 : 1;
+  const rival: Seat = rivalSeat(mySeat);
   const verdict = verdictLabel(ended, mySeat);
   const kind = ended.winnerSeat === null ? "drawn" : ended.winnerSeat === mySeat ? "won" : "lost";
 
@@ -101,7 +101,7 @@ export function SummaryView() {
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
-          <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rivalSeat]} total={ended.totals[rivalSeat]} index={2} guest={opponent?.guest === true} />
+          <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rival]} total={ended.totals[rival]} index={2} guest={opponent?.guest === true} />
         </div>
       )}
 

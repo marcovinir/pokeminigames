@@ -1,4 +1,5 @@
-import type { RoundPlayerResult, Seat } from "@pokemon-minigames/shared";
+import type { RoundPlayerResult } from "@pokemon-minigames/shared";
+import { rivalSeat } from "../../game/seats";
 import { Badge } from "../../components/Badge";
 import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
@@ -52,8 +53,7 @@ export function RoundResultView() {
   }
 
   const mine = result.results[view.mySeat];
-  const rivalSeat: Seat = view.mySeat === 1 ? 2 : 1;
-  const theirs = result.results[rivalSeat];
+  const theirs = result.results[rivalSeat(view.mySeat)];
   const remaining = result.nextRoundAt === null ? 0 : Math.min(100, (untilNext / RESULT_PAUSE_MS) * 100);
 
   return (
