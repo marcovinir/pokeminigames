@@ -49,7 +49,8 @@ export function Notice({ tone = "info", urgent = tone === "danger", children, ac
       className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-ui border-(length:--frame) px-4 py-3 text-sm ${TONES[tone]} ${className}`}
     >
       <NoticeIcon tone={tone} />
-      <div className="min-w-0 flex-1">{children}</div>
+      {/* Con una base de 12 rem, en un teléfono la acción baja a otra línea en vez de dejar el texto en una columna estrecha. */}
+      <div className="min-w-0 shrink grow basis-48">{children}</div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );

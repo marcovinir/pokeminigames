@@ -6,6 +6,7 @@ import { Notice } from "../../components/Notice";
 import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
 import {
+  MENU_TEXT,
   REMATCH_TEXT,
   ROOM_GONE_CODES,
   SILHOUETTE_SCREEN,
@@ -138,10 +139,12 @@ export function RoomPage() {
     if (nextRoom) navigate(`/sala/${encodeURIComponent(nextRoom)}`, { replace: true });
   }, [nextRoom, navigate]);
 
-  // Los tipos de cada Pokémon solo se piden en las salas con «Pistas de tipos»; sin ellas ni siquiera viajan.
+  // Los tipos de cada Pokémon solo se piden en las salas con «Pistas de tipos»; sin ellas ni siquiera viajan. Se espera a
+  // conocer la configuración: pedir antes descargaba la lista sin tipos y luego otra vez con ellos.
+  const configKnown = useGame((s) => s.view.config !== null);
   useEffect(() => {
-    void names.getState().load({ withTypes: typeHints });
-  }, [names, typeHints]);
+    if (configKnown) void names.getState().load({ withTypes: typeHints });
+  }, [names, typeHints, configKnown]);
 
   // La sala ya no existe, terminó o no eres parte de ella: no hay nada más que hacer aquí.
   // Con la partida terminada el resumen se queda: el servidor ya cerró la sala y es lo esperable.
@@ -151,8 +154,9 @@ export function RoomPage() {
       <section className="mx-auto max-w-md text-center">
         <Notice tone="danger">{errorMessage(error.code)}</Notice>
         <div className="mt-4">
+          {/* Lleva al menú (sin la sala no se sabe de qué juego era): el botón lo dice. */}
           <Button variant="primary" onClick={() => navigate("/")}>
-            Volver al lobby
+            {MENU_TEXT.backToMenu}
           </Button>
         </div>
       </section>

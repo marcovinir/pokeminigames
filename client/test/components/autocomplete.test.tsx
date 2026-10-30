@@ -271,3 +271,18 @@ describe("Autocomplete sin imágenes (la silueta)", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 });
+
+describe("Autocomplete con datos corruptos", () => {
+  it("un id inválido o un tipo desconocido no rompen la lista: esa sugerencia sale sin imagen, sin número ni icono", async () => {
+    const broken = [
+      { id: 0, es: "Cero", en: "Zero" },
+      { id: 6, es: "Charizard", en: "Charizard", types: ["fire", "bogus"] },
+    ] as unknown as PokemonName[];
+    const user = userEvent.setup();
+    render(<Autocomplete names={broken} onSubmit={vi.fn()} showTypes />);
+    await user.type(screen.getByRole("combobox", { name: "Nombre del Pokémon" }), "c");
+    const options = screen.getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(["CeroZero", expect.stringContaining("Charizard")]);
+    expect(options[0]!.querySelector("img")).toBeNull();
+  });
+});

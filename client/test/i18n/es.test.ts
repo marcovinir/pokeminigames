@@ -128,6 +128,7 @@ describe("textos de la revancha", () => {
 describe("textos de los avatares", () => {
   it("son los de la spec", () => {
     expect(AVATAR_TEXT).toEqual({
+      gridLabel: "Avatares",
       change: "Cambiar avatar",
       title: "Elige tu avatar",
       useInitials: "Usar mis iniciales",

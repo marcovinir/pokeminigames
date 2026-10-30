@@ -68,7 +68,8 @@ export function ProfilePage() {
   const { username: name, stats } = state.data;
   // El propio sale de la sesión (se actualiza al instante al cambiarlo); el ajeno, de sus estadísticas.
   const account = sessionUser && !isGuest(sessionUser) ? sessionUser : null;
-  const avatarId = own ? (account?.avatarId ?? null) : state.data.avatarId;
+  // `?? null`: un servidor anterior (tras una marcha atrás) no manda el campo y se leería «n.º undefined».
+  const avatarId = own ? (account?.avatarId ?? null) : (state.data.avatarId ?? null);
   const closePicker = () => {
     setPicking(false);
     changeRef.current?.querySelector("button")?.focus();

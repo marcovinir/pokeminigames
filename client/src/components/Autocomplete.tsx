@@ -1,4 +1,4 @@
-import { normalizeName } from "@pokemon-minigames/shared";
+import { TYPE_NAMES, normalizeName } from "@pokemon-minigames/shared";
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { PokemonName } from "../api/types";
 import { spriteUrl } from "../catalog/artwork";
@@ -169,7 +169,8 @@ export function Autocomplete({ names, showTypes = false, showSprites = true, onS
               }}
               className={`flex min-h-11 cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 px-3 py-1 text-sm ${i === active ? "bg-accent text-accent-fg" : "hover:bg-surface-2"}`}
             >
-              {showSprites ? (
+              {/* Un id inválido (solo con datos corruptos) haría lanzar a spriteUrl y pokedexNumber: sin imagen ni número. */}
+              {showSprites && Number.isInteger(name.id) && name.id >= 1 ? (
                 <>
                   <ArtImage id={name.id} spriteUrl={spriteUrl(name.id)} size={40} variant="sprite" eager />
                   <span aria-hidden="true" className={`w-11 shrink-0 font-num text-xs tabular-nums ${i === active ? "" : "text-muted"}`}>
@@ -183,7 +184,7 @@ export function Autocomplete({ names, showTypes = false, showSprites = true, onS
               </span>
               {showTypes && name.types ? (
                 <span className="ml-auto flex shrink-0 gap-1">
-                  {name.types.map((type) => (
+                  {name.types.filter((type) => (TYPE_NAMES as readonly string[]).includes(type)).map((type) => (
                     <TypeChip key={type} type={type} />
                   ))}
                 </span>

@@ -89,6 +89,20 @@ describe("ThemeMenu", () => {
     expect(screen.getByRole("button", { name: "Apariencia" })).toHaveFocus();
   });
 
+  it("Escape con el foco en otro control no es para el menú: no lo cierra ni le roba el foco", async () => {
+    renderWithServices(
+      <>
+        <ThemeMenu />
+        <input aria-label="Otro campo" />
+      </>,
+    );
+    await openMenu();
+    screen.getByLabelText("Otro campo").focus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByLabelText("Otro campo")).toHaveFocus();
+    expect(screen.getAllByRole("radio").length).toBeGreaterThan(0);
+  });
+
   it("un clic fuera lo cierra", async () => {
     renderWithServices(
       <>

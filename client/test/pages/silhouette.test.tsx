@@ -108,12 +108,32 @@ describe("la sala de espera y el resumen de la silueta", () => {
 describe("la revelación: marcador y siguiente ronda", () => {
   it("enseña el marcador ya actualizado y cuánto falta para la siguiente ronda", () => {
     renderRoom([inRound(), event.silhouetteRoundResult(gengar(), { 1: 808, 2: 0 }, SERVER_NOW + 6000)]);
-    expect(screen.getByLabelText("Marcador")).toHaveTextContent("Tú 808 · misty 0");
+    expect(screen.getByRole("group", { name: "Marcador" })).toHaveTextContent("Tú 808 · misty 0");
     expect(screen.getByText(/^Siguiente ronda en \d+ s$/)).toBeInTheDocument();
   });
 
   it("en la última ronda avisa de que llega el resultado final", () => {
     renderRoom([inRound(), event.silhouetteRoundResult(gengar(), { 1: 808, 2: 0 }, null)]);
     expect(screen.getByText("Calculando el resultado final…")).toBeInTheDocument();
+  });
+});
+
+describe("el marcador de la silueta con un invitado", () => {
+  it("separa nombre, etiqueta «Invitado» y cifra con espacios (un lector de pantalla no lee «mistyInvitado»)", () => {
+    const state = inRound();
+    renderRoom([{ ...state, payload: { ...state.payload, players: [ash(), misty({ guest: true })] } } as typeof state]);
+    const bar = screen.getByRole("group", { name: "Marcador" });
+    expect(bar.textContent!.replace(/\s+/g, " ")).toMatch(/misty Invitado 0$/);
+  });
+});
+
+describe("el motivo del final en la silueta", () => {
+  it("«exhausted» dice que no quedaron Pokémon, no el texto de «Doble tipo» sobre pares de tipos", () => {
+    renderRoom([
+      event.roomState({ phase: "finished", config: SILHOUETTE, players: [ash(), misty()] }),
+      event.gameEnded({ winnerSeat: 1, reason: "exhausted", totals: { 1: 808, 2: 0 }, teams: { 1: [], 2: [] }, silhouette: { reveals: [gengar()] } }),
+    ]);
+    expect(screen.getByText("No quedaron más Pokémon por adivinar")).toBeInTheDocument();
+    expect(screen.queryByText(/pares de tipos/)).toBeNull();
   });
 });

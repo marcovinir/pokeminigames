@@ -19,7 +19,8 @@ export interface AvatarPickerProps {
 
 /**
  * La ventana «Elige tu avatar»: los 24 en una rejilla, el actual marcado. Tocar uno lo guarda y cierra; si falla, sigue
- * abierta con un aviso. Es modal: el foco entra al abrir, no sale con Tab y Escape la cierra.
+ * abierta con un aviso. Es modal: el foco entra al abrir, no sale con Tab y Escape la cierra (salvo mientras guarda: cerrar
+ * entonces dejaría la sesión con un avatar y la base con otro si se elige otro antes de que responda).
  */
 export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
   const saveAvatar = useSession((s) => s.saveAvatar);
@@ -28,6 +29,8 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
   // Un segundo toque puede llegar antes de que React vuelva a pintar: la guarda síncrona lo descarta.
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
+  /** El avatar que se está guardando (para marcar su celda); `undefined` si no se guarda nada. */
+  const [touched, setTouched] = useState<number | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -46,6 +49,7 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
     }
     savingRef.current = true;
     setSaving(true);
+    setTouched(avatarId);
     setFailed(false);
     try {
       await saveAvatar(avatarId);
@@ -53,6 +57,7 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
     } catch {
       savingRef.current = false;
       setSaving(false);
+      setTouched(undefined);
       setFailed(true);
     }
   }
@@ -63,7 +68,7 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCloseRef.current();
+        if (!savingRef.current) onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -93,45 +98,54 @@ export function AvatarPicker({ current, name, onClose }: AvatarPickerProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         tone="raised"
-        className="animate-rise w-full max-w-md p-5"
+        // En pantallas bajas (o con el aviso de error) la ventana se desplaza en vez de cortarse.
+        className="animate-rise max-h-full w-full max-w-md overflow-y-auto p-5"
       >
         <div ref={panelRef}>
-        <h2 id={titleId} className="font-display text-xl font-semibold">
-          {AVATAR_TEXT.title}
-        </h2>
-        <div className="mt-4 grid grid-cols-6 gap-2">
-          {AVATAR_POKEMON.map((pokemon) => {
-            const selected = pokemon.id === current;
-            return (
-              <button
-                key={pokemon.id}
-                type="button"
-                aria-pressed={selected}
-                aria-disabled={saving || undefined}
-                onClick={() => void choose(pokemon.id)}
-                className={`flex justify-center rounded-pill p-0.5 ring-offset-2 ring-offset-surface ${selected ? "ring-[3px] ring-accent" : ""}`}
-              >
-                <Avatar name={name} avatarId={pokemon.id} size="md" />
-                <span className="sr-only">{pokemon.name}</span>
-              </button>
-            );
-          })}
-        </div>
-        {failed ? (
-          <div className="mt-4">
-            <Notice tone="danger">{AVATAR_TEXT.saveError}</Notice>
+          <h2 id={titleId} className="font-display text-xl font-semibold">
+            {AVATAR_TEXT.title}
+          </h2>
+          <div
+            role="group"
+            aria-label={AVATAR_TEXT.gridLabel}
+            aria-busy={saving || undefined}
+            className={`mt-4 grid grid-cols-6 gap-2 transition-opacity ${saving ? "opacity-60" : ""}`}
+          >
+            {AVATAR_POKEMON.map((pokemon) => {
+              const selected = pokemon.id === current;
+              const beingSaved = saving && touched === pokemon.id;
+              return (
+                <button
+                  key={pokemon.id}
+                  type="button"
+                  aria-pressed={selected}
+                  aria-disabled={saving || undefined}
+                  data-saving={beingSaved || undefined}
+                  onClick={() => void choose(pokemon.id)}
+                  // El aro de foco va separado (6 px) para no tapar el aro de selección.
+                  className={`flex justify-center rounded-pill p-0.5 ring-offset-2 ring-offset-surface focus-visible:outline-offset-[6px] ${selected || beingSaved ? "ring-[3px] ring-accent" : ""} ${beingSaved ? "animate-pulse" : ""}`}
+                >
+                  <Avatar name={name} avatarId={pokemon.id} size="md" />
+                  <span className="sr-only">{pokemon.name}</span>
+                </button>
+              );
+            })}
           </div>
-        ) : null}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          {current !== null ? (
-            <button type="button" onClick={() => void choose(null)} className="text-sm font-semibold underline underline-offset-4">
-              {AVATAR_TEXT.useInitials}
-            </button>
-          ) : (
-            <span />
-          )}
-          <Button onClick={onClose}>{AVATAR_TEXT.close}</Button>
-        </div>
+          {failed ? (
+            <div className="mt-4">
+              <Notice tone="danger">{AVATAR_TEXT.saveError}</Notice>
+            </div>
+          ) : null}
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            {current !== null ? (
+              <button type="button" onClick={() => void choose(null)} className="text-sm font-semibold underline underline-offset-4">
+                {AVATAR_TEXT.useInitials}
+              </button>
+            ) : (
+              <span />
+            )}
+            <Button onClick={() => (savingRef.current ? undefined : onClose())}>{AVATAR_TEXT.close}</Button>
+          </div>
         </div>
       </Card>
     </div>

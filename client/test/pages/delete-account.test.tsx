@@ -100,3 +100,29 @@ describe("una cuenta borrada en el historial", () => {
     expect(screen.getByRole("link", { name: "misty" })).toHaveAttribute("href", "/jugador/misty");
   });
 });
+
+describe("Borrar mi cuenta: foco y estilo (#8)", () => {
+  it("al abrir, el foco va al campo de la contraseña", async () => {
+    const { user } = renderAt("/perfil");
+    await openForm(user);
+    expect(screen.getByLabelText("Contraseña")).toHaveFocus();
+  });
+
+  it("«Cancelar» limpia lo escrito y devuelve el foco a «Borrar mi cuenta»", async () => {
+    const { user } = renderAt("/perfil");
+    await openForm(user);
+    await user.type(screen.getByLabelText("Contraseña"), "secreta");
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    const opener = screen.getByRole("button", { name: "Borrar mi cuenta" });
+    expect(opener).toHaveFocus();
+    await user.click(opener);
+    expect(screen.getByLabelText("Contraseña")).toHaveValue("");
+  });
+
+  it("el botón que borra tiene estilo de peligro", async () => {
+    const { user } = renderAt("/perfil");
+    await openForm(user);
+    const confirm = screen.getByRole("button", { name: /Borrar/ });
+    expect(confirm.className).toContain("text-danger");
+  });
+});

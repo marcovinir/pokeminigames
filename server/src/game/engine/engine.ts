@@ -423,8 +423,9 @@ function closeRound(c: Ctx): void {
   s.roundsPlayed = round.number;
   const over = gameIsOver(s);
   // Si acertaron 0 o 1 jugadores se enseña un Pokémon libre que sí servía (ya repartidos los de esta ronda: nunca es uno ganado).
+  // En la última ronda no: el resumen final sustituye al resultado al instante y el ejemplo nunca se vería.
   const hits = SEATS.filter((seat) => results[seat].result === "VALID").length;
-  const example = hits <= 1 ? pickExample(c.deps.catalog, pair, claimedIds(s), c.deps.rng) : null;
+  const example = hits <= 1 && !over ? pickExample(c.deps.catalog, pair, claimedIds(s), c.deps.rng) : null;
   const payload = {
     round: round.number,
     nextRoundAt: over ? null : c.now + seconds(RESULT_PAUSE_SECONDS),

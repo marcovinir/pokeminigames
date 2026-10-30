@@ -9,7 +9,7 @@ import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
 import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
-import { END_REASON_LABELS } from "../../i18n/es";
+import { endReasonLabel } from "../../i18n/es";
 import { RematchLoadingView } from "./RematchLoadingView";
 import { RematchPanel } from "./RematchPanel";
 import { SilhouetteSummary } from "./SilhouetteSummary";
@@ -90,7 +90,7 @@ export function SummaryView() {
           </span>
         )}
         <h1 className="font-display text-4xl font-semibold">{verdict}</h1>
-        <p className="mt-1 text-sm text-muted">{END_REASON_LABELS[ended.reason]}</p>
+        <p className="mt-1 text-sm text-muted">{endReasonLabel(ended.reason, ended.silhouette !== undefined)}</p>
         <p className="mt-3 font-num text-3xl tabular-nums">{scoreLabel(ended, mySeat)}</p>
       </Card>
 

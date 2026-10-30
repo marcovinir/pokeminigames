@@ -48,7 +48,7 @@ export function WaitingView() {
     <Card as="section" tone="raised" style={rise(0)} className="animate-rise mx-auto w-full max-w-md p-6 text-center sm:p-8">
       <h1 className="font-display text-2xl font-semibold">Sala de espera</h1>
       <p className="mt-3 text-sm text-muted">Comparte este código con tu oponente:</p>
-      <p aria-label="Código de la sala" className="my-4 flex justify-center gap-2">
+      <div role="group" aria-label="Código de la sala" className="my-4 flex justify-center gap-2">
         {[...code].map((letter, index) => (
           <span
             key={index}
@@ -58,18 +58,18 @@ export function WaitingView() {
             {letter}
           </span>
         ))}
-      </p>
+      </div>
       <CopyCodeButton code={code} />
 
       {dobleTipo ? (
-        <p aria-label="Configuración de la sala" className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
+        <div role="group" aria-label="Configuración de la sala" className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-muted">
           <span>{describeConfig(dobleTipo)}</span>
           {dobleTipo.typeHints ? <Badge tone="info">Pistas de tipos</Badge> : null}
-        </p>
+        </div>
       ) : view.config && isSilhouetteConfig(view.config) ? (
-        <p aria-label="Configuración de la sala" className="mt-4 text-sm text-muted [overflow-wrap:anywhere]">
+        <div role="group" aria-label="Configuración de la sala" className="mt-4 text-sm text-muted [overflow-wrap:anywhere]">
           {describeSilhouetteConfig(view.config)}
-        </p>
+        </div>
       ) : null}
 
       <ul className="mt-7 flex justify-center gap-4 sm:gap-8" aria-label="Jugadores">
