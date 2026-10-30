@@ -7,7 +7,7 @@ test("el tema guardado en el perfil se aplica en un navegador nuevo tras iniciar
   try {
     await register(first);
     // El tema y el modo se eligen desde el menú de apariencia del encabezado (botones segmentados).
-    await first.page.getByRole("button", { name: "Apariencia" }).click();
+    await first.page.getByRole("button", { name: "Menú", exact: true }).click();
     const saved = first.page.waitForResponse((r) => r.url().endsWith("/auth/me/preferences") && r.request().method() === "PUT");
     await first.page.getByText("Pokédex", { exact: true }).click();
     await saved;
@@ -23,7 +23,7 @@ test("el tema guardado en el perfil se aplica en un navegador nuevo tras iniciar
     await expect(page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "pokedex");
     await expect(page.locator("html")).toHaveAttribute("data-mode", "oscuro");
-    await page.getByRole("button", { name: "Apariencia" }).click();
+    await page.getByRole("button", { name: "Menú", exact: true }).click();
     await expect(page.getByRole("radio", { name: "Pokédex" })).toBeChecked();
     await expect(page.getByRole("radio", { name: "Oscuro" })).toBeChecked();
   } finally {

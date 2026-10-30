@@ -140,8 +140,18 @@ export const LOAD_ERROR_TEXT = {
   reload: "Recargar",
 } as const;
 
+export const HEADER_MENU_TEXT = {
+  button: "Menú",
+  sections: "Secciones",
+  appearance: "Apariencia",
+  logIn: "Iniciar sesión",
+  register: "Crear cuenta",
+  profile: "Mi perfil",
+  logOut: "Cerrar sesión",
+} as const;
+
 export const TYPES_TEXT = {
-  title: "Tabla de tipos",
+  title: "Matriz de Tipos",
   first: "Tipo 1",
   second: "Tipo 2",
   none: "Ninguno",
@@ -150,7 +160,7 @@ export const TYPES_TEXT = {
   chartHint: "En cada fila, el tipo que ataca; en cada columna, el que recibe.",
   chartLabel: "Tabla de efectividad de tipos",
   cornerLabel: "Ataca / recibe",
-  link: "Tipos",
+  link: "Matriz de Tipos",
   selectedColumn: "(elegido)",
   playPrompt: "¿Quieres jugar? Entra con tu cuenta o como invitado.",
   playLink: "Entrar a jugar",
@@ -257,7 +267,6 @@ export function recordHeadline(record: RematchRecord, rivalName: string): string
 /** El control de sonido del encabezado. */
 export const SOUND_TEXT = {
   button: "Sonido",
-  buttonMuted: "Sonido (silenciado)",
   music: "Música",
   musicVolume: "Volumen de la música",
   effects: "Efectos",
