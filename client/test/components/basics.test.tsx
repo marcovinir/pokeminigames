@@ -121,12 +121,6 @@ describe("TypeChip", () => {
     expect(icon.style.maxWidth).toBe("none");
   });
 
-  it("con icon={false} queda como antes, sin imagen", () => {
-    const { container } = render(<TypeChip type="ice" icon={false} />);
-    expect(container.querySelector("img")).toBeNull();
-    expect(screen.getByText("hielo")).toBeInTheDocument();
-  });
-
   it("si la imagen no carga, el icono desaparece y queda el chip de siempre", () => {
     const { container } = render(<TypeChip type="ghost" />);
     fireEvent.error(container.querySelector("img")!);

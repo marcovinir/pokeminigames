@@ -14,7 +14,9 @@ import type {
   SilhouetteStateView,
   TypeName,
 } from "@pokemon-minigames/shared";
+import { isSilhouetteConfig } from "@pokemon-minigames/shared";
 import { clockOffset } from "./clock";
+import { rivalSeat } from "./seats";
 
 export interface RoundView {
   number: number;
@@ -174,7 +176,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
             })
           : [
               ...view.players,
-              joiner({ seat: view.mySeat === 1 ? 2 : 1, username, connected: false, totalStats: 0, teamSize: 0 }),
+              joiner({ seat: rivalSeat(view.mySeat ?? 2), username, connected: false, totalStats: 0, teamSize: 0 }),
             ],
       };
     }
@@ -238,8 +240,8 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     case "round-result": {
       const result = event.payload;
       const mine = view.mySeat ? result.results[view.mySeat].pokemon : null;
-      const rivalSeat: Seat | null = view.mySeat === null ? null : view.mySeat === 1 ? 2 : 1;
-      const theirs = rivalSeat ? result.results[rivalSeat].pokemon : null;
+      const rival: Seat | null = view.mySeat === null ? null : rivalSeat(view.mySeat);
+      const theirs = rival ? result.results[rival].pokemon : null;
       return {
         ...view,
         phase: "round_result",
@@ -305,7 +307,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
 
     case "silhouette-round-result": {
       const { reveal, totals, nextRoundAt, serverNow } = event.payload;
-      const silhouette = view.silhouette ?? { totalRounds: reveal.round, round: null, reveals: [], lastReveal: null, nextRoundAt: null };
+      const silhouette = view.silhouette ?? { totalRounds: view.config && isSilhouetteConfig(view.config) ? view.config.rounds : reveal.round, round: null, reveals: [], lastReveal: null, nextRoundAt: null };
       return {
         ...view,
         phase: "round_result",

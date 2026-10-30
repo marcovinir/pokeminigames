@@ -48,6 +48,7 @@ async function toApiError(response: Response): Promise<ApiError> {
 export class ApiClient {
   private token: string | null = null;
   private refreshing: Promise<AuthSession | null> | null = null;
+  private refreshFailedByNetwork = false;
 
   constructor(private readonly options: ApiClientOptions = {}) {}
 
@@ -64,6 +65,8 @@ export class ApiClient {
 
     if (response.status === 401 && auth) {
       const session = await this.refreshSession();
+      // Sin red no se sabe si la sesión sigue viva: es un error de red, no una sesión perdida.
+      if (!session && this.refreshFailedByNetwork) throw new ApiError(0, NETWORK_ERROR);
       if (!session) {
         this.options.onSessionLost?.();
         throw await toApiError(response);
@@ -85,6 +88,7 @@ export class ApiClient {
   }
 
   private async doRefresh(): Promise<AuthSession | null> {
+    this.refreshFailedByNetwork = false;
     try {
       const response = await this.send("POST", "/auth/refresh", undefined, null);
       if (!response.ok) {
@@ -96,6 +100,7 @@ export class ApiClient {
       this.options.onSessionRefreshed?.(session);
       return session;
     } catch {
+      this.refreshFailedByNetwork = true;
       return null;
     }
   }

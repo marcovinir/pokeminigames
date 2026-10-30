@@ -15,13 +15,10 @@ const ICON_SIZES = { md: 14, lg: 18 } as const;
 export function TypeChip({
   type,
   size = "md",
-  icon = true,
   className = "",
 }: {
   type: TypeName;
   size?: keyof typeof SIZES;
-  /** Con `false` el chip es solo el nombre, como antes. */
-  icon?: boolean;
   className?: string;
 }) {
   return (
@@ -30,7 +27,7 @@ export function TypeChip({
       className={`inline-flex items-center gap-1.5 rounded-pill font-display font-semibold shadow-[inset_0_-2px_0_rgb(0_0_0/0.18)] ${SIZES[size]} ${className}`}
       data-type={type}
     >
-      {icon ? <TypeIcon type={type} size={ICON_SIZES[size]} /> : null}
+      <TypeIcon type={type} size={ICON_SIZES[size]} />
       {TYPE_LABELS[type]}
     </span>
   );

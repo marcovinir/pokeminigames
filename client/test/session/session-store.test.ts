@@ -123,7 +123,8 @@ describe("sesión", () => {
       const { store, endpoints } = setup();
       await store.getState().login({ email: "ash@example.com", password: "x" });
       vi.mocked(endpoints.auth.logout).mockRejectedValueOnce(new ApiError(0, "NETWORK"));
-      await store.getState().logout().catch(() => {});
+      // No lanza: el encabezado la llama sin esperar y quedaría una promesa rechazada sin capturar.
+      await expect(store.getState().logout()).resolves.toBeUndefined();
       expect(store.getState().status).toBe("anonymous");
     });
 

@@ -1,4 +1,5 @@
 import type { Seat, SilhouetteReveal } from "@pokemon-minigames/shared";
+import { rivalSeat } from "../../game/seats";
 import { ArtImage } from "../../components/ArtImage";
 import { Card } from "../../components/Card";
 import { rise } from "../../components/rise";
@@ -6,7 +7,7 @@ import { SILHOUETTE_SCREEN, silhouetteRivalGotIt } from "../../i18n/es";
 
 function whoGotIt(reveal: SilhouetteReveal, mySeat: Seat, rival: string): string {
   const mine = reveal.answers[mySeat].correct;
-  const theirs = reveal.answers[mySeat === 1 ? 2 : 1].correct;
+  const theirs = reveal.answers[rivalSeat(mySeat)].correct;
   if (mine && theirs) return SILHOUETTE_SCREEN.bothGotIt;
   if (mine) return SILHOUETTE_SCREEN.youGotIt;
   if (theirs) return silhouetteRivalGotIt(rival);

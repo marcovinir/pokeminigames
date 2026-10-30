@@ -178,8 +178,8 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
           <p>
             Con nadie: no se vende nada ni hay anuncios. El juego está alojado en Render (servidor) y Neon (base de datos),
             que como cualquier servidor pueden registrar direcciones IP en sus registros técnicos. Las imágenes de los
-            Pokémon se cargan de PokeAPI y GitHub. Para evitar abusos, el servidor cuenta durante un rato los intentos de
-            inicio de sesión por dirección IP.
+            Pokémon se cargan de PokeAPI y GitHub. Para evitar abusos, el servidor cuenta durante un rato, por dirección IP, los
+            intentos de inicio de sesión, los registros, las entradas como invitado y las peticiones.
           </p>
         </Section>
         <Section title="Borrar tu cuenta">

@@ -1,15 +1,14 @@
-import { gameOf } from "@pokemon-minigames/shared";
-import { lobbyPath } from "../lobby-path";
-import { asDobleTipo, isSilhouetteConfig } from "@pokemon-minigames/shared";
+import { asDobleTipo, gameOf, isSilhouetteConfig } from "@pokemon-minigames/shared";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
 import { Badge } from "../../components/Badge";
-import { GuestTag } from "../../components/GuestTag";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
+import { GuestTag } from "../../components/GuestTag";
 import { rise } from "../../components/rise";
 import { describeConfig, describeSilhouetteConfig } from "../../i18n/es";
+import { lobbyPath } from "../lobby-path";
 import { useRoom } from "./use-room";
 
 /** Copia el código de la sala al portapapeles; si el navegador no lo permite, lo dice. */

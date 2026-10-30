@@ -230,3 +230,15 @@ describe("script que aplica el tema antes de pintar (index.html)", () => {
     }
   });
 });
+
+describe("hasChoice con lo guardado en el navegador", () => {
+  it.each(["no es json", "{}", '{"theme":"otro","mode":"nada"}', "null"])("%s no cuenta como una elección", (saved) => {
+    const { env } = fakeEnv({ saved });
+    expect(createThemeStore(env).getState().hasChoice).toBe(false);
+  });
+
+  it("una preferencia válida sí cuenta", () => {
+    const { env } = fakeEnv({ saved: JSON.stringify({ theme: "pokedex", mode: "oscuro" }) });
+    expect(createThemeStore(env).getState().hasChoice).toBe(true);
+  });
+});

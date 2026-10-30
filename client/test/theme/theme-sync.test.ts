@@ -124,14 +124,38 @@ describe("con un invitado", () => {
 });
 
 describe("con la sesión iniciada", () => {
-  it("cada cambio de tema o de modo se guarda en el servidor", () => {
+  it("cada cambio de tema o de modo se guarda en el servidor", async () => {
     const { theme, signIn, savePreferences } = setup();
     signIn(userWith({ theme: "clasico", themeMode: "auto" }));
     theme.getState().setTheme("pokedex");
     expect(savePreferences).toHaveBeenLastCalledWith({ theme: "pokedex", themeMode: "auto" });
+    await vi.waitFor(() => expect(savePreferences.mock.results[0]).toBeDefined());
+    await Promise.resolve();
     theme.getState().setMode("oscuro");
-    expect(savePreferences).toHaveBeenLastCalledWith({ theme: "pokedex", themeMode: "oscuro" });
+    await vi.waitFor(() => expect(savePreferences).toHaveBeenLastCalledWith({ theme: "pokedex", themeMode: "oscuro" }));
     expect(savePreferences).toHaveBeenCalledTimes(2);
+  });
+
+  it("varios cambios seguidos no se cruzan: se espera al guardado en curso y solo se manda el último", async () => {
+    const finishes: Array<() => void> = [];
+    const { theme, signIn, savePreferences } = setup({ savePreferences: () => new Promise<void>((resolve) => finishes.push(resolve)) });
+    signIn(userWith({ theme: "clasico", themeMode: "auto" }));
+    theme.getState().setTheme("pokedex");
+    theme.getState().setMode("oscuro");
+    theme.getState().setMode("claro");
+    expect(savePreferences).toHaveBeenCalledTimes(1);
+    finishes[0]!();
+    await vi.waitFor(() => expect(savePreferences).toHaveBeenCalledTimes(2));
+    expect(savePreferences).toHaveBeenLastCalledWith({ theme: "pokedex", themeMode: "claro" });
+  });
+
+  it("si un guardado falla, el que esperaba se manda igual", async () => {
+    const results = [() => Promise.reject(new Error("sin red")), () => Promise.resolve()];
+    const { theme, signIn, savePreferences } = setup({ savePreferences: () => results.shift()!() });
+    signIn(userWith({ theme: "clasico", themeMode: "auto" }));
+    theme.getState().setTheme("pokedex");
+    theme.getState().setMode("oscuro");
+    await vi.waitFor(() => expect(savePreferences).toHaveBeenCalledTimes(2));
   });
 
   it("elegir lo que ya está guardado no vuelve a mandarlo", () => {

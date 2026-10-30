@@ -167,7 +167,7 @@ describe("renovación de la sesión ante un 401", () => {
     expect(calls("/auth/refresh")).toHaveLength(0);
   });
 
-  it("un error de red durante la renovación cuenta como sesión perdida", async () => {
+  it("un error de red durante la renovación no cierra la sesión: es un error de red y el token se conserva", async () => {
     const onSessionLost = vi.fn();
     const { api } = setup(
       tokenServer(() => {
@@ -176,8 +176,10 @@ describe("renovación de la sesión ante un 401", () => {
       { onSessionLost },
     );
     api.setToken("viejo");
-    await api.request("GET", "/x").catch(() => {});
-    expect(onSessionLost).toHaveBeenCalledTimes(1);
+    const error = await api.request("GET", "/x").catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ status: 0, code: "NETWORK" });
+    expect(onSessionLost).not.toHaveBeenCalled();
+    expect(api.getToken()).toBe("viejo");
   });
 });
 

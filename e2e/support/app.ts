@@ -73,11 +73,6 @@ export interface Player {
   page: Page;
 }
 
-/**
- * Una persona con su propio navegador limpio. El servidor de la prueba está configurado como en Render (detrás de un
- * proxy: `TRUST_PROXY=1`) y los límites de peticiones son por IP; cada persona manda una IP distinta en `X-Forwarded-For`
- * para que las pruebas no compartan límites.
- */
 const MENU_CARD: Record<"doble_tipo" | "silueta", string> = { doble_tipo: "Doble tipo", silueta: "¿Quién es ese Pokémon?" };
 
 const LOBBY_PATH: Record<"doble_tipo" | "silueta", string> = { doble_tipo: "/jugar/doble-tipo", silueta: "/jugar/silueta" };
@@ -95,6 +90,11 @@ export async function enterLobby(page: Page, game: "doble_tipo" | "silueta"): Pr
   await expect(page.getByRole("heading", { level: 1, name: MENU_CARD[game] })).toBeVisible();
 }
 
+/**
+ * Una persona con su propio navegador limpio. El servidor de la prueba está configurado como en Render (detrás de un
+ * proxy: `TRUST_PROXY=1`) y los límites de peticiones son por IP; cada persona manda una IP distinta en `X-Forwarded-For`
+ * para que las pruebas no compartan límites.
+ */
 export async function newPlayer(browser: Browser, label: string): Promise<Player> {
   const name = `${label}_${randomInt(10_000, 99_999)}`;
   const ip = `10.${randomInt(1, 255)}.${randomInt(1, 255)}.${randomInt(1, 255)}`;
