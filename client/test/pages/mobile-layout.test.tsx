@@ -92,12 +92,12 @@ describe("sin desbordes en pantallas estrechas", () => {
  * jsdom no calcula tamaños: estas pruebas fijan las clases que evitan los desbordes que se midieron en un navegador de
  * verdad (e2e/tests/layout.spec.ts, con nombres de 30 letras a 360 y 375 px), para que un cambio de clases salte rápido.
  */
-describe("encabezado y menú de apariencia en pantallas estrechas", () => {
+describe("encabezado y su menú en pantallas estrechas", () => {
   async function openMenu(username = "ash") {
     const services = fakeServices();
     signIn(services, { ...ASH, username });
     renderWithServices(<Header />, { services });
-    const toggle = screen.getByRole("button", { name: "Apariencia" });
+    const toggle = screen.getByRole("button", { name: "Menú" });
     await userEvent.click(toggle);
     return document.getElementById(toggle.getAttribute("aria-controls")!)!;
   }
@@ -109,15 +109,12 @@ describe("encabezado y menú de apariencia en pantallas estrechas", () => {
     expect(panel.parentElement!.closest(".relative")).toBe(panel.closest("header")!.firstElementChild);
   });
 
-  it("el nombre largo se recorta en vez de ensanchar la fila, y las etiquetas de texto solo caben desde pantallas anchas", async () => {
+  it("el nombre largo se recorta en vez de ensanchar la fila", async () => {
     const name = "a".repeat(30);
     await openMenu(name);
     const shown = screen.getByText(name);
     expect(classesOf(shown)).toContain("truncate");
     expect(classesOf(shown)).toContain("lg:inline");
-    for (const label of ["Apariencia", "Mi perfil", "Cerrar sesión"]) {
-      expect(classesOf(screen.getByText(label)), label).toContain("lg:not-sr-only");
-    }
   });
 });
 

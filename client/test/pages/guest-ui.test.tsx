@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { Header } from "../../src/components/Header";
@@ -8,32 +9,33 @@ import { ASH, GUEST, fakeServices, renderWithServices, signIn } from "../helpers
 const tags = () => screen.queryAllByText("Invitado");
 
 describe("encabezado", () => {
-  it("el de un invitado muestra «Invitado» con su nombre y «Crear cuenta» (a /registro), sin «Mi perfil», y conserva «Cerrar sesión» y «Apariencia»", () => {
+  it("el de un invitado muestra «Invitado» con su nombre y «Crear cuenta» (a /registro), sin «Mi perfil», y conserva «Cerrar sesión» y «Apariencia»", async () => {
     const services = fakeServices();
     signIn(services, GUEST);
     renderWithServices(<Header />, { services });
     expect(screen.getByText("Invitado")).toBeInTheDocument();
     expect(screen.getByText("inv_1")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Menú" }));
     expect(screen.getByRole("link", { name: "Crear cuenta" })).toHaveAttribute("href", "/registro");
     expect(screen.queryByRole("link", { name: "Mi perfil" })).toBeNull();
     expect(screen.getByRole("button", { name: "Cerrar sesión" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Apariencia" })).toBeInTheDocument();
   });
 
   it("«Cerrar sesión» de un invitado termina su sesión", async () => {
     const services = fakeServices();
     signIn(services, GUEST);
     renderWithServices(<Header />, { services });
-    screen.getByRole("button", { name: "Cerrar sesión" }).click();
-    await Promise.resolve();
+    await userEvent.click(screen.getByRole("button", { name: "Menú" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cerrar sesión" }));
     expect(services.endpoints.auth.logout).toHaveBeenCalledTimes(1);
   });
 
-  it("el de una cuenta no cambia: sin etiqueta y con «Mi perfil»", () => {
+  it("el de una cuenta no cambia: sin etiqueta y con «Mi perfil»", async () => {
     const services = fakeServices();
     signIn(services, ASH);
     renderWithServices(<Header />, { services });
     expect(tags()).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "Menú" }));
     expect(screen.getByRole("link", { name: "Mi perfil" })).toHaveAttribute("href", "/perfil");
     expect(screen.queryByRole("link", { name: "Crear cuenta" })).toBeNull();
   });

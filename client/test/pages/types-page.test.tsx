@@ -51,7 +51,7 @@ describe("parseTypeSelection", () => {
 describe("la página de la tabla de tipos", () => {
   it("sin selección hay título y tabla, pero no bloque de daño", () => {
     renderAt("/tipos");
-    expect(screen.getByRole("heading", { level: 1, name: "Tabla de tipos" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Matriz de Tipos" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Daño que recibe" })).toBeNull();
     expect(screen.getByText("En cada fila, el tipo que ataca; en cada columna, el que recibe.")).toBeInTheDocument();
   });
@@ -137,7 +137,7 @@ describe("la ruta /tipos es pública", () => {
       </>,
       { route: "/tipos", services },
     );
-    expect(await screen.findByRole("heading", { level: 1, name: "Tabla de tipos" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Matriz de Tipos" })).toBeInTheDocument();
     expect(where()).toBe("/tipos");
   });
 });

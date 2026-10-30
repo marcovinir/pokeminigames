@@ -91,10 +91,11 @@ test("las etiquetas: la cuenta ve «Invitado» junto al rival, y el invitado no 
     // El encabezado de un invitado: su etiqueta y «Crear cuenta» en lugar de «Mi perfil», y /perfil lo devuelve al lobby.
     const header = appHeader(guest.page);
     await expect(header.getByText("Invitado", { exact: true })).toBeVisible();
+    await header.getByRole("button", { name: "Menú", exact: true }).click();
     await expect(header.getByRole("link", { name: "Crear cuenta" })).toHaveAttribute("href", "/registro");
     await expect(header.getByRole("link", { name: "Mi perfil" })).toHaveCount(0);
     await expect(header.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
-    await expect(header.getByRole("button", { name: "Apariencia" })).toBeVisible();
+    await expect(header.getByRole("group", { name: "Apariencia" })).toBeVisible();
     await guest.page.goto("/perfil");
     await expect(guest.page).toHaveURL(/\/$/);
     await expect(guest.page.getByRole("heading", { name: "¿A qué jugamos?" })).toBeVisible();
@@ -164,6 +165,7 @@ test("dos invitados juegan; el segundo con el mismo nombre (con otras mayúscula
     await expect(first.page.getByRole("heading", { name: "Sala de espera" })).toBeVisible();
 
     // Sale y entra con otro nombre.
+    await second.page.getByRole("button", { name: "Menú", exact: true }).click();
     await second.page.getByRole("button", { name: "Cerrar sesión" }).click();
     await expect(second.page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
     await guestLogin(second.page, second.name);
@@ -206,9 +208,10 @@ for (const width of VIEWPORTS) {
       const box = await header.boundingBox();
       expect.soft(box!.height, `${width} px: el encabezado del invitado se parte en varias líneas (${box!.height} px)`).toBeLessThan(70);
       await expectInsideViewport(guest.page, header.getByText("Invitado", { exact: true }), `${width} px: la etiqueta del encabezado`);
+      await header.getByRole("button", { name: "Menú", exact: true }).click();
       await expectInsideViewport(guest.page, header.getByRole("link", { name: "Crear cuenta" }), `${width} px: «Crear cuenta»`);
       await expectInsideViewport(guest.page, header.getByRole("button", { name: "Cerrar sesión" }), `${width} px: «Cerrar sesión»`);
-      await expectInsideViewport(guest.page, header.getByRole("button", { name: "Apariencia" }), `${width} px: «Apariencia»`);
+      await guest.page.keyboard.press("Escape");
       await expectNoSideScroll(guest.page, `${width} px, lobby del invitado`);
 
       // La sala de espera, la cuenta atrás y la ronda: la cuenta (nombre largo) ve al invitado (nombre largo) con su etiqueta.

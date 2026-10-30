@@ -57,7 +57,7 @@ for (const [theme, mode] of COMBINATIONS) {
       await expect(visitor.page.getByRole("heading", { name: "Iniciar sesión" })).toBeVisible();
 
       // Encabezado: el botón de apariencia enfocado con el teclado.
-      const toggle = visitor.page.getByRole("button", { name: "Apariencia" });
+      const toggle = visitor.page.getByRole("button", { name: "Menú", exact: true });
       await focusWithKeyboard(visitor.page, toggle);
       const inHeader = await ringOf(toggle, "header");
       expect(inHeader.width).not.toBe("0px");

@@ -39,7 +39,7 @@ async function expectOneRowHeader(page: Page, where: string): Promise<void> {
 
 /** Abre el menú de apariencia y comprueba que el panel y cada una de sus opciones se alcanzan, y lo cierra. */
 async function expectThemeMenuReachable(page: Page, where: string): Promise<void> {
-  const toggle = page.getByRole("button", { name: "Apariencia" });
+  const toggle = page.getByRole("button", { name: "Menú", exact: true });
   await toggle.click();
   const panel = page.locator(`[id="${await toggle.getAttribute("aria-controls")}"]`);
   await expect(panel).toBeVisible();
@@ -187,6 +187,7 @@ test("a 375 px toda la partida cabe con nombres de 30 letras y una respuesta de 
     for (const player of [ash, misty]) await expectNoSideScroll(player.page, "375 px, resumen");
 
     // El perfil, con el nombre largo en distintos anchos.
+    await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
     await ash.page.getByRole("link", { name: "Mi perfil" }).click();
     await expect(ash.page.getByRole("heading", { name: "Tu perfil" })).toBeVisible();
     await expect(fact(ash.page, "Partidas")).toHaveText("1");

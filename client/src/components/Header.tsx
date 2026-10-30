@@ -1,59 +1,43 @@
 import { Link, useLocation } from "react-router";
 import { isGuest } from "../api/types";
-import { TYPES_TEXT } from "../i18n/es";
-import { useServices, useSession } from "../services";
+import { HEADER_MENU_TEXT, TYPES_TEXT } from "../i18n/es";
+import { useSession } from "../services";
 import { Avatar } from "./Avatar";
-import { Button } from "./Button";
 import { GuestTag } from "./GuestTag";
+import { HeaderMenu } from "./HeaderMenu";
 import { Logo } from "./Logo";
-import { SoundMenu } from "./SoundMenu";
-import { ThemeMenu } from "./ThemeMenu";
 
 function GridIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="size-5 lg:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18" />
     </svg>
   );
 }
 
-function UserIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5 lg:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  );
-}
+const TILE = "flex items-center gap-2 rounded-ui border-2 px-3 py-1.5 font-display text-sm font-semibold";
+const BAR_TILE = `${TILE} border-header-fg/40 hover:bg-header-fg/15`;
+const PANEL_TILE = `${TILE} border-line hover:bg-surface-2`;
 
-function UserPlusIcon() {
+/** Los accesos a las secciones: rectángulos con su icono, en la barra (escritorio) o dentro del menú (pantallas estrechas). */
+function Shortcuts({ tileClassName, onChoose }: { tileClassName: string; onChoose?: () => void }) {
   return (
-    <svg viewBox="0 0 24 24" className="size-5 sm:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="8" r="4" />
-      <path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6" />
-    </svg>
-  );
-}
-
-function ExitIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5 lg:hidden" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="m16 17 5-5-5-5M21 12H9" />
-    </svg>
+    <Link to="/tipos" onClick={onChoose} className={tileClassName}>
+      <GridIcon />
+      {TYPES_TEXT.link}
+    </Link>
   );
 }
 
 export function Header() {
   const user = useSession((s) => s.user);
-  const { session } = useServices();
   const guest = isGuest(user);
   // En una sala no se ofrece: salir de la página cierra la conexión con la partida.
   const inRoom = useLocation().pathname.startsWith("/sala/");
 
   return (
     <header data-app-header className="sticky top-0 z-20 h-(--header-h) border-b-(length:--frame) border-line bg-header text-header-fg">
-      {/* `relative`: el panel del menú de apariencia se ancla a este contenedor y no a su botón, que con sesión queda a media fila. */}
+      {/* `relative`: el panel del menú se ancla a este contenedor y no a su botón. */}
       <div className="relative mx-auto flex h-full max-w-5xl items-center gap-2 px-4 sm:gap-3">
         {/* Luces de adorno: solo en el tema Pokédex (el encabezado rojo tipo consola) y con sitio de sobra: en pantallas estrechas desbordaban la fila. */}
         <span data-leds aria-hidden="true" className="hidden items-center gap-1.5 md:in-data-[theme=pokedex]:flex">
@@ -65,40 +49,30 @@ export function Header() {
         <Link to="/" className="shrink-0 rounded-ui">
           <Logo hideNameOnMobile={Boolean(user)} />
         </Link>
+        {inRoom ? null : (
+          <nav aria-label={HEADER_MENU_TEXT.sections} className="ml-3 hidden items-center gap-2 lg:flex">
+            <Shortcuts tileClassName={BAR_TILE} />
+          </nav>
+        )}
         <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-3">
-          {inRoom ? null : (
-            <Link to="/tipos" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
-              <GridIcon />
-              <span className="sr-only lg:not-sr-only">{TYPES_TEXT.link}</span>
-            </Link>
-          )}
-          <SoundMenu />
-          <ThemeMenu compact={Boolean(user)} />
           {user ? (
-            <>
-              {guest ? (
-                // Un invitado no tiene perfil: en su lugar, el camino a tener cuenta.
-                <Link to="/registro" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
-                  <UserPlusIcon />
-                  <span className="sr-only sm:not-sr-only">Crear cuenta</span>
-                </Link>
-              ) : (
-                <Link to="/perfil" className="inline-flex shrink-0 items-center gap-2 rounded-pill px-2 py-1.5 font-display text-sm font-semibold hover:bg-header-fg/15">
-                  <UserIcon />
-                  <span className="sr-only lg:not-sr-only">Mi perfil</span>
-                </Link>
-              )}
-              <span className="flex min-w-0 items-center gap-2">
-                <Avatar name={user.username} avatarId={guest ? null : user.avatarId} size="sm" />
-                {guest ? <GuestTag /> : null}
-                <span className="hidden max-w-40 truncate font-display text-sm font-semibold lg:inline">{user.username}</span>
-              </span>
-              <Button variant="header" className="shrink-0 max-lg:px-3" onClick={() => void session.getState().logout()}>
-                <ExitIcon />
-                <span className="sr-only lg:not-sr-only">Cerrar sesión</span>
-              </Button>
-            </>
+            <span className="flex min-w-0 items-center gap-2">
+              <Avatar name={user.username} avatarId={guest ? null : user.avatarId} size="sm" />
+              {guest ? <GuestTag /> : null}
+              <span className="hidden max-w-40 truncate font-display text-sm font-semibold lg:inline">{user.username}</span>
+            </span>
           ) : null}
+          <HeaderMenu
+            shortcuts={
+              inRoom
+                ? undefined
+                : (close) => (
+                    <div className="flex flex-col gap-2 lg:hidden">
+                      <Shortcuts tileClassName={PANEL_TILE} onChoose={close} />
+                    </div>
+                  )
+            }
+          />
         </div>
       </div>
     </header>

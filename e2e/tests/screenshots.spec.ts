@@ -103,6 +103,7 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
     await ash.page.waitForFunction(() => [...document.images].every((image) => image.complete));
     await shoot(ash.page, "resumen");
 
+    await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
     await ash.page.getByRole("link", { name: "Mi perfil" }).click();
     await expect(ash.page.getByRole("heading", { name: "Tu perfil" })).toBeVisible();
     await expect(fact(ash.page, "Partidas")).toHaveText("1");
@@ -112,11 +113,11 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
     // El otro tema: Pokédex (claro), elegido desde el menú de apariencia (el del perfil manda al iniciar sesión).
     await ash.page.goto("/jugar/doble-tipo");
     await expect(ash.page.getByRole("heading", { level: 1, name: "Doble tipo" })).toBeVisible();
-    await ash.page.getByRole("button", { name: "Apariencia" }).click();
+    await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
     await ash.page.getByText("Pokédex", { exact: true }).click();
     await ash.page.getByText("Claro", { exact: true }).click();
     await ash.page.keyboard.press("Escape");
-    // Escape devuelve el foco al botón de apariencia y su aro (ahora visible en Pokédex) saldría en la captura.
+    // Escape devuelve el foco al botón del menú y su aro (ahora visible en Pokédex) saldría en la captura.
     await ash.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await expect(ash.page.locator("html")).toHaveAttribute("data-theme", "pokedex");
     await shoot(ash.page, "pokedex");
