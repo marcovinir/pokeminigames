@@ -26,9 +26,27 @@ export function syncThemeWithSession({ session, theme, endpoints }: ThemeSyncDep
   /** Lo último que se sabe que tiene el servidor (o que se le acaba de mandar). */
   let known: ThemePreference | null = null;
 
+  let saving = false;
+  let waiting: ThemePreference | null = null;
+
+  // De uno en uno y solo el último de los que esperan: dos PUT a la vez podrían llegar desordenados y dejar el tema anterior.
+  const send = (preference: ThemePreference): void => {
+    saving = true;
+    void endpoints.auth
+      .savePreferences({ theme: preference.theme, themeMode: preference.mode })
+      .catch(() => {})
+      .finally(() => {
+        saving = false;
+        const next = waiting;
+        waiting = null;
+        if (next) send(next);
+      });
+  };
+
   const save = (preference: ThemePreference): void => {
     known = preference;
-    void endpoints.auth.savePreferences({ theme: preference.theme, themeMode: preference.mode }).catch(() => {});
+    if (saving) waiting = preference;
+    else send(preference);
   };
 
   const onSession = (state: SessionState, previous?: SessionState): void => {

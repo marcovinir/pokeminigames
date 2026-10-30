@@ -162,6 +162,8 @@ El juego suena desde el principio; el altavoz del encabezado abre un panel con *
 - **El rival respondió:** al aceptar una respuesta, el servidor envía `opponent-answered` `{ round }` solo al otro jugador (en los dos juegos, sin decir qué respondió); el estado de la sala lleva `opponentAnswered` para recuperarlo al reconectar, y la ronda muestra «Tu rival ya respondió».
 - El navegador no deja sonar nada hasta la primera interacción: el servicio lo reintenta con el primer clic o tecla.
 
+**Limitación conocida (iOS):** Safari en iPhone y iPad no deja cambiar por código el volumen de un elemento `<audio>`, así que ahí el control de volumen de la música y su fundido no surten efecto (el interruptor y los efectos sí funcionan). Arreglarlo exigiría pasar la música por Web Audio; se deja así mientras no sea un problema real.
+
 ## Temas y accesibilidad
 
 Cada jugador elige entre dos temas, **Clásico** (moderno y colorido: esquinas muy redondeadas, relieve, fondo con degradado y tipografía Fredoka) y **Pokédex** (la piel retro del mismo diseño: bordes marcados, sin sombras difusas y letra monoespaciada JetBrains Mono), y entre modo automático, claro u oscuro desde el botón «Apariencia» del encabezado; la preferencia se guarda en el navegador y, con la sesión iniciada, también en tu perfil (al entrar en otro navegador se aplica la del perfil). Los colores de todos los temas y de los 18 tipos cumplen el contraste AA de WCAG (lo comprueban las pruebas). Para revisar lo que realmente se ve, pega [`client/scripts/contrast-audit.js`](../client/scripts/contrast-audit.js) en la consola del navegador y ejecuta `__contrastAuditAll()`.

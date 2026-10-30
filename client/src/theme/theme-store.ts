@@ -31,6 +31,17 @@ export function parsePreference(raw: string | null): ThemePreference {
   }
 }
 
+/** Si lo guardado trae algo válido: unos datos corruptos no son una elección de la persona (no se suben a su cuenta). */
+function isChoice(raw: string | null): boolean {
+  try {
+    const data: unknown = raw === null ? null : JSON.parse(raw);
+    const { theme, mode } = (typeof data === "object" && data !== null ? data : {}) as Record<string, unknown>;
+    return THEME_NAMES.includes(theme as ThemeName) || THEME_MODES.includes(mode as ThemeMode);
+  } catch {
+    return false;
+  }
+}
+
 export function resolveMode(mode: ThemeMode, prefersDark: boolean): ResolvedMode {
   if (mode === "auto") return prefersDark ? "oscuro" : "claro";
   return mode;
@@ -93,7 +104,7 @@ export function createThemeStore(env: ThemeEnv): StoreApi<ThemeState> {
     return {
       preference: initial,
       resolvedMode: apply(initial),
-      hasChoice: saved !== null,
+      hasChoice: isChoice(saved),
       setTheme: (theme) => choose({ ...get().preference, theme }),
       setMode: (mode) => choose({ ...get().preference, mode }),
       setPreference: (preference) => choose({ theme: preference.theme, mode: preference.mode }),

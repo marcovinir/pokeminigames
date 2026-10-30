@@ -115,6 +115,11 @@ describe("las páginas de información", () => {
     }
   });
 
+  it("Privacidad dice que los límites por IP cubren inicio de sesión, registro, invitados y peticiones", () => {
+    const { text } = pageText("/privacidad");
+    expect(text).toMatch(/inicio de sesión, los registros, las entradas como invitado y las peticiones/);
+  });
+
   it("Privacidad explica la cookie, la contraseña cifrada y cómo borrar la cuenta, con fecha", () => {
     const { text } = pageText("/privacidad");
     expect(text).toMatch(/cookie/i);

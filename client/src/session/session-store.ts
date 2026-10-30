@@ -60,6 +60,8 @@ export function createSessionStore(endpoints: Endpoints): StoreApi<SessionState>
     async logout() {
       try {
         await endpoints.auth.logout();
+      } catch {
+        // Sin servidor la cookie sigue ahí, pero en esta pestaña la sesión se cierra igual.
       } finally {
         set({ status: "anonymous", user: null });
       }
