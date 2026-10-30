@@ -254,3 +254,44 @@ describe("la posición guardada solo se aplica al volver", () => {
     expect(where()).toBe("/pokedex/6");
   });
 });
+
+describe("las pestañas de generación", () => {
+  const tabs = () => screen.getByRole("group", { name: "Generación" });
+  const tab = (name: string) => within(tabs()).getByRole("button", { name });
+
+  it("se ven todas de un vistazo, con «Todas» marcada al entrar, y ya no hay lista de generación", async () => {
+    renderList();
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(within(tabs()).getAllByRole("button").map((button) => button.textContent)).toEqual(["Todas", "1.ª", "2.ª", "3.ª", "4.ª", "5.ª", "6.ª", "7.ª", "8.ª", "9.ª"]);
+    expect(tab("Todas")).toHaveAttribute("aria-pressed", "true");
+    expect(tab("1.ª")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("combobox", { name: "Generación" })).toBeNull();
+  });
+
+  it("elegir una filtra, la guarda en la dirección y vuelve a la primera tanda", async () => {
+    const { user } = renderList("/pokedex?ver=120");
+    await screen.findByRole("link", { name: /Charizard/ });
+    await user.click(tab("2.ª"));
+    expect(where()).toBe("/pokedex?gen=2");
+    expect(tab("2.ª")).toHaveAttribute("aria-pressed", "true");
+    expect(tiles()).toHaveLength(1);
+    await user.click(tab("Todas"));
+    expect(where()).toBe("/pokedex");
+    expect(tiles()).toHaveLength(5);
+  });
+
+  it("una dirección compartida marca su pestaña y conserva los demás filtros al cambiarla", async () => {
+    const { user } = renderList("/pokedex?gen=1&tipo1=fire");
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(tab("1.ª")).toHaveAttribute("aria-pressed", "true");
+    await user.click(tab("2.ª"));
+    expect(where()).toBe("/pokedex?tipo1=fire&gen=2");
+  });
+
+  it("no ensanchan la página: se reparten en varias filas", async () => {
+    renderList();
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(tabs().className).toContain("flex-wrap");
+  });
+});
+

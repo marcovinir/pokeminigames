@@ -139,7 +139,7 @@ Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si l
 
 ## Pokédex
 
-`/pokedex` lista los 1025 Pokémon en tarjetas, de 60 en 60, con buscador por nombre (español o inglés) o número, filtro por dos tipos y por generación, y orden por número, nombre o total de stats. `/pokedex/:id` es la ficha: stats, daño recibido, cadena de evolución con sus ramas, habilidades y una descripción. Las dos son públicas, se abren desde el encabezado (en la barra en el escritorio, en el botón «Menú» en pantallas estrechas) y el acceso se oculta durante una partida. Los filtros viven en la dirección (`/pokedex?tipo1=fire&tipo2=flying&gen=1&orden=total`).
+`/pokedex` lista los 1025 Pokémon en tarjetas, de 60 en 60, con buscador por nombre (español o inglés) o número, pestañas de generación, filtro por dos tipos y orden por número, nombre o total de stats. `/pokedex/:id` es la ficha: stats, daño recibido, cadena de evolución con sus ramas, habilidades y una descripción. Las dos son públicas, se abren desde el encabezado (en la barra en el escritorio, en el botón «Menú» en pantallas estrechas) y el acceso se oculta durante una partida. Los filtros viven en la dirección (`/pokedex?tipo1=fire&tipo2=flying&gen=1&orden=total`).
 
 Los datos están en `server/data/pokedex.snapshot.json`, generado desde PokeAPI con `npm run pokedex:fetch -w server`, y el servidor los lee al arrancar: no usa la base de datos ni depende de PokeAPI en vivo (las imágenes sí se cargan de allí). Las descripciones son textos oficiales, con su crédito. Donde PokeAPI no tiene texto en español (toda la generación 9 y parte de las habilidades recientes) se muestra el inglés con «(en inglés)». Las evoluciones que no se pueden decir en pocas palabras salen como «condición especial».
 

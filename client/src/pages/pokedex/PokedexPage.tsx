@@ -60,7 +60,6 @@ export function PokedexPage() {
   const [entries, setEntries] = useState<PokedexEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
   const searchId = useId();
-  const generationId = useId();
   const sortId = useId();
   const query = parsePokedexQuery(params);
   const matches = useMemo(() => (entries ? filterPokedex(entries, parsePokedexQuery(params)) : []), [entries, params]);
@@ -89,6 +88,19 @@ export function PokedexPage() {
     <div style={rise(0)} className="animate-rise mx-auto flex max-w-4xl flex-col gap-5">
       <h1 className="font-display text-3xl font-semibold">{POKEDEX_TEXT.title}</h1>
       <PlayPrompt />
+      <div role="group" aria-label={POKEDEX_TEXT.generation} className="flex flex-wrap gap-1.5">
+        {[null, ...GENERATIONS].map((generation) => (
+          <button
+            key={generation ?? "todas"}
+            type="button"
+            aria-pressed={query.generation === generation}
+            onClick={() => change({ generation })}
+            className={`rounded-pill px-3 py-1.5 font-display text-sm font-semibold ${query.generation === generation ? "bg-accent text-accent-fg" : "bg-surface-2 text-fg hover:bg-surface"}`}
+          >
+            {generation === null ? POKEDEX_TEXT.allGenerations : POKEDEX_TEXT.generationTab(generation)}
+          </button>
+        ))}
+      </div>
       <Card as="section" aria-label={POKEDEX_TEXT.filters} className="flex flex-wrap gap-3 p-5">
         <div className="w-full">
           <label htmlFor={searchId} className="mb-1 block text-sm font-semibold">
@@ -105,24 +117,6 @@ export function PokedexPage() {
         </div>
         <TypeSelect label={POKEDEX_TEXT.firstType} value={first} onChange={(type) => chooseTypes([type, second])} />
         <TypeSelect label={POKEDEX_TEXT.secondType} value={second} disabled={!first} exclude={first} onChange={(type) => chooseTypes([first, type])} />
-        <div className="min-w-40 flex-1">
-          <label htmlFor={generationId} className="mb-1 block text-sm font-semibold">
-            {POKEDEX_TEXT.generation}
-          </label>
-          <select
-            id={generationId}
-            value={query.generation ?? ""}
-            onChange={(event) => change({ generation: event.target.value ? Number(event.target.value) : null })}
-            className="framed-field w-full rounded-ui bg-surface px-4 py-3 text-fg"
-          >
-            <option value="">{POKEDEX_TEXT.allGenerations}</option>
-            {GENERATIONS.map((generation) => (
-              <option key={generation} value={generation}>
-                {POKEDEX_TEXT.generationName(generation)}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="min-w-40 flex-1">
           <label htmlFor={sortId} className="mb-1 block text-sm font-semibold">
             {POKEDEX_TEXT.sort}
