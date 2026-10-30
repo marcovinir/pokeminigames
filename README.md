@@ -35,6 +35,7 @@ Create a room, share its code with a friend and play. No account needed (guest m
 - **Reconnection-safe:** reload mid-round and you return to your seat; a disconnected player gets a grace period.
 - **Anti-cheat by design:** the silhouette is rendered on the server as a black PNG behind a random token, so the answer never reaches the browser.
 - **Accounts done carefully:** short-lived access token kept in memory, rotating `HttpOnly` refresh cookie, per-IP rate limits, origin checks, and account deletion that anonymizes the user while keeping opponents' history intact.
+- **Type chart:** a public page with a one- or two-type selector and the full 18 × 18 table, with every value tested against PokeAPI.
 - **Sound:** original, freely licensed chiptune music for the lobby, the battle and the ending, plus 8-bit sound effects synthesized in the browser with the Web Audio API (no audio files), with a mute and volume panel.
 - **Accessible UI:** two themes (Clásico and Pokédex) × light/dark, WCAG AA contrast checked in tests and in a real browser, keyboard focus rings, and a single rule that honors *reduce motion*.
 

@@ -137,6 +137,12 @@ Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si l
 - **Mientras se espera.** Arriba, el **récord** entre las dos cuentas (todas las partidas completadas entre ellas, con las últimas 5 como G/P/E; en la primera, «Es su primera partida juntos»); debajo, el plazo y un **dato curioso** de Pokémon que cambia cada 6 s, calculado del catálogo (nunca hay cifras escritas a mano).
 - **Invitados.** La revancha funciona igual con invitados, pero sin récord, y la sala nueva tampoco se guarda (una partida con un invitado no deja filas). Entre dos cuentas cada revancha es una partida más en las estadísticas.
 
+## Tabla de tipos
+
+`/tipos` es una página pública (con cuenta, como invitado o sin sesión) a la que se llega desde el encabezado; el enlace se oculta durante una partida, porque salir de la página cierra la conexión. Arriba, un selector de uno o dos tipos muestra el daño que recibe esa combinación; debajo está la tabla completa de 18 × 18, que en el teléfono se desplaza dentro de su caja. La selección vive en la dirección (`/tipos?tipo1=fire&tipo2=flying`), así que se puede compartir, y los valores desconocidos se ignoran.
+
+La regla está en [`shared/src/type-chart.ts`](../shared/src/type-chart.ts) (`typeEffectiveness`, `damageTaken`). Una prueba compara los 324 valores con `server/test/shared/fixtures/type-chart.pokeapi.json`, que se regenera con `npx tsx scripts/type-chart-fixture.ts` desde `server/`.
+
 ## Avatares
 
 En **Mi perfil**, «Cambiar avatar» abre una ventana con **24 Pokémon populares** (Pikachu, los tres iniciales de Kanto, Gengar, Eevee, Lucario, Greninja, Mimikyu…; la lista está en [`shared/src/avatars.ts`](../shared/src/avatars.ts)). Tocar uno lo guarda en la cuenta y se ve al instante; «Usar mis iniciales» lo quita. El avatar es el **arte oficial** del Pokémon dentro del círculo, sobre el mismo color que tenían las iniciales, y aparece en todo el juego: el encabezado, la sala de espera, la cuenta atrás, el panel del rival, el récord y la pantalla de la revancha, los perfiles y el historial.
