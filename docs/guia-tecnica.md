@@ -5,7 +5,7 @@ La portada del proyecto está en el [README](../README.md) (en inglés) y en [RE
 Colección de minijuegos de Pokémon para 2 jugadores en tiempo real. **Doble tipo:** en cada ronda se enfrenta un par de tipos y cada jugador tiene 15 s para nombrar un Pokémon que tenga ambos; gana quien acumule más stats base. **¿Quién es ese Pokémon?:** los dos ven la misma silueta y tienen un solo intento; cuanto antes aciertes, más puntos. El diseño completo está en [`docs/superpowers/specs/`](superpowers/specs/).
 
 
-**Para quien trabaje en el código (persona o agente):** la guía está en [`AGENTS.md`](../AGENTS.md) y el trabajo pendiente, en las [issues de GitHub](https://github.com/marcovinir/pokemon-minigames/issues) (la que lleva la etiqueta `hoja-de-ruta` da el orden).
+**Para quien trabaje en el código (persona o agente):** la guía está en [`AGENTS.md`](../AGENTS.md) y el trabajo pendiente, en las [issues de GitHub](https://github.com/marcovinir/pokeminigames/issues) (la que lleva la etiqueta `hoja-de-ruta` da el orden).
 
 ## Capturas
 

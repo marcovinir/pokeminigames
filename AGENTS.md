@@ -4,7 +4,7 @@ Para agentes de programación y para personas. Si Marco te dice **«haz las issu
 
 ## Qué es esto
 
-**PokeMiniGames** (antes «Pokémon Minigames»): juego web de dos personas en tiempo real. En cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga los dos; gana quien acumule más stats base. Es un proyecto de portafolio de Marco (estudiante), desplegado gratis en Render + Neon: https://pokemon-minigames.onrender.com . Repositorio público `marcovinir/pokemon-minigames`. Proyecto de fans sin fines de lucro: los nombres, sprites y arte de Pokémon son de Nintendo, Game Freak y The Pokémon Company (las imágenes se cargan de PokeAPI); no se monetiza ni se usa su arte como identidad de marca.
+**PokeMiniGames** (antes «Pokémon Minigames»): juego web de dos personas en tiempo real. En cada ronda se enfrenta un par de tipos Pokémon y cada jugador tiene 15 s para nombrar un Pokémon que tenga los dos; gana quien acumule más stats base. Es un proyecto de portafolio de Marco (estudiante), desplegado gratis en Render + Neon: https://pokemon-minigames.onrender.com . Repositorio público `marcovinir/pokeminigames`. Proyecto de fans sin fines de lucro: los nombres, sprites y arte de Pokémon son de Nintendo, Game Freak y The Pokémon Company (las imágenes se cargan de PokeAPI); no se monetiza ni se usa su arte como identidad de marca.
 
 ## 1. Cómo trabajar las issues
 
