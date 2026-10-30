@@ -4,10 +4,10 @@ import { newPlayer, playAsGuest, register } from "../support/app";
 /** Encabezado en una sola fila, nada fuera de la ventana y solo la tabla se desplaza de lado. */
 async function expectFits(page: Page, where: string): Promise<void> {
   const width = page.viewportSize()!.width;
-  await expect(page.getByRole("heading", { level: 1, name: "Tabla de tipos" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Matriz de Tipos" })).toBeVisible();
   const header = await page.locator("header").first().boundingBox();
   expect(header!.height, `${where}: encabezado`).toBeLessThanOrEqual(72);
-  for (const target of [page.getByRole("link", { name: "Tipos" }), page.getByRole("combobox", { name: "Tipo 2" }), page.getByRole("region", { name: "Tabla de efectividad de tipos" })]) {
+  for (const target of [page.getByRole("button", { name: "Menú", exact: true }), page.getByRole("combobox", { name: "Tipo 2" }), page.getByRole("region", { name: "Tabla de efectividad de tipos" })]) {
     const box = await target.boundingBox();
     expect(box!.x, where).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width, where).toBeLessThanOrEqual(width);
@@ -24,7 +24,7 @@ test("sin sesión se abre desde el encabezado, se elige una combinación y recar
   const visitor = await newPlayer(browser, "visita");
   try {
     await visitor.page.goto("/login");
-    await visitor.page.getByRole("link", { name: "Tipos" }).click();
+    await visitor.page.getByRole("link", { name: "Matriz de Tipos" }).click();
     await visitor.page.getByRole("combobox", { name: "Tipo 1" }).selectOption("fire");
     await visitor.page.getByRole("combobox", { name: "Tipo 2" }).selectOption("flying");
     await expect(visitor.page).toHaveURL(/\/tipos\?tipo1=fire&tipo2=flying$/);
@@ -82,7 +82,7 @@ for (const theme of ["clasico", "pokedex"]) {
         await page.goto("/tipos");
         await page.evaluate((name) => localStorage.setItem("pokemon-minigames:theme", JSON.stringify({ theme: name, mode: "claro" })), theme);
         await page.reload();
-        await expect(page.getByRole("heading", { level: 1, name: "Tabla de tipos" })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1, name: "Matriz de Tipos" })).toBeVisible();
         for (const width of WIDTHS) {
           await page.setViewportSize({ width, height: 740 });
           await expectHeaderFits(page, `${theme}, ${who}, ${width} px`);
@@ -92,6 +92,30 @@ for (const theme of ["clasico", "pokedex"]) {
       await visitor.context.close();
       await account.context.close();
       await guest.context.close();
+    }
+  });
+}
+
+for (const width of [360, 375]) {
+  test(`a ${width} px el menú entra en la ventana y se llega a la Matriz de Tipos`, async ({ browser }) => {
+    const visitor = await newPlayer(browser, "visita");
+    try {
+      await visitor.page.setViewportSize({ width, height: 560 });
+      await visitor.page.goto("/login");
+      await expect(visitor.page.getByRole("link", { name: "Matriz de Tipos" })).toHaveCount(0);
+      await visitor.page.getByRole("button", { name: "Menú", exact: true }).click();
+      const panel = visitor.page.getByRole("region", { name: "Menú", exact: true });
+      const box = await panel.boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(560);
+      await panel.getByRole("link", { name: "Iniciar sesión" }).scrollIntoViewIfNeeded();
+      await expect(panel.getByRole("link", { name: "Iniciar sesión" })).toBeInViewport();
+      await panel.getByRole("link", { name: "Matriz de Tipos" }).click();
+      await expect(visitor.page).toHaveURL(/\/tipos$/);
+      await expect(panel).toHaveCount(0);
+    } finally {
+      await visitor.context.close();
     }
   });
 }

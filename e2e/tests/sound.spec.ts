@@ -36,10 +36,10 @@ test("la música sigue a la partida, el rival avisa al responder y el panel de s
     await music(misty.page).toHaveAttribute("data-music", "final");
 
     // Apagar la música desde el panel se recuerda al recargar.
-    await ash.page.getByRole("button", { name: "Sonido" }).click();
+    await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
     await ash.page.getByRole("switch", { name: "Música" }).uncheck();
     await ash.page.reload();
-    await ash.page.getByRole("button", { name: /Sonido/ }).click();
+    await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
     await expect(ash.page.getByRole("switch", { name: "Música" })).not.toBeChecked();
     await expect(ash.page.getByRole("switch", { name: "Efectos" })).toBeChecked();
 

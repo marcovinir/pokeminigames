@@ -137,9 +137,9 @@ Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si l
 - **Mientras se espera.** Arriba, el **récord** entre las dos cuentas (todas las partidas completadas entre ellas, con las últimas 5 como G/P/E; en la primera, «Es su primera partida juntos»); debajo, el plazo y un **dato curioso** de Pokémon que cambia cada 6 s, calculado del catálogo (nunca hay cifras escritas a mano).
 - **Invitados.** La revancha funciona igual con invitados, pero sin récord, y la sala nueva tampoco se guarda (una partida con un invitado no deja filas). Entre dos cuentas cada revancha es una partida más en las estadísticas.
 
-## Tabla de tipos
+## Matriz de Tipos
 
-`/tipos` es una página pública (con cuenta, como invitado o sin sesión) a la que se llega desde el encabezado; el enlace se oculta durante una partida, porque salir de la página cierra la conexión. Arriba, un selector de uno o dos tipos muestra el daño que recibe esa combinación; debajo está la tabla completa de 18 × 18, que en el teléfono se desplaza dentro de su caja. La selección vive en la dirección (`/tipos?tipo1=fire&tipo2=flying`), así que se puede compartir, y los valores desconocidos se ignoran.
+`/tipos` es una página pública (con cuenta, como invitado o sin sesión) a la que se llega desde el encabezado (en la barra en el escritorio; en el botón «Menú» en pantallas estrechas); el acceso se oculta durante una partida, porque salir de la página cierra la conexión. Arriba, un selector de uno o dos tipos muestra el daño que recibe esa combinación; debajo está la tabla completa de 18 × 18, que en el teléfono se desplaza dentro de su caja. La selección vive en la dirección (`/tipos?tipo1=fire&tipo2=flying`), así que se puede compartir, y los valores desconocidos se ignoran.
 
 La regla está en [`shared/src/type-chart.ts`](../shared/src/type-chart.ts) (`typeEffectiveness`, `damageTaken`). Una prueba compara los 324 valores con `server/test/shared/fixtures/type-chart.pokeapi.json`, que se regenera con `npx tsx scripts/type-chart-fixture.ts` desde `server/`.
 
@@ -161,7 +161,7 @@ En **Mi perfil** (`/perfil`) cada persona ve sus partidas jugadas, ganadas, empa
 
 ## Música y sonido
 
-El juego suena desde el principio; el altavoz del encabezado abre un panel con **Música** y **Efectos** (interruptor y volumen), que se guarda en el navegador (`pokeminigames:sonido`). El código está en [`client/src/sound/`](../client/src/sound/).
+El juego suena desde el principio; el botón «Menú» del encabezado tiene **Música** y **Efectos** (interruptor y volumen), que se guarda en el navegador (`pokeminigames:sonido`). El código está en [`client/src/sound/`](../client/src/sound/).
 
 - **Música** (temas libres de OpenGameArt, en MP3 en [`client/public/audio/`](../client/public/audio/), con sus créditos en `CREDITOS.md`): en el menú, los lobbies y la espera suena un tema de sala al azar; desde la cuenta atrás hasta la última ronda, uno de combate (*Porkymon Battle Theme* toca su entrada y después el bucle); en el resumen, *Menu* si ganas o empatas una partida completa y *Game Over* si pierdes, una sola vez y después del efecto de final. Una partida que no se completó y no tiene ganador vuelve a la música de sala. Fuera de esas pantallas, silencio. Al cambiar de zona hay un fundido corto y se elige otro tema sin repetir el último; con la pestaña oculta se pausa. Qué música toca lo decide `musicCueFor` (`cues.ts`) y la zona queda en `<html data-music>` para la E2E.
 - **Efectos de 8 bits**, generados con Web Audio (`synth.ts`), sin archivos: acierto, fallo, ganar, perder, empieza la ronda, últimos segundos (una vez por ronda, al quedar 5 s si no respondiste), botón, Pokémon revelado (silueta) y el rival respondió. Qué efectos dispara cada evento lo decide `effectsForEvent` (`cues.ts`); un `room-state` (entrar, recargar o reconectar) nunca suena.

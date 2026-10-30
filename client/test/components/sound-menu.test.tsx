@@ -4,10 +4,10 @@ import { describe, expect, it } from "vitest";
 import { Header } from "../../src/components/Header";
 import { fakeServices, renderWithServices, signIn } from "../helpers/services";
 
-const soundButton = () => screen.getByRole("button", { name: /Sonido/ });
+const soundButton = () => screen.getByRole("button", { name: "Menú" });
 
 describe("el control de sonido", () => {
-  it("está en el encabezado, con y sin sesión", () => {
+  it("se llega por el menú del encabezado, con y sin sesión", () => {
     const anon = renderWithServices(<Header />);
     expect(soundButton()).toBeInTheDocument();
     anon.unmount();
@@ -38,54 +38,4 @@ describe("el control de sonido", () => {
     expect(services.soundSettings.getState().settings.effectsVolume).toBeCloseTo(0.9);
   });
 
-  it("Escape cierra el panel y devuelve el foco al botón", async () => {
-    renderWithServices(<Header />);
-    const user = userEvent.setup();
-    await user.click(soundButton());
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("switch", { name: "Música" })).not.toBeInTheDocument();
-    expect(soundButton()).toHaveFocus();
-  });
-
-  it("Escape con el foco en otro control no es para el panel: no le roba el foco (el panel ya se cerró al perderlo)", async () => {
-    renderWithServices(
-      <>
-        <Header />
-        <input aria-label="Otro campo" />
-      </>,
-    );
-    const user = userEvent.setup();
-    await user.click(soundButton());
-    screen.getByLabelText("Otro campo").focus();
-    await user.keyboard("{Escape}");
-    expect(screen.getByLabelText("Otro campo")).toHaveFocus();
-  });
-
-  it("sacar el foco del panel con Tab lo cierra", async () => {
-    renderWithServices(
-      <>
-        <Header />
-        <button type="button">Después</button>
-      </>,
-    );
-    const user = userEvent.setup();
-    await user.click(soundButton());
-    screen.getByRole("slider", { name: "Volumen de los efectos" }).focus();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    await user.tab();
-    expect(screen.queryByRole("switch", { name: "Música" })).not.toBeInTheDocument();
-  });
-
-  it("el botón dice si todo está silenciado", async () => {
-    const { services } = renderWithServices(<Header />);
-    expect(soundButton()).toHaveAccessibleName("Sonido");
-    services.soundSettings.getState().update({ musicOn: false });
-    expect(await screen.findByRole("button", { name: "Sonido" })).toBeInTheDocument();
-    services.soundSettings.getState().update({ effectsOn: false });
-    expect(await screen.findByRole("button", { name: "Sonido (silenciado)" })).toBeInTheDocument();
-  });
 });

@@ -30,12 +30,14 @@ test("dos personas juegan una partida completa y el perfil de cada una la cuenta
     await expect(misty.page.getByRole("heading", { name: "Historial" })).toHaveCount(0);
 
     // El perfil propio de cada una cuenta la partida.
+    await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
     await ash.page.getByRole("link", { name: "Mi perfil" }).click();
     await expect(ash.page.getByRole("heading", { name: "Tu perfil" })).toBeVisible();
     await expect(fact(ash.page, "Partidas")).toHaveText("1");
     await expect(fact(ash.page, "Ganadas")).toHaveText("1");
     await expect(ash.page.getByRole("list", { name: "Historial de partidas" }).getByRole("listitem")).toHaveCount(1);
 
+    await misty.page.getByRole("button", { name: "Menú", exact: true }).click();
     await misty.page.getByRole("link", { name: "Mi perfil" }).click();
     await expect(fact(misty.page, "Partidas")).toHaveText("1");
     await expect(fact(misty.page, "Perdidas")).toHaveText("1");
