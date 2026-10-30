@@ -1,3 +1,4 @@
+import { createPokedexStore } from "../../src/catalog/pokedex-store.js";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,7 +33,7 @@ afterAll(async () => {
 function appWith(clientDist?: string) {
   const ctx = buildTestContext();
   const { env, tokens, roomManager, catalog } = ctx;
-  return createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: "off", clientDist, silhouettes: createSilhouetteRegistry() });
+  return createApp({ pokedex: createPokedexStore([]), env, prisma, tokens, roomManager, catalog, rateLimits: "off", clientDist, silhouettes: createSilhouetteRegistry() });
 }
 
 describe("el cliente construido", () => {

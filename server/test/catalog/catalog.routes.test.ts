@@ -72,3 +72,30 @@ describe("GET /pokemon/facts", () => {
     expect(response.body.facts).toContainEqual({ kind: "dual_type_count", count: 8, total: 10 });
   });
 });
+
+describe("GET /pokemon/dex", () => {
+  const app = buildTestApp();
+
+  it("la lista es pública, ligera y cacheable", async () => {
+    const response = await request(app).get("/pokemon/dex");
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toContain("max-age=86400");
+    expect(response.body.pokemon).toEqual([
+      { id: 6, names: { es: "Charizard", en: "Charizard" }, types: ["fire", "flying"], total: 534, generation: 1, spriteUrl: "https://sprite/6.png" },
+    ]);
+  });
+
+  it("la ficha trae todo, sin sesión", async () => {
+    const response = await request(app).get("/pokemon/dex/6");
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toContain("max-age=86400");
+    expect(response.body.lore.game).toBe("Espada");
+    expect(response.body.abilities[0].name).toBe("Mar Llamas");
+  });
+
+  it.each(["0", "1026", "abc", "6.5", "-6", "6a"])("/pokemon/dex/%s da 404", async (id) => {
+    const response = await request(app).get(`/pokemon/dex/${id}`);
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("POKEMON_NOT_FOUND");
+  });
+});

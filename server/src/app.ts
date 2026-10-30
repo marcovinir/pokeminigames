@@ -7,6 +7,7 @@ import { AuthService } from "./auth/auth.service.js";
 import { createPasswordHasher } from "./auth/password.js";
 import type { TokenService } from "./auth/tokens.js";
 import { createCatalogRouter } from "./catalog/catalog.routes.js";
+import type { PokedexStore } from "./catalog/pokedex-store.js";
 import type { PokemonCatalog } from "./catalog/pokemon-catalog.js";
 import type { Env } from "./config/env.js";
 import type { PrismaClient } from "./db/prisma.js";
@@ -38,6 +39,7 @@ export interface AppDeps {
   /** El registro de siluetas que comparte con las salas (sin él, uno vacío). */
   /** El mismo registro que usa el `RoomManager`: con uno distinto, todas las siluetas darían 404. */
   silhouettes: SilhouetteRegistry;
+  pokedex: PokedexStore;
 }
 
 export function createApp({
@@ -49,6 +51,7 @@ export function createApp({
   rateLimits = DEFAULT_RATE_LIMITS,
   clientDist,
   silhouettes,
+  pokedex,
 }: AppDeps): Express {
   const limits = rateLimits === "off" ? null : rateLimits;
   const limiters = limits && {
@@ -86,7 +89,7 @@ export function createApp({
   });
   app.use("/auth", createAuthRouter({ env, authService, tokens, guests, limiters: limiters ?? undefined }));
   app.use("/rooms", createRoomsRouter({ manager: roomManager, tokens, readAvatar: (userId) => authService.avatarOf(userId) }));
-  app.use("/pokemon", createCatalogRouter({ catalog }));
+  app.use("/pokemon", createCatalogRouter({ catalog, pokedex }));
   app.use("/silhouettes", createSilhouettesRouter({ registry: silhouettes, renderer: createSilhouetteRenderer({ artUrl: env.SILHOUETTE_ART_URL }) }));
   app.use(createStatsRouter({ service: new StatsService({ prisma, catalog }), tokens }));
 

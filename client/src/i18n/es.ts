@@ -48,6 +48,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   INVALID_REFRESH_TOKEN: "Tu sesión expiró. Inicia sesión de nuevo.",
   NOT_FOUND: "No encontramos lo que buscas.",
   USER_NOT_FOUND: "No encontramos a ese jugador.",
+  POKEMON_NOT_FOUND: "Ese Pokémon no existe.",
   INTERNAL_ERROR: "Algo falló en el servidor. Inténtalo de nuevo.",
   ALREADY_IN_GAME: "Ya estás en una partida. Vuelve a ella desde el lobby.",
   ROOM_NOT_FOUND: "Esa sala no existe o ya terminó.",

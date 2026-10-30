@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createApp } from "./app.js";
 import { rateLimitsFor } from "./http/limits.js";
 import { createTokenService } from "./auth/tokens.js";
+import { loadPokedex } from "./catalog/pokedex-store.js";
 import { loadCatalog } from "./catalog/pokemon-catalog.js";
 import { loadEnv } from "./config/env.js";
 import { createPrismaClient } from "./db/prisma.js";
@@ -52,7 +53,9 @@ const roomManager = new RoomManager({
 });
 
 // El cliente construido vive en client/dist, a la misma distancia desde server/src y desde el servidor empaquetado (server/dist).
-const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: rateLimitsFor(env.NODE_ENV), clientDist: join(import.meta.dirname, "../../client/dist"), silhouettes });
+// Vive a la misma distancia desde server/src y desde el servidor empaquetado (server/dist).
+const pokedex = loadPokedex(new URL("../data/pokedex.snapshot.json", import.meta.url));
+const app = createApp({ pokedex, env, prisma, tokens, roomManager, catalog, rateLimits: rateLimitsFor(env.NODE_ENV), clientDist: join(import.meta.dirname, "../../client/dist"), silhouettes });
 const server = createServer(app);
 const io = attachRealtime(server, { env, tokens, manager: roomManager, broadcaster, logger: console });
 
