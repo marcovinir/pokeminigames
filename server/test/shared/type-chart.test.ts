@@ -1,6 +1,6 @@
 import { TYPE_NAMES, damageTaken, typeEffectiveness } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
-import reference from "./fixtures/type-chart.pokeapi.json";
+import reference from "./fixtures/type-chart.pokeapi.json" with { type: "json" };
 
 describe("tabla de tipos", () => {
   it("los 324 valores coinciden con PokeAPI", () => {
