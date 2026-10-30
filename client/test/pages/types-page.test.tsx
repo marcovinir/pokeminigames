@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { AppRoutes } from "../../src/routes";
 import { TypesPage } from "../../src/pages/types/TypesPage";
 import { parseTypeSelection } from "../../src/pages/types/type-selection";
-import { fakeServices, renderWithServices } from "../helpers/services";
+import { fakeServices, renderWithServices, signIn } from "../helpers/services";
 
 function Probe() {
   const location = useLocation();
@@ -97,14 +97,16 @@ describe("la página de la tabla de tipos", () => {
     expect(screen.queryByRole("region", { name: "Daño que recibe" })).toBeNull();
   });
 
-  it("la tabla: fuego contra planta dice 2; normal contra fantasma, 0; neutra, vacía", () => {
+  it("la tabla: fuego contra planta dice 2; normal contra fantasma, 0; la neutra no se ve", () => {
     renderAt("/tipos");
     expect(within(table()).getAllByRole("columnheader")).toHaveLength(19);
     expect(within(table()).getAllByRole("rowheader")).toHaveLength(18);
     expect(cell("fuego", "planta")).toHaveTextContent("2");
     expect(cell("fuego", "agua")).toHaveTextContent("½");
     expect(cell("normal", "fantasma")).toHaveTextContent("0");
-    expect(cell("normal", "fuego").textContent).toBe("");
+    // La neutra no se ve, pero un lector de pantalla oye «1» y no una celda en blanco.
+    expect(cell("normal", "fuego")).toHaveTextContent("1");
+    expect(within(cell("normal", "fuego")).getByText("1")).toHaveClass("sr-only");
   });
 
   it("las columnas de los tipos elegidos se marcan, y ninguna otra", () => {
@@ -137,5 +139,50 @@ describe("la ruta /tipos es pública", () => {
     );
     expect(await screen.findByRole("heading", { level: 1, name: "Tabla de tipos" })).toBeInTheDocument();
     expect(where()).toBe("/tipos");
+  });
+});
+
+describe("la tabla de tipos para lectores de pantalla", () => {
+  it("la tabla tiene título propio, con la explicación de filas y columnas", () => {
+    renderAt("/tipos");
+    expect(screen.getByRole("table", { name: /Todos los tipos.*En cada fila, el tipo que ataca/ })).toBeInTheDocument();
+  });
+
+  it("la columna elegida se anuncia en su encabezado, y las demás no", () => {
+    renderAt("/tipos?tipo1=fire");
+    expect(within(table()).getByRole("columnheader", { name: /fuego.*elegido/ })).toBeInTheDocument();
+    expect(within(table()).queryByRole("columnheader", { name: /agua.*elegido/ })).toBeNull();
+  });
+
+  it("el bloque de daño está en una región viva que ya existe antes de elegir, para que el cambio se anuncie", async () => {
+    const { user } = renderAt("/tipos");
+    const live = document.querySelector('[aria-live="polite"]')!;
+    expect(live).toBeEmptyDOMElement();
+    await user.selectOptions(tipo1(), "fire");
+    expect(document.querySelector('[aria-live="polite"]')).toBe(live);
+    expect(within(live as HTMLElement).getByRole("heading", { name: "Daño que recibe" })).toBeInTheDocument();
+  });
+});
+
+describe("el camino para entrar a jugar", () => {
+  const cta = () => screen.queryByRole("link", { name: "Entrar a jugar" });
+
+  it("sin sesión, la página ofrece entrar a jugar y lleva a /login", () => {
+    const services = fakeServices();
+    services.session.setState({ status: "anonymous", user: null });
+    renderWithServices(<TypesPage />, { services });
+    expect(cta()).toHaveAttribute("href", "/login");
+  });
+
+  it("con sesión o mientras carga no se ofrece", () => {
+    const loading = fakeServices();
+    loading.session.setState({ status: "loading", user: null });
+    const first = renderWithServices(<TypesPage />, { services: loading });
+    expect(cta()).toBeNull();
+    first.unmount();
+    const account = fakeServices();
+    signIn(account);
+    renderWithServices(<TypesPage />, { services: account });
+    expect(cta()).toBeNull();
   });
 });

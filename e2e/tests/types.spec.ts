@@ -32,6 +32,8 @@ test("sin sesión se abre desde el encabezado, se elige una combinación y recar
     await visitor.page.reload();
     await expect(visitor.page.getByRole("combobox", { name: "Tipo 2" })).toHaveValue("flying");
     await expect(visitor.page.getByRole("group", { name: "×4" }).getByText("roca")).toBeVisible();
+    await visitor.page.getByRole("link", { name: "Entrar a jugar" }).click();
+    await expect(visitor.page).toHaveURL(/\/login$/);
   } finally {
     await visitor.context.close();
   }

@@ -1,10 +1,11 @@
 import { type DamageGroups, TYPE_NAMES, type TypeName, damageTaken, typeEffectiveness } from "@pokemon-minigames/shared";
 import { useId } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Card } from "../../components/Card";
 import { TypeChip } from "../../components/TypeChip";
 import { rise } from "../../components/rise";
 import { TYPES_TEXT, TYPE_ABBREVIATIONS, TYPE_LABELS } from "../../i18n/es";
+import { useSession } from "../../services";
 import { typeChipStyle } from "../../theme/type-styles";
 import { parseTypeSelection, typeSelectionParams } from "./type-selection";
 
@@ -96,7 +97,10 @@ function TypeHeader({ type, scope, selected = false }: { type: TypeName; scope: 
       className={`px-1 py-1 text-xs font-semibold ${scope === "row" ? "sticky left-0 z-1" : ""} ${selected ? "outline-2 -outline-offset-2 outline-accent" : ""}`}
     >
       <span aria-hidden="true">{TYPE_ABBREVIATIONS[type]}</span>
-      <span className="sr-only">{TYPE_LABELS[type]}</span>
+      <span className="sr-only">
+        {TYPE_LABELS[type]}
+        {selected ? ` ${TYPES_TEXT.selectedColumn}` : ""}
+      </span>
     </th>
   );
 }
@@ -107,6 +111,7 @@ function TypeChart({ selected }: { selected: TypeName[] }) {
     // `relative`: sin él, los textos `sr-only` (absolutos) de los encabezados escapan de la caja y ensanchan la página.
     <div role="region" aria-label={TYPES_TEXT.chartLabel} tabIndex={0} className="relative mt-3 overflow-x-auto rounded-ui">
       <table className="mx-auto border-collapse font-num text-sm">
+        <caption className="sr-only">{`${TYPES_TEXT.chartTitle}. ${TYPES_TEXT.chartHint}`}</caption>
         <thead>
           <tr>
             <th scope="col" className="sticky left-0 z-1 bg-surface p-1">
@@ -130,7 +135,8 @@ function TypeChart({ selected }: { selected: TypeName[] }) {
                     data-selected={marked || undefined}
                     className={`h-8 min-w-9 border border-line text-center font-semibold ${CELL_STYLE[value]} ${marked ? "border-x-2 border-x-accent" : ""}`}
                   >
-                    {CELL_TEXT[value]}
+                    {/* El ×1 no se ve (la tabla se lee mejor), pero un lector de pantalla no debe oír una celda en blanco. */}
+                    {value === 1 ? <span className="sr-only">1</span> : CELL_TEXT[value]}
                   </td>
                 );
               })}
@@ -147,6 +153,7 @@ export function TypesPage() {
   const [params, setParams] = useSearchParams();
   const selected = parseTypeSelection(params);
   const [first, second] = selected;
+  const anonymous = useSession((s) => s.status === "anonymous");
   // Sin apilar historial: «Atrás» sale de la página en vez de deshacer cada cambio de una lista.
   const choose = (types: (TypeName | undefined)[]) =>
     setParams(typeSelectionParams([...new Set(types.filter((type) => type !== undefined))]), { replace: true });
@@ -154,12 +161,21 @@ export function TypesPage() {
   return (
     <div style={rise(0)} className="animate-rise mx-auto flex max-w-4xl flex-col gap-5">
       <h1 className="font-display text-3xl font-semibold">{TYPES_TEXT.title}</h1>
+      {anonymous ? (
+        <p className="text-sm">
+          {TYPES_TEXT.playPrompt}{" "}
+          <Link to="/login" className="font-semibold text-accent underline underline-offset-4">
+            {TYPES_TEXT.playLink}
+          </Link>
+        </p>
+      ) : null}
       <Card as="section" className="p-5">
         <div className="flex flex-wrap gap-3">
           <TypeSelect label={TYPES_TEXT.first} value={first} onChange={(type) => choose([type, second])} />
           <TypeSelect label={TYPES_TEXT.second} value={second} disabled={!first} exclude={first} onChange={(type) => choose([first, type])} />
         </div>
-        {first ? <DamageBlock types={selected} /> : null}
+        {/* La región viva existe desde el principio: si naciera con el contenido, el cambio no se anunciaría. */}
+        <div aria-live="polite">{first ? <DamageBlock types={selected} /> : null}</div>
       </Card>
       <Card as="section" aria-labelledby="types-chart-title" className="min-w-0 p-5">
         <h2 id="types-chart-title" className="font-display text-lg font-semibold">

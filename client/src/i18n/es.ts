@@ -151,6 +151,9 @@ export const TYPES_TEXT = {
   chartLabel: "Tabla de efectividad de tipos",
   cornerLabel: "Ataca / recibe",
   link: "Tipos",
+  selectedColumn: "(elegido)",
+  playPrompt: "¿Quieres jugar? Entra con tu cuenta o como invitado.",
+  playLink: "Entrar a jugar",
 } as const;
 
 export const RESULT_LABELS: Record<GameResult, string> = { won: "Ganaste", drawn: "Empate", lost: "Perdiste" };
