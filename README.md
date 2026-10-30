@@ -2,7 +2,7 @@
 
 **Real-time Pokémon minigames for two players: challenge a friend 1 vs 1 from the browser.**
 
-[![CI](https://github.com/marcovinir/pokemon-minigames/actions/workflows/ci.yml/badge.svg)](https://github.com/marcovinir/pokemon-minigames/actions/workflows/ci.yml)
+[![CI](https://github.com/marcovinir/pokeminigames/actions/workflows/ci.yml/badge.svg)](https://github.com/marcovinir/pokeminigames/actions/workflows/ci.yml)
 [![Play now](https://img.shields.io/badge/play-pokemon--minigames.onrender.com-ef5350)](https://pokemon-minigames.onrender.com)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -70,7 +70,7 @@ A single Node service serves the built client, the REST API and Socket.io from o
 
 - **Spec → plan → TDD → independent review.** Every feature starts as a design spec and an implementation plan, both in [`docs/superpowers/`](docs/superpowers/). Each step is written test-first, critical guards are checked by breaking them on purpose (mutation testing), and every branch gets a final review with a fresh pair of eyes before merging.
 - **About 1,800 automated tests** (server and client) plus **44 Playwright end-to-end tests** that play full matches in real browsers against the production build, including layout checks at phone widths.
-- **Work tracked in [GitHub issues](https://github.com/marcovinir/pokemon-minigames/issues)** with a roadmap issue, and changes land through pull requests with green CI.
+- **Work tracked in [GitHub issues](https://github.com/marcovinir/pokeminigames/issues)** with a roadmap issue, and changes land through pull requests with green CI.
 - **AI-assisted development:** built with Claude Code as a pair programmer. [`AGENTS.md`](AGENTS.md) documents the workflow and the rules any contributor, human or agent, follows.
 
 ## Run it locally

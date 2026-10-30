@@ -2,7 +2,7 @@
 
 **Minijuegos Pokémon en tiempo real para dos personas: reta a un amigo 1 vs 1 desde el navegador.**
 
-[![CI](https://github.com/marcovinir/pokemon-minigames/actions/workflows/ci.yml/badge.svg)](https://github.com/marcovinir/pokemon-minigames/actions/workflows/ci.yml)
+[![CI](https://github.com/marcovinir/pokeminigames/actions/workflows/ci.yml/badge.svg)](https://github.com/marcovinir/pokeminigames/actions/workflows/ci.yml)
 [![Jugar](https://img.shields.io/badge/jugar-pokemon--minigames.onrender.com-ef5350)](https://pokemon-minigames.onrender.com)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-green)](LICENSE)
@@ -70,7 +70,7 @@ Un solo servicio de Node sirve el cliente construido, la API REST y Socket.io de
 
 - **Spec → plan → TDD → revisión independiente.** Cada función empieza con una spec de diseño y un plan de implementación, en [`docs/superpowers/`](docs/superpowers/). Cada paso se escribe con la prueba primero, las protecciones críticas se comprueban rompiéndolas a propósito (pruebas de mutación) y cada rama pasa una revisión final con ojos nuevos antes de fusionarse.
 - **Unas 1800 pruebas automáticas** (servidor y cliente) y **44 pruebas E2E con Playwright** que juegan partidas completas en navegadores reales contra la construcción de producción, incluidas comprobaciones de diseño a ancho de teléfono.
-- **El trabajo se sigue en [issues de GitHub](https://github.com/marcovinir/pokemon-minigames/issues)** con una hoja de ruta, y los cambios entran por Pull Requests con la CI en verde.
+- **El trabajo se sigue en [issues de GitHub](https://github.com/marcovinir/pokeminigames/issues)** con una hoja de ruta, y los cambios entran por Pull Requests con la CI en verde.
 - **Desarrollo asistido por IA:** hecho con Claude Code como compañero de programación. [`AGENTS.md`](AGENTS.md) recoge el flujo de trabajo y las reglas que sigue quien contribuya, persona o agente.
 
 ## Ejecutarlo en local
