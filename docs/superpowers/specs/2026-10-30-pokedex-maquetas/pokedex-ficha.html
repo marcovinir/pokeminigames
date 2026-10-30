@@ -1,0 +1,48 @@
+<style>
+  .f-wrap{max-width:620px;margin:0 auto;font-size:13px}
+  .f-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .f-head img{width:130px;height:130px}
+  .pk-t{display:inline-block;padding:2px 9px;border-radius:999px;color:#fff;font-size:11px;font-weight:700;margin:1px 2px 1px 0}
+  .fire{background:#c9481f}.fly{background:#6d7fd6}.water{background:#2f7fd0}.grass{background:#3f9a3a}.elec{background:#b98a00}.rock{background:#8a7a3d}.fight{background:#a33a2d}.steel{background:#62758a}.fairy{background:#c0528f}.bug{background:#7b8f1e}.ground{background:#94683a}
+  .f-sec{border:1px solid #9aa5b5;border-radius:12px;padding:10px 12px;margin-top:10px}
+  .f-sec h4{margin:0 0 6px;font-size:13px}
+  .s{display:grid;grid-template-columns:90px 34px 1fr;gap:6px;align-items:center;margin:3px 0}
+  .s i{display:block;height:8px;border-radius:9px;background:#c9481f}
+  .w{display:grid;grid-template-columns:48px 1fr;gap:4px 8px;align-items:center}
+  .evo{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;text-align:center}
+  .evo img{width:64px;height:64px;display:block;margin:0 auto}
+  .evo .me{font-weight:700;text-decoration:underline}
+</style>
+<h2>La ficha de un Pokémon</h2>
+<p class="subtitle">Boceto con los datos reales de Charizard. Sería una página propia (por ejemplo, /pokedex/6), para poder compartir el enlace.</p>
+<div class="mockup"><div class="mockup-header">Ficha</div><div class="mockup-body"><div class="f-wrap">
+  <p style="margin:0 0 6px">← Volver a la Pokédex</p>
+  <div class="f-head">
+    <img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png">
+    <div><div style="opacity:.7">#006 · 1.ª generación (Kanto)</div><h3 style="margin:2px 0 6px;font-size:24px">Charizard</h3><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></div>
+  </div>
+  <div class="f-sec"><h4>Estadísticas base · total 534</h4>
+    <div class="s"><span>PS</span><b>78</b><i style="width:31%"></i></div>
+    <div class="s"><span>Ataque</span><b>84</b><i style="width:33%"></i></div>
+    <div class="s"><span>Defensa</span><b>78</b><i style="width:31%"></i></div>
+    <div class="s"><span>At. especial</span><b>109</b><i style="width:43%"></i></div>
+    <div class="s"><span>Def. especial</span><b>85</b><i style="width:33%"></i></div>
+    <div class="s"><span>Velocidad</span><b>100</b><i style="width:39%"></i></div>
+  </div>
+  <div class="f-sec"><h4>Daño que recibe</h4><div class="w">
+    <b>×4</b><div><span class="pk-t rock">roca</span></div>
+    <b>×2</b><div><span class="pk-t water">agua</span><span class="pk-t elec">eléctrico</span></div>
+    <b>×½</b><div><span class="pk-t fire">fuego</span><span class="pk-t fight">lucha</span><span class="pk-t steel">acero</span><span class="pk-t fairy">hada</span></div>
+    <b>×¼</b><div><span class="pk-t grass">planta</span><span class="pk-t bug">bicho</span></div>
+    <b>×0</b><div><span class="pk-t ground">tierra</span></div>
+  </div></div>
+  <div class="f-sec"><h4>Evoluciones</h4><div class="evo">
+    <div><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png">Charmander</div><div>→<br><small>nivel 16</small></div>
+    <div><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/5.png">Charmeleon</div><div>→<br><small>nivel 36</small></div>
+    <div><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png"><span class="me">Charizard</span></div>
+  </div></div>
+  <div class="f-sec"><h4>Habilidades</h4>
+    <p style="margin:0 0 4px"><b>Mar Llamas:</b> potencia los ataques de tipo Fuego en un apuro.</p>
+    <p style="margin:0"><b>Poder Solar</b> (oculta): con sol, sube el Ataque Especial pero pierde PS cada turno.</p>
+  </div>
+</div></div></div>

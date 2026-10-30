@@ -1,0 +1,44 @@
+<style>
+  .pk-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .pk-bar span{padding:5px 10px;border-radius:999px;border:1px solid #9aa5b5;font-size:12px}
+  .pk-t{display:inline-block;padding:1px 7px;border-radius:999px;color:#fff;font-size:10px;font-weight:700;margin-right:2px}
+  .fire{background:#c9481f}.fly{background:#6d7fd6}.water{background:#2f7fd0}.grass{background:#3f9a3a}.poison{background:#8d3fa6}.elec{background:#b98a00}
+  .pk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pk-card{border:1px solid #9aa5b5;border-radius:12px;padding:8px;text-align:center;font-size:12px}
+  .pk-card img{width:64px;height:64px;display:block;margin:0 auto}
+  .pk-num{font-size:10px;opacity:.7}
+  .pk-table{width:100%;border-collapse:collapse;font-size:12px}
+  .pk-table td,.pk-table th{padding:3px 4px;border-bottom:1px solid #9aa5b555;text-align:left}
+  .pk-table th{font-size:10px;text-transform:uppercase;opacity:.7}
+  .pk-table img{width:32px;height:32px;display:block}
+  .pk-table .n{text-align:right;font-variant-numeric:tabular-nums}
+</style>
+<h2>¿Cómo quieres ver la lista de la Pokédex?</h2>
+<p class="subtitle">Los dos bocetos llevan buscador y filtro por dos tipos. Son bocetos: los colores finales serían los del tema del juego.</p>
+
+<div class="cards">
+  <div class="card" data-choice="tarjetas" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:transparent">
+      <div class="pk-bar"><span>🔍 Buscar nombre o número</span><span>Tipo 1: Fuego ▾</span><span>Tipo 2: Volador ▾</span><span>Generación ▾</span></div>
+      <div class="pk-grid">
+        <div class="pk-card"><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png"><div class="pk-num">#006</div><b>Charizard</b><br><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></div>
+        <div class="pk-card"><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/146.png"><div class="pk-num">#146</div><b>Moltres</b><br><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></div>
+        <div class="pk-card"><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/250.png"><div class="pk-num">#250</div><b>Ho-Oh</b><br><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A. Tarjetas</h3><p>Más visual y cómoda en el teléfono. Se ven menos Pokémon a la vez y no se comparan las stats de un vistazo.</p></div>
+  </div>
+
+  <div class="card" data-choice="tabla" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:transparent">
+      <div class="pk-bar"><span>🔍 Buscar nombre o número</span><span>Tipo 1: Fuego ▾</span><span>Tipo 2: Volador ▾</span><span>Generación ▾</span></div>
+      <table class="pk-table">
+        <tr><th></th><th>#</th><th>Nombre</th><th>Tipos</th><th class="n">Total ▾</th><th class="n">Vel.</th></tr>
+        <tr><td><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/250.png"></td><td>250</td><td><b>Ho-Oh</b></td><td><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></td><td class="n">680</td><td class="n">90</td></tr>
+        <tr><td><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/146.png"></td><td>146</td><td><b>Moltres</b></td><td><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></td><td class="n">580</td><td class="n">90</td></tr>
+        <tr><td><img alt="" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png"></td><td>6</td><td><b>Charizard</b></td><td><span class="pk-t fire">fuego</span><span class="pk-t fly">volador</span></td><td class="n">534</td><td class="n">100</td></tr>
+      </table>
+    </div>
+    <div class="card-body"><h3>B. Tabla ordenable</h3><p>Ordena por total o por cualquier stat: lo más útil para elegir respuestas de muchos puntos. En el teléfono cabrían menos columnas.</p></div>
+  </div>
+</div>

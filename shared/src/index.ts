@@ -9,4 +9,5 @@ export * from "./preferences.js";
 export * from "./rematch.js";
 export * from "./rooms.js";
 export * from "./stats.js";
+export * from "./type-chart.js";
 export * from "./types.js";

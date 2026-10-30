@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { Header } from "../../src/components/Header";
 import { ThemeMenu } from "../../src/components/ThemeMenu";
-import { ASH, fakeServices, renderWithServices, signIn } from "../helpers/services";
+import { ASH, GUEST, fakeServices, renderWithServices, signIn } from "../helpers/services";
 
 const openMenu = async () => userEvent.click(screen.getByRole("button", { name: "Apariencia" }));
 
@@ -185,5 +185,27 @@ describe("Header", () => {
   it("es un encabezado de la página (banner)", () => {
     renderWithServices(<Header />);
     expect(screen.getByRole("banner")).toBeInTheDocument();
+  });
+});
+
+describe("Header: enlace a la tabla de tipos", () => {
+  const link = () => screen.queryByRole("link", { name: "Tipos" });
+
+  it("sin sesión, como invitado y con cuenta enlaza a /tipos", () => {
+    const anon = renderWithServices(<Header />);
+    expect(link()).toHaveAttribute("href", "/tipos");
+    anon.unmount();
+    for (const user of [GUEST, ASH]) {
+      const services = fakeServices();
+      signIn(services, user);
+      const view = renderWithServices(<Header />, { services });
+      expect(link()).toHaveAttribute("href", "/tipos");
+      view.unmount();
+    }
+  });
+
+  it("en una sala no hay enlace: salir cerraría la conexión", () => {
+    renderWithServices(<Header />, { route: "/sala/ABC234" });
+    expect(link()).toBeNull();
   });
 });

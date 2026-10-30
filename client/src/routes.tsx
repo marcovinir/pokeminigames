@@ -1,4 +1,6 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { LoadBoundary } from "./components/LoadBoundary";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { isGuest } from "./api/types";
 import { useSession } from "./services";
@@ -9,6 +11,9 @@ import { LobbyRoute } from "./pages/Lobby";
 import { MainMenu } from "./pages/MainMenu";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { RoomPage } from "./pages/room/RoomPage";
+
+// Se carga aparte: no engorda el arranque de quien solo viene a jugar.
+const TypesPage = lazy(() => import("./pages/types/TypesPage").then((module) => ({ default: module.TypesPage })));
 
 /** Rutas que exigen sesión: sin ella llevan a /login y, tras entrar, vuelven a donde se iba. */
 function RequireAuth() {
@@ -58,6 +63,16 @@ export function AppRoutes() {
       {INFO_SLUGS.map((slug) => (
         <Route key={slug} path={INFO_PAGES[slug].path} element={<InfoPage slug={slug} />} />
       ))}
+      <Route
+        path="/tipos"
+        element={
+          <LoadBoundary>
+            <Suspense fallback={<LoadingScreen />}>
+              <TypesPage />
+            </Suspense>
+          </LoadBoundary>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

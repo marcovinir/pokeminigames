@@ -114,6 +114,48 @@ export function endReasonLabel(reason: GameEndReason, silhouette: boolean): stri
   return silhouette && reason === "exhausted" ? "No quedaron más Pokémon por adivinar" : END_REASON_LABELS[reason];
 }
 
+export const TYPE_ABBREVIATIONS: Record<TypeName, string> = {
+  normal: "Nor",
+  fighting: "Luc",
+  flying: "Vol",
+  poison: "Ven",
+  ground: "Tie",
+  rock: "Roc",
+  bug: "Bic",
+  ghost: "Fan",
+  steel: "Ace",
+  fire: "Fue",
+  water: "Agu",
+  grass: "Pla",
+  electric: "Elé",
+  psychic: "Psí",
+  ice: "Hie",
+  dragon: "Dra",
+  dark: "Sin",
+  fairy: "Had",
+};
+
+export const LOAD_ERROR_TEXT = {
+  message: "No se pudo cargar esta página. Puede que haya una versión nueva o que falle la conexión.",
+  reload: "Recargar",
+} as const;
+
+export const TYPES_TEXT = {
+  title: "Tabla de tipos",
+  first: "Tipo 1",
+  second: "Tipo 2",
+  none: "Ninguno",
+  damageTitle: "Daño que recibe",
+  chartTitle: "Todos los tipos",
+  chartHint: "En cada fila, el tipo que ataca; en cada columna, el que recibe.",
+  chartLabel: "Tabla de efectividad de tipos",
+  cornerLabel: "Ataca / recibe",
+  link: "Tipos",
+  selectedColumn: "(elegido)",
+  playPrompt: "¿Quieres jugar? Entra con tu cuenta o como invitado.",
+  playLink: "Entrar a jugar",
+} as const;
+
 export const RESULT_LABELS: Record<GameResult, string> = { won: "Ganaste", drawn: "Empate", lost: "Perdiste" };
 
 const SAME_FOR_ALL = (text: string): Record<GameResult, string> => ({ won: text, drawn: text, lost: text });
