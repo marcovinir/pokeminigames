@@ -113,7 +113,7 @@ describe("la lista de la Pokédex", () => {
 
   it("muestra 60 y «Ver más» añade 60 y lo guarda en la dirección; sin más no hay botón", async () => {
     const { user } = renderList("/pokedex", many);
-    await screen.findByRole("link", { name: /Poké1\b/ });
+    await screen.findByRole("link", { name: /Poké1(?!\d)/ });
     expect(tiles()).toHaveLength(60);
     await user.click(screen.getByRole("button", { name: "Ver más" }));
     expect(tiles()).toHaveLength(120);
@@ -125,7 +125,7 @@ describe("la lista de la Pokédex", () => {
 
   it("los filtros viven en la dirección y al cambiar uno se vuelve a la primera tanda", async () => {
     const { user } = renderList("/pokedex?ver=120", many);
-    await screen.findByRole("link", { name: /Poké1\b/ });
+    await screen.findByRole("link", { name: /Poké1(?!\d)/ });
     await user.selectOptions(screen.getByRole("combobox", { name: "Tipo 1" }), "water");
     expect(where()).toBe("/pokedex?tipo1=water");
     expect(tiles()).toHaveLength(60);
