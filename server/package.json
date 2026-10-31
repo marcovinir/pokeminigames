@@ -16,6 +16,7 @@
     "db:seed:prod": "tsx scripts/seed.ts",
     "catalog:fetch": "tsx scripts/fetch-catalog.ts",
     "pokedex:fetch": "tsx scripts/fetch-pokedex.ts",
+    "auction:simulate": "tsx scripts/simulate-auction.ts",
     "smoke": "tsx scripts/smoke-game.ts",
     "smoke:deployed": "tsx scripts/smoke-deployed.ts",
     "account:delete": "tsx scripts/delete-account.ts",
