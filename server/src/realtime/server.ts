@@ -28,6 +28,7 @@ const passSchema = z.object({ turnId: z.number().int() });
 const lineupSchema = z.strictObject({ order: z.array(z.number().int()).max(6) });
 const moveSchema = z.strictObject({ move: z.custom<BattleMove>((value) => value === "forcejeo" || value === "recuperar" || (TYPE_NAMES as readonly unknown[]).includes(value)) });
 const pauseSchema = z.strictObject({ choice: z.strictObject({ titular: z.number().int() }) });
+const switchSchema = z.strictObject({ pokemonId: z.number().int() });
 const stillHereSchema = z.strictObject({ turnId: z.number().int() });
 
 export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -187,6 +188,14 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
     handle(moveSchema, ({ move }) => {
       const { room, seat } = requireBinding();
       room.dispatch({ type: "CHOOSE_MOVE", seat, move });
+    }),
+  );
+
+  socket.on(
+    "auction-switch",
+    handle(switchSchema, ({ pokemonId }) => {
+      const { room, seat } = requireBinding();
+      room.dispatch({ type: "CHOOSE_SWITCH", seat, pokemonId });
     }),
   );
 

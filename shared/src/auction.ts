@@ -1,6 +1,6 @@
 import type { PokemonView, Seat, TypeName } from "./types.js";
 
-/** El fondo de cada lote. Se sortea sin mirar el Pokémon, para que no lo delate. */
+/** El fondo de cada lote y del combate. Se sortea sin mirar el Pokémon, para que no lo delate. */
 export const AUCTION_SCENES = ["bosque", "volcan", "playa", "noche"] as const;
 export type AuctionScene = (typeof AUCTION_SCENES)[number];
 
@@ -64,6 +64,12 @@ export interface AuctionSalePayload {
 /** Un movimiento: el ataque de un tipo, Forcejeo (sin tipo) o Recuperar. */
 export type BattleMove = TypeName | "forcejeo" | "recuperar";
 
+/** Quién entró a pelear en un turno: los cambios van antes que los ataques. */
+export interface BattleSwitch {
+  seat: Seat;
+  pokemonId: number;
+}
+
 /** Lo que pasó en un turno, en orden, para animarlo. */
 export interface BattleAction {
   actor: Seat;
@@ -97,13 +103,25 @@ export interface BattleMoveView {
 export interface BattleView {
   round: number;
   turn: number;
-  /** Hasta cuándo se puede decidir; nula mientras se anima un turno. */
+  /** El escenario, uno por combate. */
+  scene: AuctionScene;
+  /** Hasta cuándo se puede decidir en la revelación, la alineación o la pausa. Elegir movimiento no tiene reloj: siempre nula. */
   deadline: number | null;
+  /** Se está eligiendo movimiento; falso mientras se anima un turno. */
+  choosing: boolean;
+  /** Identifica este paso: «Sigo aquí» lo manda para que una pulsación tardía no valga para otro. */
+  stepId: number;
+  /** Hasta cuándo puedo responder «Sigo aquí». Solo lo recibe quien aún no eligió. */
+  warningUntil: number | null;
+  /** Yo ya elegí y el rival lleva tiempo sin hacerlo. */
+  rivalIdle: boolean;
   /** Ya confirmé en este paso (revelación, alineación, movimiento o pausa). */
   confirmed: boolean;
   /** Lo que yo decidí en este paso, para recuperarlo al recargar. Lo del rival nunca va. */
   myLineup: number[] | null;
   myMove: BattleMove | null;
+  /** A quién elegí sacar este turno. */
+  mySwitch: number | null;
   myPause: PauseChoice | null;
   myTeam: BattleFighterView[];
   rivalTeam: BattleFighterView[];

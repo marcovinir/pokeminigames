@@ -65,8 +65,8 @@ export function bestMove(attacker: Fighter, defender: Fighter): BattleMove {
 
 const otherSeat = (seat: Seat): Seat => (seat === 1 ? 2 : 1);
 
-/** Resuelve un turno y modifica a los dos: ataca primero el más rápido, y un debilitado ya no ataca. */
-export function resolveTurn(sides: Record<Seat, CombatSide>, choices: Record<Seat, BattleMove>, rng: Rng, options: { criticals?: boolean } = {}): BattleAction[] {
+/** Resuelve un turno y modifica a los dos: ataca primero el más rápido, y un debilitado ya no ataca. Sin elección (cambió de Pokémon) no hace nada. */
+export function resolveTurn(sides: Record<Seat, CombatSide>, choices: Record<Seat, BattleMove | null>, rng: Rng, options: { criticals?: boolean } = {}): BattleAction[] {
   const [speedA, speedB] = [sides[1].fighter.pokemon.stats.speed, sides[2].fighter.pokemon.stats.speed];
   const first: Seat = speedA === speedB ? (rng.int(2) === 0 ? 1 : 2) : speedA > speedB ? 1 : 2;
   const actions: BattleAction[] = [];
@@ -75,6 +75,7 @@ export function resolveTurn(sides: Record<Seat, CombatSide>, choices: Record<Sea
     const rival = sides[otherSeat(actor)];
     if (me.fighter.hp <= 0) continue;
     const move = choices[actor];
+    if (move === null) continue;
     if (move === "recuperar") {
       const healed = Math.min(me.fighter.maxHp - me.fighter.hp, Math.round(me.fighter.maxHp * HEAL_FRACTION));
       me.fighter.hp += healed;

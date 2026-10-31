@@ -41,10 +41,16 @@ export interface AuctionBattle {
   /** Lo que cada uno decidió en el paso actual. Nunca sale hacia el rival antes de resolverse. */
   lineups: Partial<Record<Seat, number[]>>;
   moves: Partial<Record<Seat, BattleMove>>;
+  switches: Partial<Record<Seat, number>>;
   pauses: Partial<Record<Seat, PauseChoice>>;
   healed: Record<Seat, boolean>;
   deadline: number | null;
   step: number;
+  /** Se está eligiendo movimiento, sin reloj: `deadline` es solo cuándo se avisa de la inactividad. */
+  choosing: boolean;
+  warningUntil: number | null;
+  stillHere: number;
+  scene: AuctionScene;
   /** El asalto ya terminó: al acabar la animación se abre la pausa. */
   roundOver: boolean;
   damage: Record<Seat, number>;

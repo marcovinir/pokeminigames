@@ -1,4 +1,4 @@
-// Dibuja los fondos de los lotes de la subasta en pixel art. Son originales: `node client/scripts/make-auction-scenes.cjs`.
+// Dibuja los fondos de la subasta en pixel art: los lotes con una plataforma y los combates con dos. Son originales: `node client/scripts/make-auction-scenes.cjs`.
 const fs = require("fs");
 const path = require("path");
 const { PNG } = require("pngjs");
@@ -58,6 +58,12 @@ function platform(set, cx, cy, rx, ry, top, rim, dark) {
     }
   }
 }
+/** Una plataforma para el lote; o dos en perspectiva para el combate: la del rival al fondo, la tuya delante. */
+function stage(set, battle, top, rim, dark) {
+  if (!battle) return platform(set, 160, 150, 86, 15, top, rim, dark);
+  platform(set, 228, 128, 58, 10, top, rim, dark);
+  platform(set, 84, 160, 84, 15, top, rim, dark);
+}
 function pine(set, x, base, h, dark, mid) {
   for (let i = 0; i < h; i++) {
     const w = Math.floor((i / h) * (h * 0.42)) + (i % 5 === 4 ? -1 : 0);
@@ -68,7 +74,7 @@ function pine(set, x, base, h, dark, mid) {
     set(x + 1, base + i, "#2f1b0e");
   }
 }
-function forest() {
+function forest(battle) {
   const { png, set } = canvas();
   const r = rng(7);
   bands(set, ["#3f8fe0", "#5aaaee", "#86c8f4", "#bfe6f7"], 0, 110);
@@ -88,10 +94,10 @@ function forest() {
     set(x, y - 1, "#8fe06b");
   }
   for (let i = 0; i < 26; i++) set(r() * W, 132 + r() * 44, i % 2 ? "#ffe45e" : "#ff8fb1");
-  platform(set, 160, 150, 86, 15, "#c9e88d", "#a2d06a", "#6a9c3f");
+  stage(set, battle, "#c9e88d", "#a2d06a", "#6a9c3f");
   return png;
 }
-function volcano() {
+function volcano(battle) {
   const { png, set } = canvas();
   const r = rng(11);
   bands(set, ["#2a0f1f", "#54162a", "#8f1f2c", "#d9472a", "#f58a2e"], 0, 112);
@@ -117,10 +123,10 @@ function volcano() {
     const l = 4 + r() * 10;
     for (let k = 0; k < l; k++) set(x + k, y, i % 3 ? "#28131b" : "#ff7a1f");
   }
-  platform(set, 160, 150, 86, 15, "#8a5a4a", "#6b4238", "#3d2226");
+  stage(set, battle, "#8a5a4a", "#6b4238", "#3d2226");
   return png;
 }
-function beach() {
+function beach(battle) {
   const { png, set } = canvas();
   const r = rng(21);
   bands(set, ["#5b4bb5", "#b65ba8", "#f27f8f", "#fdb47a", "#ffe08a"], 0, 86);
@@ -155,10 +161,10 @@ function beach() {
       set(44 + Math.cos(an) * t, 67 - Math.sin(an) * t + (t * t) / 28, "#1f6d45");
     }
   }
-  platform(set, 160, 150, 86, 15, "#fff1c4", "#e7cc8b", "#b58f4f");
+  stage(set, battle, "#fff1c4", "#e7cc8b", "#b58f4f");
   return png;
 }
-function night() {
+function night(battle) {
   const { png, set } = canvas();
   const r = rng(33);
   bands(set, ["#0a0a2e", "#14154a", "#231f6b", "#3a2f8f"], 0, 112);
@@ -180,10 +186,11 @@ function night() {
     set(x, y, "#b6ff7a");
     set(x + 1, y, "#6fdc55");
   }
-  platform(set, 160, 150, 86, 15, "#6d6ad0", "#524fb0", "#2a2870");
+  stage(set, battle, "#6d6ad0", "#524fb0", "#2a2870");
   return png;
 }
 
 for (const [name, draw] of Object.entries({ bosque: forest, volcan: volcano, playa: beach, noche: night })) {
-  fs.writeFileSync(path.join(OUT, `lote-${name}.png`), PNG.sync.write(draw()));
+  fs.writeFileSync(path.join(OUT, `lote-${name}.png`), PNG.sync.write(draw(false)));
+  fs.writeFileSync(path.join(OUT, `combate-${name}.png`), PNG.sync.write(draw(true)));
 }

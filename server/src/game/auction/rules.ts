@@ -15,7 +15,6 @@ export const AUTO_LOT_MS = 2_000;
 /** La revelación: 3 s por Pokémon, y se salta si los dos confirman. */
 export const REVEAL_MS = 36_000;
 export const LINEUP_MS = 30_000;
-export const MOVE_MS = 8_000;
 /** Lo que espera el servidor tras resolver un turno, para que la pantalla lo anime. */
 export const TURN_ANIMATION_MS = 3_000;
 export const PAUSE_MS = 15_000;

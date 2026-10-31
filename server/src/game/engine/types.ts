@@ -105,6 +105,7 @@ export type GameEvent =
   | { type: "READY"; seat: Seat }
   | { type: "CHOOSE_LINEUP"; seat: Seat; order: number[] }
   | { type: "CHOOSE_MOVE"; seat: Seat; move: BattleMove }
+  | { type: "CHOOSE_SWITCH"; seat: Seat; pokemonId: number }
   | { type: "PAUSE_CONFIRM"; seat: Seat; choice: PauseChoice }
   | { type: "LEAVE"; seat: Seat }
   | { type: "TIMER"; timer: TimerId };
