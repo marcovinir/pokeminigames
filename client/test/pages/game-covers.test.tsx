@@ -31,12 +31,14 @@ describe("las portadas de los minijuegos", () => {
     expect(image).toHaveClass("brightness-0");
   });
 
-  it("la subasta tiene su propia escena: foco, mazo y precio, sin los rayos de la silueta", () => {
+  it("la subasta tiene su propia escena: haz de luz, pedestal y las dos paletas de puja, sin rayos ni mazo", () => {
     const { container } = render(<GameArt game="subasta" example={example} covers={{ silhouette: 25, auction: 150 }} />);
     expect(container.querySelector(".silhouette-rays")).toBeNull();
     expect(container.querySelector(".auction-stage")).not.toBeNull();
-    expect(container.querySelector("[data-gavel]")).not.toBeNull();
-    expect(container.querySelector("[data-price-tag]")).toHaveTextContent("₽");
+    expect(container.querySelector(".auction-beam")).not.toBeNull();
+    expect(container.querySelector(".auction-pedestal")).not.toBeNull();
+    expect([...container.querySelectorAll("[data-paddle]")].map((one) => one.textContent)).toEqual(["1", "2"]);
+    expect(container.querySelector("[data-gavel]")).toBeNull();
     expect(container.querySelector("img")!.getAttribute("src")).toContain("/150.png");
   });
 

@@ -296,11 +296,20 @@ body::before {
   }
   /* La Poké Ball de la pantalla «¡Revancha!»: colores fijos porque es la de siempre y es decorativa (sin texto). */
   /* Los rayos amarillos de «¿Quién es ese Pokémon?» (decorativos, con colores fijos como la Poké Ball). */
-  /* La sala de subastas: telón rojo y un foco dorado que ilumina el lote. */
+  /* La sala de subastas: telones a los lados, cenefa dorada arriba y un haz de luz sobre el lote en su pedestal. */
   .auction-stage {
     background:
-      radial-gradient(ellipse 45% 80% at 50% 100%, #fde68a 0 55%, #f59e0b 75%, transparent 100%),
-      repeating-linear-gradient(90deg, #7f1d1d 0 14px, #991b1b 14px 28px);
+      linear-gradient(#fbbf24 0 4px, #7f1d1d 4px 12px, transparent 12px),
+      repeating-linear-gradient(90deg, #b91c1c 0 7px, #7f1d1d 7px 14px) left / 16% 100% no-repeat,
+      repeating-linear-gradient(90deg, #7f1d1d 0 7px, #b91c1c 7px 14px) right / 16% 100% no-repeat,
+      #2a0a12;
+  }
+  .auction-beam {
+    clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+    background: linear-gradient(rgb(253 230 138 / 0.55), rgb(253 230 138 / 0.95));
+  }
+  .auction-pedestal {
+    background: linear-gradient(#fbbf24, #b45309);
   }
   .silhouette-rays {
     background: repeating-conic-gradient(#fde047 0deg 10deg, #facc15 10deg 20deg);

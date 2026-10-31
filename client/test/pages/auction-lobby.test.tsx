@@ -52,12 +52,12 @@ describe("la sala de espera de la subasta", () => {
 });
 
 describe("el dibujo de la subasta", () => {
-  it("lleva su etiqueta de precio, que la silueta no tiene", () => {
+  it("lleva sus paletas de puja, que la silueta no tiene", () => {
     const example = { pokemonId: 6, types: ["fire", "flying"] as ["fire", "flying"] };
     const { container, unmount } = render(<GameArt game="subasta" example={example} />);
-    expect(container.querySelector("[data-price-tag]")).not.toBeNull();
+    expect(container.querySelector("[data-paddle]")).not.toBeNull();
     unmount();
     const other = render(<GameArt game="silueta" example={example} />);
-    expect(other.container.querySelector("[data-price-tag]")).toBeNull();
+    expect(other.container.querySelector("[data-paddle]")).toBeNull();
   });
 });

@@ -6,16 +6,15 @@ import { TypeChip } from "./TypeChip";
 
 const DEFAULT_COVERS: GameCovers = { silhouette: 94, auction: 6 };
 
-/** El mazo de la subasta: dibujado aquí, sin imágenes. */
-function Gavel({ className }: { className: string }) {
+/** Una paleta de puja con el número del jugador: dibujada aquí, sin imágenes. */
+function Paddle({ number, className }: { number: 1 | 2; className: string }) {
   return (
-    <svg data-gavel viewBox="0 0 48 48" className={className} focusable="false">
-      <g transform="rotate(-40 24 24)">
-        <rect x="21.5" y="20" width="5" height="26" rx="2" fill="#b45309" />
-        <rect x="10" y="8" width="28" height="14" rx="3" fill="#92400e" />
-        <rect x="14" y="8" width="3" height="14" fill="#fbbf24" />
-        <rect x="31" y="8" width="3" height="14" fill="#fbbf24" />
-      </g>
+    <svg data-paddle viewBox="0 0 40 64" className={className} focusable="false">
+      <rect x="17" y="34" width="6" height="30" rx="2" fill="#451a03" />
+      <circle cx="20" cy="20" r="18" fill="#fef3c7" stroke="#451a03" strokeWidth="3" />
+      <text x="20" y="28" textAnchor="middle" fontSize="22" fontWeight="700" fill="#451a03">
+        {number}
+      </text>
     </svg>
   );
 }
@@ -23,7 +22,7 @@ function Gavel({ className }: { className: string }) {
 /**
  * El dibujo de cada minijuego (decorativo). «Doble tipo»: el arte de un Pokémon de ejemplo sobre un fondo partido en
  * los colores de sus dos tipos, con los tipos debajo. La silueta: un Pokémon en negro sobre los rayos. La subasta: un
- * lote en negro bajo el foco, con su precio y el mazo. `compact` es la versión pequeña de la página de inicio: sin los
+ * lote en negro bajo un haz de luz, entre los telones y con las paletas de los dos jugadores. `compact` es la versión pequeña de la página de inicio: sin los
  * tipos debajo.
  */
 export function GameArt({ game, example, covers = DEFAULT_COVERS, compact = false }: { game: GameKind; example: DobleTipoExample; covers?: GameCovers; compact?: boolean }) {
@@ -58,19 +57,20 @@ export function GameArt({ game, example, covers = DEFAULT_COVERS, compact = fals
     );
   }
   if (game === "subasta") {
+    const paddle = compact ? "h-9 w-6" : "h-16 w-10";
     return (
       <div aria-hidden="true" className={`auction-stage relative flex items-end justify-center overflow-hidden rounded-card ${box}`}>
+        <span className="auction-beam absolute inset-y-0 left-1/2 w-3/5 -translate-x-1/2" />
+        <span className={`auction-pedestal absolute bottom-0 left-1/2 -translate-x-1/2 rounded-t-ui ${compact ? "h-2 w-12" : "h-3 w-28"}`} />
         <img
           src={artworkUrl(covers.auction)}
           alt=""
           width={compact ? 56 : 88}
           height={compact ? 56 : 88}
-          className={`${compact ? "mb-1 size-14" : "mb-2 size-22"} relative object-contain brightness-0`}
+          className={`${compact ? "mb-2 size-14" : "mb-3 size-22"} relative object-contain brightness-0`}
         />
-        <span data-price-tag className={`absolute top-2 left-2 rounded-pill bg-amber-300 px-2 py-0.5 font-num font-bold text-stone-900 shadow-card ${compact ? "text-[10px]" : "text-xs"}`}>
-          ₽ ???
-        </span>
-        <Gavel className={`absolute right-1 bottom-1 ${compact ? "size-8" : "size-14"}`} />
+        <Paddle number={1} className={`absolute -bottom-1 -rotate-12 ${compact ? "left-2" : "left-[14%]"} ${paddle}`} />
+        <Paddle number={2} className={`absolute -bottom-1 rotate-12 ${compact ? "right-2" : "right-[14%]"} ${paddle}`} />
       </div>
     );
   }
