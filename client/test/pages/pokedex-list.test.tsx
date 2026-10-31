@@ -1,5 +1,5 @@
 import type { PokedexEntry, TypeName } from "@pokemon-minigames/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, Route, Routes, useLocation } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -254,3 +254,57 @@ describe("la posición guardada solo se aplica al volver", () => {
     expect(where()).toBe("/pokedex/6");
   });
 });
+
+describe("cambios de filtro muy seguidos", () => {
+  const search = () => screen.getByRole("searchbox", { name: "Buscar" });
+
+  it("dos cambios antes de repintar no se pisan: lo borrado no vuelve", async () => {
+    renderList("/pokedex?q=charizard");
+    await screen.findByRole("link", { name: /Charizard/ });
+    act(() => {
+      fireEvent.change(search(), { target: { value: "" } });
+      fireEvent.change(screen.getByRole("combobox", { name: "Tipo 1" }), { target: { value: "fire" } });
+    });
+    await waitFor(() => expect(where()).toBe("/pokedex?tipo1=fire"));
+    expect(search()).toHaveValue("");
+  });
+
+  it("el campo muestra lo escrito aunque la dirección tarde en ponerse al día", async () => {
+    renderList();
+    await screen.findByRole("link", { name: /Charizard/ });
+    act(() => {
+      fireEvent.change(search(), { target: { value: "m" } });
+      fireEvent.change(search(), { target: { value: "mo" } });
+    });
+    expect(search()).toHaveValue("mo");
+    await waitFor(() => expect(where()).toBe("/pokedex?q=mo"));
+  });
+
+  it("«Limpiar filtros» también vacía el campo", async () => {
+    const { user } = renderList("/pokedex?q=nadie");
+    await user.click(await screen.findByRole("button", { name: "Limpiar filtros" }));
+    expect(search()).toHaveValue("");
+  });
+
+  it("entrar a /pokedex por un enlace desde una búsqueda la limpia del todo", async () => {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dex).mockResolvedValue(SAMPLE);
+    const user = userEvent.setup();
+    renderWithServices(
+      <>
+        <Link to="/pokedex">Enlace del encabezado</Link>
+        <Routes>
+          <Route path="/pokedex" element={<PokedexPage />} />
+        </Routes>
+        <Probe />
+      </>,
+      { route: "/pokedex?q=charizard", services },
+    );
+    await screen.findByRole("link", { name: /Charizard/ });
+    await user.click(screen.getByRole("link", { name: "Enlace del encabezado" }));
+    await waitFor(() => expect(search()).toHaveValue(""));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Tipo 1" }), "fire");
+    expect(where()).toBe("/pokedex?tipo1=fire");
+  });
+});
+

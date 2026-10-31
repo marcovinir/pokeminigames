@@ -54,15 +54,26 @@ function PokemonTile({ pokemon, fromSearch, onOpen }: { pokemon: PokedexEntry; f
 export function PokedexPage() {
   const { endpoints } = useServices();
   const [params, setParams] = useSearchParams();
+  const navigationType = useNavigationType();
   const { search, state } = useLocation();
   // La posición guardada es de quien vuelve (Atrás, recargar o «Volver a la Pokédex»): entrar por otro enlace empieza arriba.
-  const returning = useNavigationType() === "POP" || (state as { restoreScroll?: boolean } | null)?.restoreScroll === true;
+  const returning = navigationType === "POP" || (state as { restoreScroll?: boolean } | null)?.restoreScroll === true;
   const [entries, setEntries] = useState<PokedexEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
   const searchId = useId();
   const generationId = useId();
   const sortId = useId();
   const query = parsePokedexQuery(params);
+  const requested = useRef(params);
+  // El campo lleva su propio texto: si dependiera de la transición, escribir rápido perdería letras.
+  const [text, setText] = useState(query.q);
+
+  // Lo que no viene de estos filtros (el enlace del encabezado, Atrás) manda sobre lo pedido.
+  useEffect(() => {
+    if (navigationType === "REPLACE") return;
+    requested.current = params;
+    setText(parsePokedexQuery(params).q);
+  }, [params, navigationType]);
   const matches = useMemo(() => (entries ? filterPokedex(entries, parsePokedexQuery(params)) : []), [entries, params]);
 
   const load = useCallback(() => {
@@ -81,7 +92,13 @@ export function PokedexPage() {
   }, [entries, search, returning]);
 
   // Sin apilar historial: «Atrás» sale de la lista en vez de deshacer cada filtro. Cambiar un filtro vuelve a la primera tanda.
-  const change = (changes: Partial<typeof query>) => setParams(pokedexQueryParams({ ...query, visible: DEX_PAGE_SIZE, ...changes }), { replace: true });
+  // React Router pinta la dirección nueva en una transición, así que dos cambios muy seguidos verían filtros viejos y el
+  // segundo desharía el primero: los cambios parten de lo último pedido, no de lo último pintado.
+  const change = (changes: Partial<typeof query>) => {
+    const next = pokedexQueryParams({ ...parsePokedexQuery(requested.current), visible: DEX_PAGE_SIZE, ...changes });
+    requested.current = next;
+    setParams(next, { replace: true });
+  };
   const [first, second] = query.types;
   const chooseTypes = (types: (TypeName | undefined)[]) => change({ types: [...new Set(types.filter((type) => type !== undefined && TYPE_NAMES.includes(type)))] as TypeName[] });
 
@@ -97,9 +114,12 @@ export function PokedexPage() {
           <input
             id={searchId}
             type="search"
-            value={query.q}
+            value={text}
             placeholder={POKEDEX_TEXT.searchHint}
-            onChange={(event) => change({ q: event.target.value })}
+            onChange={(event) => {
+              setText(event.target.value);
+              change({ q: event.target.value });
+            }}
             className="framed-field w-full rounded-ui bg-surface px-4 py-3 text-fg"
           />
         </div>
@@ -148,7 +168,13 @@ export function PokedexPage() {
       ) : matches.length === 0 ? (
         <div className="flex flex-col items-center gap-3 text-center">
           <p>{POKEDEX_TEXT.noMatches}</p>
-          <Button onClick={() => setParams(new URLSearchParams(), { replace: true })}>{POKEDEX_TEXT.clearFilters}</Button>
+          <Button
+            onClick={() => {
+              setText("");
+              requested.current = new URLSearchParams();
+              setParams(requested.current, { replace: true });
+            }}
+          >{POKEDEX_TEXT.clearFilters}</Button>
         </div>
       ) : (
         <>
