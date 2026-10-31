@@ -7,6 +7,13 @@ export const ITEM_PRICES: Record<AuctionItem, number> = { pocion: 100_000, reviv
 /** Una silueta trampa de cada tantos lotes. */
 export const TRAP_ODDS = 6;
 export const BID_TURN_MS = 10_000;
+/** La revelación: 3 s por Pokémon, y se salta si los dos confirman. */
+export const REVEAL_MS = 18_000;
+export const LINEUP_MS = 20_000;
+export const MOVE_MS = 8_000;
+/** Lo que espera el servidor tras resolver un turno, para que la pantalla lo anime. */
+export const TURN_ANIMATION_MS = 3_000;
+export const PAUSE_MS = 15_000;
 export const TEAM_SIZE = 3;
 /** Lo que se reserva por cada hueco del equipo, para poder completarlo. */
 export const SLOT_RESERVE = 50_000;

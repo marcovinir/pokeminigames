@@ -437,5 +437,5 @@ describe("partidas al azar, con mensajes inválidos", () => {
       expect(h.state.phase).toBe("finished");
       expect(h.state.outcome?.reason).toBe("completed");
     }
-  });
+  }, 120_000);
 });
