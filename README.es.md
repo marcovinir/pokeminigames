@@ -38,7 +38,7 @@ Crea una sala, pásale el código a un amigo y a jugar. Sin cuenta (modo invitad
 - **Cuentas hechas con cuidado:** token de acceso corto y solo en memoria, cookie de refresco `HttpOnly` que rota, límites por IP, comprobación de origen, y borrar la cuenta la anonimiza sin tocar el historial de los rivales.
 - **Pokédex:** los 1025 Pokémon con buscador, filtro por dos tipos y una ficha para cada uno (stats, debilidades, evoluciones, habilidades), servida desde un archivo versionado para no depender de que PokeAPI responda.
 - **Matriz de Tipos:** una página pública con selector de uno o dos tipos y la tabla completa de 18 × 18, con cada valor comprobado contra PokeAPI.
-- **Sonido:** música chiptune original y de licencia libre para la sala, el combate y el final, y efectos de 8 bits generados en el navegador con la Web Audio API (sin archivos de audio), con un panel para silenciar y ajustar el volumen.
+- **Sonido:** un tema propio para el inicio y las salas, música chiptune de licencia libre para el combate y el final, y efectos de 8 bits generados en el navegador con la Web Audio API (sin archivos de audio), con un panel para silenciar y ajustar el volumen.
 - **Interfaz accesible:** dos temas (Clásico y Pokédex) en claro y oscuro, contraste WCAG AA comprobado en las pruebas y en un navegador real, foco de teclado visible y una sola regla que respeta *reducir movimiento*.
 
 ## Tecnologías

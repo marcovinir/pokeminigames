@@ -14,7 +14,8 @@ function isMp3(file: string): boolean {
 
 describe("los temas de música", () => {
   it("son los que eligió Marco, en su orden", () => {
-    expect(LOBBY_TRACKS.map((t) => t.title)).toEqual(["Town Center", "Title Screen", "Bittersweet Story", "Pavane", "Dungeon"]);
+    // El inicio y las salas tienen un solo tema: el que hizo un amigo de Marco.
+    expect(LOBBY_TRACKS.map((t) => t.title)).toEqual(["Tema principal de PokeMiniGames"]);
     expect(BATTLE_TRACKS.map((t) => t.title)).toEqual(["Porkymon Battle Theme", "8-Bit Battle Loop", "Chipped Urgency"]);
     expect(WIN_TRACK.title).toBe("Menu");
     expect(LOSE_TRACK.title).toBe("Game Over");
@@ -44,11 +45,12 @@ describe("los temas de música", () => {
     const credits = readFileSync(join(publicDir, "audio/CREDITOS.md"), "utf8");
     for (const track of ALL_TRACKS) {
       expect(track.author, track.title).not.toBe("");
-      expect(track.page, track.title).toMatch(/^https:\/\/opengameart\.org\//);
+      if (track.page !== null) expect(track.page, track.title).toMatch(/^https:\/\/opengameart\.org\//);
       expect(credits, track.title).toContain(track.title);
       expect(credits, track.title).toContain(track.author);
     }
-    expect(ALL_TRACKS.find((t) => t.title === "Town Center")!.license).toBe("CC-BY-SA 3.0");
+    expect(LOBBY_TRACKS[0]!.page).toBeNull();
+    expect(LOBBY_TRACKS[0]!.license).toBe("Cedida por su autor");
     expect(WIN_TRACK.license).toBe("CC-BY 4.0");
   });
 });

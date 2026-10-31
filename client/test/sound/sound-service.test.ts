@@ -69,15 +69,24 @@ describe("la música", () => {
     expect(main.loop).toBe(true);
   });
 
-  it("al volver a una zona elige otro tema distinto del último", async () => {
+  it("al volver a la partida elige otro tema distinto del último", async () => {
+    service.setMusic({ zone: "battle" });
+    service.setMusic({ zone: "lobby" });
+    service.setMusic({ zone: "battle" });
+    await flush();
+    timers.advance(400);
+    const battles = FakeAudio.created.filter((a) => BATTLE_TRACKS.some((t) => t.src === a.originalSrc)).map((a) => a.originalSrc);
+    expect(battles).toHaveLength(2);
+    expect(battles[1]).not.toBe(battles[0]);
+  });
+
+  it("la sala toca siempre el mismo tema, también al volver a ella", async () => {
     service.setMusic({ zone: "lobby" });
     service.setMusic({ zone: "battle" });
     service.setMusic({ zone: "lobby" });
     await flush();
     timers.advance(400);
-    const lobbies = FakeAudio.created.filter((a) => LOBBY_TRACKS.some((t) => t.src === a.originalSrc)).map((a) => a.originalSrc);
-    expect(lobbies).toHaveLength(2);
-    expect(lobbies[1]).not.toBe(lobbies[0]);
+    expect(playingSrcs()).toEqual(["/audio/tema-principal.mp3"]);
   });
 
   it("el final espera al efecto (~1,2 s), suena una vez y después hay silencio", async () => {

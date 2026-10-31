@@ -1,6 +1,6 @@
 /**
- * Los temas de música del juego: originales de licencia libre de OpenGameArt, elegidos por Marco (nada de la música de
- * los juegos de Pokémon ni remixes suyos). Los créditos completos están en `client/public/audio/CREDITOS.md` y en la
+ * Los temas de música del juego: el de la sala lo hizo un amigo de Marco; los demás son originales de licencia libre de
+ * OpenGameArt, elegidos por Marco (nada de la música de los juegos de Pokémon ni remixes suyos). Los créditos completos están en `client/public/audio/CREDITOS.md` y en la
  * página «Acerca de».
  */
 export interface Track {
@@ -8,8 +8,9 @@ export interface Track {
   title: string;
   src: string;
   author: string;
-  license: "CC0" | "CC-BY 4.0" | "CC-BY-SA 3.0";
-  page: string;
+  license: "CC0" | "CC-BY 4.0" | "Cedida por su autor";
+  /** Dónde está publicado; `null` si solo está aquí. */
+  page: string | null;
   /** Una entrada corta que suena una vez antes del bucle (como en los combates de los juegos). */
   intro?: string;
   loop: boolean;
@@ -17,13 +18,9 @@ export interface Track {
 
 const MELODIC = "https://opengameart.org/content/15-melodic-rpg-chiptunes";
 
-/** La sala: el menú, los lobbies y la espera antes de empezar. */
+/** La sala: el menú, los lobbies y la espera antes de empezar. Un solo tema, siempre el mismo. */
 export const LOBBY_TRACKS: readonly Track[] = [
-  { id: "town-center", title: "Town Center", src: "/audio/town-center.mp3", author: "Trevor Lentz", license: "CC-BY-SA 3.0", page: "https://opengameart.org/content/town-center", loop: true },
-  { id: "title-screen", title: "Title Screen", src: "/audio/title-screen.mp3", author: "Aureolus_Omicron", license: "CC0", page: MELODIC, loop: true },
-  { id: "bittersweet-story", title: "Bittersweet Story", src: "/audio/bittersweet-story.mp3", author: "Aureolus_Omicron", license: "CC0", page: MELODIC, loop: true },
-  { id: "pavane", title: "Pavane", src: "/audio/pavane.mp3", author: "Aureolus_Omicron", license: "CC0", page: MELODIC, loop: true },
-  { id: "dungeon", title: "Dungeon", src: "/audio/dungeon.mp3", author: "Aureolus_Omicron", license: "CC0", page: MELODIC, loop: true },
+  { id: "tema-principal", title: "Tema principal de PokeMiniGames", src: "/audio/tema-principal.mp3", author: "Un amigo de Marco, creado con Gemini", license: "Cedida por su autor", page: null, loop: true },
 ];
 
 /** La partida, desde la cuenta atrás hasta la última ronda. */
