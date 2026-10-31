@@ -129,6 +129,19 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
   await expect(misty.page.getByLabel("Jugadores").getByText("1.000.000")).toHaveCount(2);
 });
 
+test("con «reducir movimiento», el destello del golpe sí dura", async ({ browser }) => {
+  const ash = await newPlayer(browser, "ash");
+  await ash.page.emulateMedia({ reducedMotion: "reduce" });
+  await ash.page.goto("/");
+  const duration = await ash.page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.className = "battle-flash";
+    document.body.append(probe);
+    return getComputedStyle(probe).animationDuration;
+  });
+  expect(duration).toBe("0.3s");
+});
+
 test("el menú ofrece la subasta", async ({ browser }) => {
   const ash = await newPlayer(browser, "ash");
   await register(ash);

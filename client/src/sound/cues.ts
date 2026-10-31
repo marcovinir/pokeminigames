@@ -74,7 +74,7 @@ export function effectsForEvent(before: GameView, event: ServerEvent, after: Gam
       if (event.payload.actions.length === 0) return [];
       return [now(event.payload.actions[0]!.actor === seat ? "round" : "rival")];
     case "battle-round-ended":
-      return [now("wrong")];
+      return [now(event.payload.loser === seat ? "wrong" : "correct")];
     case "auction-sale":
       return [now("round")];
     case "auction-reveal":

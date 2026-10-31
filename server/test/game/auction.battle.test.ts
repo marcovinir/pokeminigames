@@ -558,3 +558,19 @@ describe("partidas al azar, con basura y desconexiones", () => {
     }
   }, 120_000);
 });
+
+describe("volver recargando con el rival ya vencido", () => {
+  it("recibe su estado además del final: si no, su pantalla no sabría quién es", () => {
+    const h = toBattle();
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
+    h.advance(10_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 2 });
+    h.advance(25_000);
+    const effects = h.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    expect(h.state.outcome).toEqual({ winnerSeat: 2, reason: "disconnect" });
+    const stateAt = effects.findIndex((one) => one.kind === "send_state" && one.to === 2);
+    const endedAt = effects.findIndex((one) => one.kind === "emit" && one.event.name === "game-ended");
+    expect(stateAt).toBeGreaterThanOrEqual(0);
+    expect(stateAt).toBeLessThan(endedAt);
+  });
+});

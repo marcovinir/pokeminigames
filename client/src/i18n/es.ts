@@ -451,6 +451,9 @@ export const BATTLE_TEXT = {
   position: (name: string, position: number): string => `${name}: posición ${position}`,
   sendOut: (name: string): string => `Sacar a ${name}`,
   hpOf: (name: string): string => `PS de ${name}`,
+  fell: (name: string, atLimit: boolean): string => (atLimit ? `${name} cayó por el límite de turnos.` : `${name} cayó.`),
+  roundVersus: (round: number, mine: string, theirs: string): string => `Asalto ${round}: ${mine} contra ${theirs}.`,
+  turnNews: (round: number, turn: number, summary: string): string => `Asalto ${round}, turno ${turn}: ${summary}`,
   roundTurn: (round: number, turn: number): string => `Asalto ${round} · Turno ${turn}`,
 };
 

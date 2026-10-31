@@ -82,8 +82,17 @@ function announcement(view: GameView): string {
       return BATTLE_TEXT.pauseTitle;
     case "battle": {
       // Una sola frase por turno: el registro completo saturaría a los lectores de pantalla.
+      const battle = view.auction?.battle;
+      if (!battle) return "";
       const last = view.battleLog[view.battleLog.length - 1];
-      return last ? turnSummary(last.actions, last.names) : BATTLE_TEXT.roundTurn(view.auction?.battle?.round ?? 1, view.auction?.battle?.turn ?? 1);
+      if (!last || last.round !== battle.round) {
+        const nameIn = (team: typeof battle.myTeam, id: number | null) => team.find((one) => one.pokemon.id === id)?.pokemon.names.es ?? "";
+        return BATTLE_TEXT.roundVersus(battle.round, nameIn(battle.myTeam, battle.myTitular), nameIn(battle.rivalTeam, battle.rivalTitular));
+      }
+      // Con el asalto y el turno delante, dos turnos con el mismo daño también se anuncian.
+      const news = BATTLE_TEXT.turnNews(last.round, last.turn, turnSummary(last.actions, last.names));
+      const end = view.lastRoundEnd?.round === battle.round ? view.lastRoundEnd : null;
+      return end ? `${news} ${BATTLE_TEXT.fell(last.names[end.loser], end.atLimit)}` : news;
     }
     case "auction": {
       const nameOf = (seat: number | null) => view.players.find((player) => player.seat === seat)?.username ?? "Tu rival";

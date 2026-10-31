@@ -45,7 +45,9 @@ export function BattleScreen() {
   const reduced = useReducedMotion();
   const battle = view.auction?.battle;
   const last = view.battleLog[view.battleLog.length - 1] ?? null;
-  const strike = useStrike(last?.actions ?? null, last ? `${last.round}-${last.turn}` : null);
+  // Solo el turno en curso: al volver de la pausa la pantalla se monta de nuevo con el último golpe en el registro.
+  const current = last && battle && last.round === battle.round && last.turn === battle.turn ? last : null;
+  const strike = useStrike(current?.actions ?? null, current ? `${current.round}-${current.turn}` : null);
   const movesRef = useRef<HTMLDivElement>(null);
   const deadline = battle?.deadline ?? null;
   useLastSeconds({ deadline, offset: view.clockOffset, answered: battle?.confirmed ?? true, round: deadline ?? 0 });
@@ -65,7 +67,8 @@ export function BattleScreen() {
     if (seat === strike.attacker && !reduced) return seat === mySeat ? "battle-lunge" : "battle-lunge battle-lunge-left";
     return "";
   };
-  const knockedOut = view.lastRoundEnd?.round === battle.round;
+  // El K.O. sale cuando acaba el golpe que lo causó.
+  const knockedOut = view.lastRoundEnd?.round === battle.round && strike === null;
   const lines = [...view.battleLog].reverse().flatMap((entry) => turnLines(entry.actions, entry.names).map((line, index) => ({ key: `${entry.round}-${entry.turn}-${index}`, line })));
 
   return (
@@ -85,8 +88,8 @@ export function BattleScreen() {
       <p className="text-center text-sm font-semibold text-muted">{BATTLE_TEXT.roundTurn(battle.round, battle.turn)}</p>
 
       <Card data-arena tone="raised" className="relative flex items-end justify-between overflow-hidden px-3 py-6 sm:px-10">
-        {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} flipped={false} effect={effectOf(mySeat)} /> : null}
-        {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} flipped effect={effectOf(rival)} /> : null}
+        {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} flipped effect={effectOf(mySeat)} /> : null}
+        {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} flipped={false} effect={effectOf(rival)} /> : null}
         {knockedOut ? <p className="battle-ko absolute inset-0 flex items-center justify-center font-display text-6xl font-bold text-danger sm:text-8xl">K.O.</p> : null}
       </Card>
 

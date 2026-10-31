@@ -46,6 +46,14 @@ describe("la pausa", () => {
     expect(screen.getByText("Usa Revivir o perderás al acabar el tiempo.")).toBeInTheDocument();
   });
 
+  it("si solo hay uno posible, ya está elegido: nadie pierde por no pulsar", async () => {
+    const down = [fighter(1, "Uno", 0), fighter(2, "Dos", 0), fighter(3, "Tres", 0)];
+    const { user } = renderRoom([pause({ myTeam: down }, ["revivir"])]);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Revivir" }), "Dos");
+    expect(screen.getByRole("button", { name: "Sacar a Dos" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
+  });
+
   it("sin nadie vivo ni objetos, lo dice y no hay nada que pulsar", () => {
     const down = [fighter(1, "Uno", 0), fighter(2, "Dos", 0), fighter(3, "Tres", 0)];
     renderRoom([pause({ myTeam: down })]);

@@ -355,3 +355,10 @@ body::before {
     scroll-behavior: auto !important;
   }
 }
+
+/* El destello es lo único que queda con «reducir movimiento»: gana a la regla global que anula las animaciones. */
+@media (prefers-reduced-motion: reduce) {
+  .battle-flash {
+    animation-duration: 300ms !important;
+  }
+}

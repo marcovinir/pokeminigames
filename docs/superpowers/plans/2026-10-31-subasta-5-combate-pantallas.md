@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Sprites de `other/showdown/{id}.gif`; los 14 sin animación (990–995, 1006, 1008, 1010, 1017 y 1022–1025) usan la imagen fija. Sin modelos propios.
-- Barra: verde por encima del 50 %, amarilla hasta el 20 %, roja por debajo. Tú a la izquierda, el rival a la derecha y volteado.
+- Barra: verde por encima del 50 %, amarilla hasta el 20 %, roja por debajo. Tú a la izquierda, el rival a la derecha, y se miran.
 - Embestida de 200 ms ida y vuelta, vibración con destello rojo que tiñe solo al Pokémon, «K.O.» en grande. Con «reducir movimiento», solo un destello.
 - Solo efecto genérico: los 18 por tipo son la #42, que no toca `server/src/game/` ni `shared/`.
 - Sin migraciones: el historial es la #40.

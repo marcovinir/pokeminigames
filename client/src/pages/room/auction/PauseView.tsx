@@ -39,7 +39,8 @@ export function PauseView() {
     return target === undefined ? [] : [{ item, target }];
   });
   const eligible = pauseTitulars(battle.myTeam, used);
-  const titular = chosen !== null && eligible.includes(chosen) ? chosen : null;
+  // Si solo hay uno posible ya está elegido: sin esto, quien revive a su último Pokémon podría perder por no pulsar.
+  const titular = chosen !== null && eligible.includes(chosen) ? chosen : eligible.length === 1 ? eligible[0]! : null;
   const nameOf = (id: number) => battle.myTeam.find((one) => one.pokemon.id === id)?.pokemon.names.es ?? "";
   const setPick = (index: number, value: number | null | undefined) => setPicks(items.map((_, other) => (other === index ? value : picks[other])));
   const nobodyLeft = eligible.length === 0 && !items.includes("revivir");
