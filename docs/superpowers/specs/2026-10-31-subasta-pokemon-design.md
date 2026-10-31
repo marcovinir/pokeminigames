@@ -92,6 +92,19 @@ Como en los otros juegos: 30 s para volver. Mientras tanto, pasa en la subasta y
 
 `npm run auction:simulate -w server`, con estrategias automáticas simples. Con los valores de arriba no hizo falta ajustar nada: reconocer siluetas gana el 72 % contra las otras estrategias, guardar dinero solo el 27 %, ninguna gana siempre, y ningún asalto llegó al límite de 20 turnos. Mediana de 3 turnos por asalto y 1,3 críticos por partida. Hay que volver a mirarlo con personas: los bots no eligen movimientos para engañar.
 
+### Cómo se ve el combate (Marco, 2026-10-31)
+
+Vista lateral de juego de pelea, tipo Street Fighter, aunque se juega por turnos y no en tiempo real:
+
+- Los dos frente a frente: tú a la izquierda y el rival a la derecha, volteado para que se miren.
+- Arriba, las barras de vida con el reloj en el centro, bajando hacia el centro. Verde por encima del 50 %, amarilla hasta el 20 % y roja por debajo.
+- **Sprites animados de PokeAPI** (`sprites/pokemon/other/showdown/{id}.gif`). Existen 1011 de 1025; los otros 14 (990–995, 1006, 1008, 1010, 1017 y 1022–1025) usan la imagen fija. No se dibujan modelos propios.
+- Embestida del atacante (ida y vuelta en 200 ms) y vibración del defensor con un destello rojo que tiñe solo al Pokémon.
+- **«K.O.»** en grande al caer un Pokémon.
+- Abajo, el registro en letra monoespaciada y los botones de movimientos, con su eficacia a la vista.
+- **Una animación de ataque por tipo** (18, con código, originales), en una issue aparte: el combate se puede jugar antes con un efecto genérico.
+- Con «reducir movimiento», los efectos se quedan en un destello.
+
 ## 5. Protección contra trampas
 
 - La identidad real de un lote nunca sale del servidor antes de la revelación, y el precio tampoco la delata.
