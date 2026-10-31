@@ -114,8 +114,8 @@ export interface ClientToServerEvents {
   "submit-pokemon": (payload: { text: string }) => void;
   "leave-room": () => void;
   /** Subir la puja; `null` abre el lote a su precio inicial. */
-  "auction-bid": (payload: { step: BidStep | null }) => void;
-  "auction-pass": () => void;
+  "auction-bid": (payload: { step: BidStep | null; turnId: number }) => void;
+  "auction-pass": (payload: { turnId: number }) => void;
   /** Ya vi la revelación: si confirman los dos, se salta. */
   "auction-ready": () => void;
   /** Pedir la revancha o aceptar la que pidió el rival. */

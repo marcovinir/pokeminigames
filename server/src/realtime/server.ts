@@ -23,7 +23,8 @@ export interface RealtimeDeps {
 const joinSchema = z.object({ code: z.string().min(1).max(20) });
 const chooseSchema = z.object({ type: z.string().min(1).max(30) });
 const submitSchema = z.object({ text: z.string().max(MAX_ANSWER_LENGTH) });
-const bidSchema = z.object({ step: z.custom<BidStep | null>((value) => value === null || BID_STEPS.includes(value as BidStep)) });
+const bidSchema = z.object({ step: z.custom<BidStep | null>((value) => value === null || BID_STEPS.includes(value as BidStep)), turnId: z.number().int() });
+const passSchema = z.object({ turnId: z.number().int() });
 
 export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
@@ -139,17 +140,17 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
 
   socket.on(
     "auction-bid",
-    handle(bidSchema, ({ step }) => {
+    handle(bidSchema, ({ step, turnId }) => {
       const { room, seat } = requireBinding();
-      room.dispatch({ type: "BID", seat, step });
+      room.dispatch({ type: "BID", seat, step, turnId });
     }),
   );
 
   socket.on(
     "auction-pass",
-    handle(null, () => {
+    handle(passSchema, ({ turnId }) => {
       const { room, seat } = requireBinding();
-      room.dispatch({ type: "PASS", seat });
+      room.dispatch({ type: "PASS", seat, turnId });
     }),
   );
 

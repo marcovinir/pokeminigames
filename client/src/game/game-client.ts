@@ -18,8 +18,8 @@ export interface GameClientApi {
   chooseType(type: TypeName): void;
   submit(text: string): void;
   /** Sube la puja del lote abierto; `null` lo abre al precio inicial. */
-  bid(step: BidStep | null): void;
-  pass(): void;
+  bid(step: BidStep | null, turnId: number): void;
+  pass(turnId: number): void;
   /** Ya vi la revelación. */
   ready(): void;
   /** Sale de la sala: cancela la espera o abandona la partida. */
@@ -104,12 +104,12 @@ export class GameClient implements GameClientApi {
     this.socket?.emit("submit-pokemon", { text });
   }
 
-  bid(step: BidStep | null): void {
-    this.socket?.emit("auction-bid", { step });
+  bid(step: BidStep | null, turnId: number): void {
+    this.socket?.emit("auction-bid", { step, turnId });
   }
 
-  pass(): void {
-    this.socket?.emit("auction-pass");
+  pass(turnId: number): void {
+    this.socket?.emit("auction-pass", { turnId });
   }
 
   ready(): void {

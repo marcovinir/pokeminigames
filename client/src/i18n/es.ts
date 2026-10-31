@@ -415,9 +415,12 @@ export const AUCTION_TEXT = {
   waitingRival: "Esperando al rival…",
   battleSoon: "El combate llega pronto",
   noWinner: "Sin ganador",
+  noPurchases: "No llegó a comprar ninguno.",
+  youTurn: "Te toca.",
   lotOf: (lot: number): string => `Lote ${lot} de 9`,
   bid: (amount: number): string => `Pujar ${auctionMoney(amount)}`,
   rivalTurn: (rival: string): string => `Le toca a ${rival}`,
+  leading: (name: string): string => `Va ganando ${name}`,
   teamSize: (size: number): string => `${size} de 3 Pokémon`,
   teamOf: (name: string): string => `Equipo de ${name}`,
 };
@@ -435,8 +438,8 @@ export const AUCTION_ITEM_LABELS: Record<AuctionItem, { name: string; descriptio
 
 /** Cómo se cerró un lote, para los lectores de pantalla. */
 export function auctionSaleText(sale: AuctionSalePayload, winner: string | null): string {
-  if (winner === null) return "Nadie se lleva el objeto";
-  return `${winner} se lleva el lote por ${auctionMoney(sale.paid)}`;
+  if (winner === null) return `Lote ${sale.lot}: nadie se lleva el objeto`;
+  return `Lote ${sale.lot}: ${winner} se lleva el lote por ${auctionMoney(sale.paid)}`;
 }
 
 export const SILHOUETTE_TEXT = {

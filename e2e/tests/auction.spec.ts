@@ -43,7 +43,7 @@ test("dos navegadores pujan, recargan a mitad y llegan a la revelación", async 
   await joinRoom(misty.page, code);
   const pages: [Page, Page] = [ash.page, misty.page];
 
-  for (const page of pages) await expect(page.getByText("Lote 1 de 9")).toBeVisible({ timeout: 30_000 });
+  for (const page of pages) await expect(page.getByText("Lote 1 de 9", { exact: true })).toBeVisible({ timeout: 30_000 });
 
   // A 360 px, con un nombre largo, nada se sale de la pantalla.
   const { scroll, client } = await ash.page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
@@ -57,11 +57,14 @@ test("dos navegadores pujan, recargan a mitad y llegan a la revelación", async 
 
   // Recargar a mitad de un lote vuelve a ese lote.
   await misty.page.reload();
-  await expect(misty.page.getByText("Lote 1 de 9")).toBeVisible({ timeout: 30_000 });
+  await expect(misty.page.getByText("Lote 1 de 9", { exact: true })).toBeVisible({ timeout: 30_000 });
 
   // No siempre se ven los 9: quien ya tiene 3 no puja más, y los lotes que quedan van solos al otro. Se juega hasta la revelación.
   const revealTitle = (page: Page) => page.getByRole("heading", { name: "¿Qué compró cada uno?" });
+  let moneyWentDown = false;
   for (let turn = 1; turn <= 40 && !(await revealTitle(ash.page).isVisible()); turn++) {
+    const players = await misty.page.getByLabel("Jugadores").textContent({ timeout: 1000 }).catch(() => null);
+    if (players !== null && (players.match(/1\.000\.000/g) ?? []).length < 2) moneyWentDown = true;
     const inTurn = await pageInTurn(pages, revealTitle);
     if (!inTurn) break;
     const bid = inTurn.getByRole("button", { name: /^Pujar/ }).first();
@@ -72,6 +75,7 @@ test("dos navegadores pujan, recargan a mitad y llegan a la revelación", async 
   }
 
   for (const page of pages) await expect(page.getByRole("heading", { name: "¿Qué compró cada uno?" })).toBeVisible({ timeout: 30_000 });
+  expect(moneyWentDown, "el dinero baja al comprar").toBe(true);
   await ash.page.getByRole("button", { name: "Listo" }).click();
   await expect(ash.page.getByRole("button", { name: "Esperando al rival…" })).toBeDisabled();
   await misty.page.getByRole("button", { name: "Listo" }).click();

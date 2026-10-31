@@ -58,7 +58,7 @@ async function startAuction() {
 describe("subasta por sockets (base real)", () => {
   it("una puja de quien tiene el turno llega a los dos", async () => {
     const { current, other, lot } = await startAuction();
-    current.emit("auction-bid", { step: null });
+    current.emit("auction-bid", { step: null, turnId: lot.turnId });
     for (const client of [current, other]) {
       const state = await stateWhere(client, (s) => s.auction?.lot?.currentBid !== null);
       expect(state.auction!.lot!.currentBid).toBe(lot.price);
@@ -66,20 +66,20 @@ describe("subasta por sockets (base real)", () => {
   });
 
   it("pasar los dos cierra el lote y avisa de la venta", async () => {
-    const { current, other } = await startAuction();
-    current.emit("auction-pass");
-    await other.next<RoomStateView>("room-state");
-    other.emit("auction-pass");
+    const { current, other, lot } = await startAuction();
+    current.emit("auction-pass", { turnId: lot.turnId });
+    const state = await other.next<RoomStateView>("room-state");
+    other.emit("auction-pass", { turnId: state.auction!.lot!.turnId });
     expect(await current.next("auction-sale")).toMatchObject({ lot: 1, kind: "pokemon" });
   });
 
   it("rechaza pujas mal formadas sin cambiar nada", async () => {
-    const { current } = await startAuction();
-    for (const bad of [{ step: 7 }, {}]) {
+    const { current, lot } = await startAuction();
+    for (const bad of [{ step: 7, turnId: lot.turnId }, { step: null }]) {
       current.emit("auction-bid", bad);
       await current.next("error");
     }
-    current.emit("auction-bid", { step: 10_000 });
+    current.emit("auction-bid", { step: 10_000, turnId: lot.turnId });
     expect(await current.next("error")).toMatchObject({ code: "INVALID_BID" });
   });
 

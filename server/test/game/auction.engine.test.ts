@@ -315,3 +315,41 @@ describe("subasta: lo que se aprendió de la revisión", () => {
     }
   });
 });
+
+describe("subasta: una acción tardía no cae en otro turno", () => {
+  it("un segundo «Pasar» no pasa el lote siguiente sin haberlo visto", () => {
+    const h = new AuctionHarness();
+    h.startGame();
+    const buyer = h.lot().turn;
+    const other = buyer === 1 ? 2 : 1;
+    h.bid(buyer);
+    const turnId = h.lot().turnId;
+    h.dispatch({ type: "PASS", seat: other, turnId });
+    const next = h.lot();
+    expect(next.number).toBe(2);
+    h.dispatch({ type: "PASS", seat: next.turn, turnId });
+    expect(h.errorCodes(next.turn)).toEqual(["NOT_YOUR_TURN"]);
+    expect(h.lot()).toEqual(next);
+  });
+
+  it("una puja de un turno que venció no abre el lote siguiente", () => {
+    const h = new AuctionHarness();
+    h.startGame();
+    const first = h.lot().turn;
+    h.pass(first);
+    const late = h.lot();
+    h.advance(10_000);
+    const next = h.lot();
+    h.dispatch({ type: "BID", seat: next.turn, step: null, turnId: late.turnId });
+    expect(h.lot().currentBid).toBeNull();
+    expect(h.errorCodes(next.turn)).toEqual(["NOT_YOUR_TURN"]);
+  });
+
+  it("con el turno vigente sí vale", () => {
+    const h = new AuctionHarness();
+    h.startGame();
+    const lot = h.lot();
+    h.dispatch({ type: "BID", seat: lot.turn, step: null, turnId: lot.turnId });
+    expect(h.lot().currentBid).toBe(lot.price);
+  });
+});

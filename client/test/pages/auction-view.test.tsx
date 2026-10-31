@@ -14,6 +14,7 @@ const lotView = (over: Partial<AuctionLotView> = {}): AuctionLotView => ({
   leader: 2,
   turn: 1,
   deadline: SERVER_NOW + 10_000,
+  turnId: 77,
   myLimit: 800_000,
   ...over,
 });
@@ -51,18 +52,21 @@ describe("la pantalla de puja", () => {
 
   it("en mi turno puedo subir con la cantidad total, o pasar", async () => {
     const services = fakeServices();
-    const { user } = renderRoom([state(lotView())], services);
+    const { user, unmount } = renderRoom([state(lotView())], services);
     await user.click(screen.getByRole("button", { name: "Pujar 210.000" }));
-    expect(services.game.client.bid).toHaveBeenCalledWith(10_000);
-    await user.click(screen.getByRole("button", { name: "Pasar" }));
-    expect(services.game.client.pass).toHaveBeenCalled();
+    expect(services.game.client.bid).toHaveBeenCalledWith(10_000, 77);
+    unmount();
+    const again = fakeServices();
+    const second = renderRoom([state(lotView())], again);
+    await second.user.click(screen.getByRole("button", { name: "Pasar" }));
+    expect(again.game.client.pass).toHaveBeenCalledWith(77);
   });
 
   it("sin puja, la opción es abrir al precio inicial", async () => {
     const services = fakeServices();
     const { user } = renderRoom([state(lotView({ currentBid: null, leader: null }))], services);
     await user.click(screen.getByRole("button", { name: "Pujar 150.000" }));
-    expect(services.game.client.bid).toHaveBeenCalledWith(null);
+    expect(services.game.client.bid).toHaveBeenCalledWith(null, 77);
   });
 
   it("en el turno del rival no hay botones", () => {
@@ -99,7 +103,58 @@ describe("la pantalla de puja", () => {
     serverSends(services, { name: "auction-sale", payload: { lot: 2, kind: "pokemon", winner: 2, paid: 210_000 } });
     expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("misty se lleva el lote por 210.000");
     serverSends(services, { name: "auction-sale", payload: { lot: 2, kind: "item", winner: null, paid: 0, item: "cinta" } });
-    expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("Nadie se lleva el objeto");
+    expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent("Lote 2: nadie se lleva el objeto");
+  });
+
+  it("tras decidir, los botones se bloquean hasta el turno siguiente", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([state(lotView())], services);
+    await user.click(screen.getByRole("button", { name: "Pasar" }));
+    expect(screen.getByRole("button", { name: "Pasar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Pujar 210.000" })).toBeDisabled();
+    serverSends(services, state(lotView({ turnId: 78, number: 4 })));
+    expect(screen.getByRole("button", { name: "Pasar" })).toBeEnabled();
+  });
+
+  it("si el servidor rechaza la puja, se puede volver a intentar", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([state(lotView())], services);
+    await user.click(screen.getByRole("button", { name: "Pasar" }));
+    serverSends(services, { name: "error", payload: { code: "INVALID_BID", message: "x" } });
+    expect(screen.getByRole("button", { name: "Pasar" })).toBeEnabled();
+  });
+
+  it("una silueta que falló no afecta a la del lote siguiente", () => {
+    const services = fakeServices();
+    renderRoom([state(lotView())], services);
+    fireEvent.error(screen.getByRole("img", { name: "Silueta de un Pokémon" }));
+    serverSends(services, state(lotView({ number: 4, silhouetteUrl: "/silhouettes/otra", turnId: 78 })));
+    expect(screen.getByRole("img", { name: "Silueta de un Pokémon" })).toHaveAttribute("src", "/silhouettes/otra");
+  });
+
+  it("se anuncia cada turno: el lote, la puja y a quién le toca", () => {
+    const services = fakeServices();
+    renderRoom([state(lotView())], services);
+    const log = screen.getByRole("log", { name: "Anuncios de la partida" });
+    expect(log).toHaveTextContent("Lote 3 de 9. Puja actual: 200.000. Te toca.");
+    serverSends(services, state(lotView({ turn: 2, turnId: 78, currentBid: 300_000 })));
+    expect(log).toHaveTextContent("Lote 3 de 9. Puja actual: 300.000. Le toca a misty.");
+  });
+
+  it("dice a la vista quién va ganando y cómo se cerró el lote anterior", () => {
+    const services = fakeServices();
+    renderRoom([state(lotView())], services);
+    expect(screen.getByText("Va ganando misty")).toBeInTheDocument();
+    serverSends(services, { name: "auction-sale", payload: { lot: 2, kind: "pokemon", winner: 2, paid: 210_000 } });
+    expect(screen.getByText("Lote 2: misty se lleva el lote por 210.000")).toBeVisible();
+  });
+
+  it("si el foco se perdió, vuelve a los botones cuando me toca", () => {
+    const services = fakeServices();
+    renderRoom([state(lotView({ turn: 2 }))], services);
+    (document.activeElement as HTMLElement | null)?.blur();
+    serverSends(services, state(lotView({ turnId: 78 })));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Pujar 210.000" }));
   });
 
   it("pulsar cuando el turno ya cambió no muestra un error alarmante", () => {

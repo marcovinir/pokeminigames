@@ -98,8 +98,8 @@ export type GameEvent =
   | { type: "PLAYER_DISCONNECTED"; seat: Seat }
   | { type: "CHOOSE_TYPE"; seat: Seat; typeName: string }
   | { type: "SUBMIT"; seat: Seat; text: string }
-  | { type: "BID"; seat: Seat; step: BidStep | null }
-  | { type: "PASS"; seat: Seat }
+  | { type: "BID"; seat: Seat; step: BidStep | null; turnId?: number }
+  | { type: "PASS"; seat: Seat; turnId?: number }
   | { type: "READY"; seat: Seat }
   | { type: "CHOOSE_LINEUP"; seat: Seat; order: number[] }
   | { type: "CHOOSE_MOVE"; seat: Seat; move: BattleMove }

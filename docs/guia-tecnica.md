@@ -200,6 +200,7 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `DELETE /auth/me` | Borra (anonimiza) la cuenta: `{ password }`. 204 y borra las cookies de sesión; contraseña equivocada: `403 WRONG_PASSWORD` (cuenta en el límite de fallos de login por IP); un invitado: `403 ACCOUNT_REQUIRED` |
 | `PUT /auth/me/avatar` | Guarda el avatar: `{ avatarId }`, el número de Pokédex de uno de los 24 de `shared/src/avatars.ts` o `null` para volver a las iniciales; devuelve `{ avatarId }`. Cualquier otro valor: `400 VALIDATION_ERROR` |
 | `POST /rooms` | Crea una sala de «Doble tipo»: `{ game?: "doble_tipo", typeMode: "random" \| "chosen", lengthMode: "fixed_rounds" \| "custom", roundsLimit?, statsGoal?, typeHints? }`, o de silueta: `{ game: "silueta", rounds?: 5 \| 10 \| 15, generations?: number[] }` (por defecto 10 y `[1]`); devuelve `{ code }`. Sin `game` es «Doble tipo». Una clave que no corresponde al juego elegido se rechaza con `400 VALIDATION_ERROR` (no se ignora en silencio). `typeHints` (booleano, `false` por omisión) activa las «Pistas de tipos»: las sugerencias muestran los tipos de cada Pokémon |
+| `POST /rooms` (subasta) | Crea una sala de subasta: `{ game: "subasta", traps?: boolean }`; sin `traps`, con siluetas trampa |
 | `GET /rooms/current` | La sala activa del usuario: `{ room: { code, phase } }` o `{ room: null }` |
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
@@ -224,8 +225,8 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `choose-type` | `{ type }` (modo elegido) |
 | `submit-pokemon` | `{ text }` (un intento por ronda, máximo 100 caracteres) |
 | `leave-room` | — (también cuenta como salir de una oferta de revancha: el rival ve «se fue») |
-| `auction-bid` | Subasta: `{ step }`: sube la puja 10.000, 50.000 o 100.000; `null` abre el lote al precio inicial |
-| `auction-pass` | Subasta: pasar en el lote abierto |
+| `auction-bid` | Subasta: `{ step, turnId }`: sube la puja 10.000, 50.000 o 100.000; `null` abre el lote al precio inicial. Puja inválida: `INVALID_BID`; de otro turno: `NOT_YOUR_TURN` |
+| `auction-pass` | Subasta: `{ turnId }`: pasar en el lote abierto |
 | `auction-ready` | Subasta: ya vi la revelación; si confirman los dos, se salta |
 | `rematch-request` | — (pedir la revancha o aceptar la del rival) |
 | `rematch-cancel` | — (cancelar la propia o rechazar la del rival) |

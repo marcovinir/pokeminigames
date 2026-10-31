@@ -11,6 +11,7 @@ const lot = (over: Partial<AuctionLotView>): AuctionLotView => ({
   leader: null,
   turn: 1,
   deadline: 0,
+  turnId: 1,
   myLimit: 800_000,
   ...over,
 });

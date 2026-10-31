@@ -122,6 +122,12 @@ describe("el resumen de una subasta", () => {
     expect(screen.queryByText("0 – 0")).toBeNull();
   });
 
+  it("quien no llegó a comprar no «ganó» nada", () => {
+    renderRoom([base, ended(1, "forfeit")]);
+    expect(screen.queryByText("No ganó ningún Pokémon.")).toBeNull();
+    expect(screen.getByText("No llegó a comprar ninguno.")).toBeInTheDocument();
+  });
+
   it("sin ganador no dice «Empate»", () => {
     renderRoom([base, ended(null, "abandoned")]);
     expect(screen.queryByText("Empate")).toBeNull();

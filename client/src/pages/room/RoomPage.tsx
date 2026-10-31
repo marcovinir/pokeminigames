@@ -7,6 +7,8 @@ import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
 import {
   MENU_TEXT,
+  AUCTION_TEXT,
+  auctionMoney,
   auctionSaleText,
   REMATCH_TEXT,
   ROOM_GONE_CODES,
@@ -71,9 +73,16 @@ function announcement(view: GameView): string {
   if (view.silhouette && view.phase === "round_result") return view.silhouette.lastReveal ? silhouetteReveal(view.silhouette.lastReveal.pokemon.names.es) : "";
   switch (view.phase) {
     case "auction": {
+      const nameOf = (seat: number | null) => view.players.find((player) => player.seat === seat)?.username ?? "Tu rival";
       const sale = view.lastSale;
-      if (!sale) return "";
-      return auctionSaleText(sale, sale.winner === null ? null : (view.players.find((player) => player.seat === sale.winner)?.username ?? "Tu rival"));
+      const lot = view.auction?.lot;
+      const parts = sale ? [auctionSaleText(sale, sale.winner === null ? null : nameOf(sale.winner))] : [];
+      if (lot) {
+        parts.push(AUCTION_TEXT.lotOf(lot.number));
+        parts.push(`${lot.currentBid === null ? AUCTION_TEXT.startingPrice : AUCTION_TEXT.currentBid}: ${auctionMoney(lot.currentBid ?? lot.price)}`);
+        parts.push(lot.turn === view.mySeat ? AUCTION_TEXT.youTurn : `${AUCTION_TEXT.rivalTurn(nameOf(lot.turn))}.`);
+      }
+      return parts.join(". ");
     }
     case "starting":
       return "La partida empieza.";

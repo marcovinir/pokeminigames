@@ -98,10 +98,10 @@ export function reduceAuction(prev: AuctionState, event: GameEvent, now: number,
       onDisconnected(c, event.seat);
       break;
     case "BID":
-      onBid(c, event.seat, event.step);
+      onBid(c, event.seat, event.step, event.turnId);
       break;
     case "PASS":
-      onPass(c, event.seat);
+      onPass(c, event.seat, event.turnId);
       break;
     case "READY":
       onReady(c, event.seat);
@@ -314,11 +314,12 @@ function startTurn(c: Ctx): void {
   schedule(c, bidding.deadline, { kind: "bid", turn: bidding.turnId });
 }
 
-function onBid(c: Ctx, seat: Seat, step: BidStep | null): void {
+function onBid(c: Ctx, seat: Seat, step: BidStep | null, turnId?: number): void {
   const { s } = c;
   const bidding = s.bidding;
   if (s.phase !== "auction" || !bidding) return reject(c, seat, "WRONG_PHASE", "Ahora no se puede pujar");
-  if (bidding.turn !== seat) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
+  // Una pulsación de un turno que ya pasó no vale para este: su dueño aún no ha visto el lote.
+  if (bidding.turn !== seat || (turnId !== undefined && turnId !== bidding.turnId)) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
   const lot = s.lots[s.lotIndex]!;
   const opening = bidding.currentBid === null;
   // La primera puja es el precio inicial; las demás suben uno de los saltos.
@@ -332,10 +333,10 @@ function onBid(c: Ctx, seat: Seat, step: BidStep | null): void {
   sendStates(c);
 }
 
-function onPass(c: Ctx, seat: Seat): void {
+function onPass(c: Ctx, seat: Seat, turnId?: number): void {
   const { s } = c;
   if (s.phase !== "auction" || !s.bidding) return reject(c, seat, "WRONG_PHASE", "Ahora no se puede pasar");
-  if (s.bidding.turn !== seat) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
+  if (s.bidding.turn !== seat || (turnId !== undefined && turnId !== s.bidding.turnId)) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
   passTurn(c);
 }
 
@@ -441,6 +442,8 @@ function onBattleTimer(c: Ctx): void {
 
 function onReady(c: Ctx, seat: Seat): void {
   const { s } = c;
+  // Un «Listo» doble o justo al acabar la revelación llega tarde: no es un error de nadie.
+  if (s.phase === "lineup" || s.phase === "battle" || s.phase === "battle_pause") return;
   if (s.phase !== "reveal") return reject(c, seat, "WRONG_PHASE", "Ahora no hay nada que confirmar");
   if (!s.readyForBattle.includes(seat)) s.readyForBattle.push(seat);
   if (s.readyForBattle.length === 2) beginLineup(c);

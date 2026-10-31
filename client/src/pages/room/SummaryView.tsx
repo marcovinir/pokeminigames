@@ -32,7 +32,7 @@ function TeamColumn({ title, team, total, index, guest = false }: { title: strin
         </div>
         {total === null ? null : <p className="font-num text-3xl font-semibold tabular-nums">{total}</p>}
       </div>
-      {team.length === 0 ? <p className="text-sm text-muted">No ganó ningún Pokémon.</p> : null}
+      {team.length === 0 ? <p className="text-sm text-muted">{total === null ? AUCTION_TEXT.noPurchases : "No ganó ningún Pokémon."}</p> : null}
       {bestFirst(team).map((pokemon, index) => (
         <PokemonCard key={pokemon.id} pokemon={pokemon} showStats size={index === 0 ? "lg" : "sm"} />
       ))}

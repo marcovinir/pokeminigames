@@ -391,7 +391,7 @@ function CreateAuctionRoomCard() {
             <CheckIcon />
           </span>
         </label>
-        <Button type="submit" variant="primary" size="lg" disabled={submitting}>
+        <Button type="submit" variant="primary" size="lg" loading={submitting}>
           Crear sala
         </Button>
       </form>

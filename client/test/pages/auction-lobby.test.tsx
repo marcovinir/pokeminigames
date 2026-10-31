@@ -24,6 +24,13 @@ describe("crear una sala de subasta", () => {
     await waitFor(() => expect(services.endpoints.rooms.create).toHaveBeenCalledWith({ game: "subasta", traps: true }));
   });
 
+  it("el botón muestra que está creando", async () => {
+    const { services, user } = renderLobby();
+    services.endpoints.rooms.create = (() => new Promise(() => undefined)) as never;
+    await user.click(screen.getByRole("button", { name: "Crear sala" }));
+    expect(await screen.findByRole("button", { busy: true })).toBeInTheDocument();
+  });
+
   it("se pueden apagar", async () => {
     const { services, user } = renderLobby();
     await user.click(screen.getByRole("switch", { name: "Siluetas trampa" }));

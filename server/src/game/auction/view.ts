@@ -104,6 +104,7 @@ export function buildAuctionRoomState(state: AuctionState, seat: Seat, code: str
               currentBid: bidding.currentBid,
               leader: bidding.leader,
               turn: bidding.turn,
+              turnId: bidding.turnId,
               deadline: bidding.deadline,
               myLimit: limitOf(state, seat),
             }

@@ -507,3 +507,12 @@ describe("partidas al azar, con mensajes inválidos", () => {
     }
   }, 120_000);
 });
+
+describe("«Listo» tardío", () => {
+  it("si la revelación ya terminó se ignora, sin error", () => {
+    const h = toLineup();
+    h.dispatch({ type: "READY", seat: 1 });
+    expect(h.errorCodes(1)).toEqual([]);
+    expect(h.state.phase).toBe("lineup");
+  });
+});
