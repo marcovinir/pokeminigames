@@ -299,6 +299,11 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       };
     }
 
+    // La subasta aún no tiene pantallas: el cliente solo la verá cuando se abra al público.
+    case "auction-sale":
+    case "auction-reveal":
+      return view;
+
     case "silhouette-answer-received": {
       const silhouette = view.silhouette;
       if (!silhouette?.round) return view;

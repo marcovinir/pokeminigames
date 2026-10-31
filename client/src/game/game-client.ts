@@ -57,6 +57,8 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   "rematch-room": true,
   "silhouette-round-started": true,
   "silhouette-answer-received": true,
+  "auction-sale": true,
+  "auction-reveal": true,
   "silhouette-round-result": true,
 };
 /**

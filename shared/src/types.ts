@@ -39,7 +39,7 @@ export type Seat = 1 | 2;
 
 export type PickResult = "VALID" | "NOT_FOUND" | "WRONG_TYPES" | "ALREADY_OWNED" | "TAKEN" | "NO_ANSWER";
 
-export type GamePhase = "waiting" | "starting" | "choosing_types" | "round_active" | "round_result" | "finished";
+export type GamePhase = "waiting" | "starting" | "choosing_types" | "round_active" | "round_result" | "auction" | "reveal" | "finished";
 
 /**
  * Por qué terminó la partida. completed, forfeit, disconnect y exhausted son partidas
@@ -80,8 +80,15 @@ export interface SilhouetteConfig {
   generations: number[];
 }
 
+/** La configuración de una sala de «Subasta Pokémon». */
+export interface AuctionConfig {
+  game: "subasta";
+  /** Siluetas trampa: a veces la silueta no es el Pokémon real. */
+  traps: boolean;
+}
+
 /** La configuración de cualquier sala: el juego se sabe con `gameOf(config)`. */
-export type RoomConfig = DobleTipoConfig | SilhouetteConfig;
+export type RoomConfig = DobleTipoConfig | SilhouetteConfig | AuctionConfig;
 
 export interface PokemonView {
   id: number;

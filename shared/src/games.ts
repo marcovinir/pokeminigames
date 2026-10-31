@@ -1,14 +1,17 @@
-import type { DobleTipoConfig, RoomConfig, SilhouetteConfig } from "./types.js";
+import type { AuctionConfig, DobleTipoConfig, RoomConfig, SilhouetteConfig } from "./types.js";
 
 /** Los minijuegos de PokeMiniGames. */
-export const GAME_KINDS = ["doble_tipo", "silueta"] as const;
+export const GAME_KINDS = ["doble_tipo", "silueta", "subasta"] as const;
 export type GameKind = (typeof GAME_KINDS)[number];
 
+/** Los que ya se pueden jugar: el menú y `POST /rooms` solo ofrecen estos. La subasta entra cuando tenga sus pantallas. */
+export const PLAYABLE_GAMES: readonly GameKind[] = ["doble_tipo", "silueta"];
+
 /** El trozo de ruta de cada juego (`/jugar/:slug`). */
-export const GAME_SLUGS: Record<GameKind, string> = { doble_tipo: "doble-tipo", silueta: "silueta" };
+export const GAME_SLUGS: Record<GameKind, string> = { doble_tipo: "doble-tipo", silueta: "silueta", subasta: "subasta" };
 
 export function gameFromSlug(slug: string): GameKind | null {
-  return GAME_KINDS.find((game) => GAME_SLUGS[game] === slug) ?? null;
+  return PLAYABLE_GAMES.find((game) => GAME_SLUGS[game] === slug) ?? null;
 }
 
 /** El juego de una configuración. Sin `game` (salas y clientes de antes de que hubiera varios) es «Doble tipo». */
@@ -45,7 +48,12 @@ export function isSilhouetteConfig(config: RoomConfig): config is SilhouetteConf
   return config.game === "silueta";
 }
 
+/** La configuración es de una subasta. */
+export function isAuctionConfig(config: RoomConfig): config is AuctionConfig {
+  return config.game === "subasta";
+}
+
 /** La configuración si es de «Doble tipo»; nulo si es de otro juego (o no hay). */
 export function asDobleTipo(config: RoomConfig | null): DobleTipoConfig | null {
-  return config && !isSilhouetteConfig(config) ? config : null;
+  return config && gameOf(config) === "doble_tipo" ? (config as DobleTipoConfig) : null;
 }

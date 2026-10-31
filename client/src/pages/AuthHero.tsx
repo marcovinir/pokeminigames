@@ -1,4 +1,4 @@
-import { GAME_KINDS } from "@pokemon-minigames/shared";
+import { PLAYABLE_GAMES } from "@pokemon-minigames/shared";
 import { useState } from "react";
 import { Badge } from "../components/Badge";
 import { GameArt } from "../components/GameArt";
@@ -8,7 +8,7 @@ import { AUTH_HERO_TEXT, GAME_CARDS, MENU_TEXT } from "../i18n/es";
 import { DOBLE_TIPO_EXAMPLES, pickRandom } from "./menu-art";
 
 /**
- * La parte de la izquierda de las pantallas de acceso: el lema y los minijuegos que hay (uno por cada `GAME_KINDS`,
+ * La parte de la izquierda de las pantallas de acceso: el lema y los minijuegos que hay (uno por cada `PLAYABLE_GAMES`,
  * con el mismo dibujo que en el menú). En pantallas estrechas solo queda el lema, para que el formulario esté a la vista.
  */
 export function AuthHero({ random = Math.random }: { random?: () => number } = {}) {
@@ -24,7 +24,7 @@ export function AuthHero({ random = Math.random }: { random?: () => number } = {
 
       <div className="hidden md:block">
         <ul aria-label={AUTH_HERO_TEXT.gamesLabel} role="list" className="flex flex-col gap-4">
-          {GAME_KINDS.map((game) => {
+          {PLAYABLE_GAMES.map((game) => {
             const card = GAME_CARDS[game];
             return (
               <li key={game} className="flex items-center gap-4">

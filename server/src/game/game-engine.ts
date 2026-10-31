@@ -1,5 +1,8 @@
-import { type GameEndedPayload, type GamePhase, type RoomConfig, type RoomStateView, type Seat, isSilhouetteConfig } from "@pokemon-minigames/shared";
+import { type GameEndedPayload, type GamePhase, type RoomConfig, type RoomStateView, type Seat, isAuctionConfig, isSilhouetteConfig } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../catalog/pokemon-catalog.js";
+import { createAuctionGame, reduceAuction } from "./auction/engine.js";
+import type { AuctionState } from "./auction/types.js";
+import { buildAuctionGameEnded, buildAuctionRoomState } from "./auction/view.js";
 import { createGame, reduce } from "./engine/engine.js";
 import type { Effect, GameEvent, GameOutcome, GameState, PlayerState } from "./engine/types.js";
 import { buildGameEnded, buildRoomState } from "./engine/view.js";
@@ -47,7 +50,7 @@ export interface GameEngine {
 // Cada adaptador solo recibe estados que él mismo creó (la sala no mezcla motores), de ahí los cambios de tipo.
 const dobleTipoEngine: GameEngine = {
   create: (config, creator, now, options) => {
-    if (isSilhouetteConfig(config)) throw new Error("«Doble tipo» no juega con una configuración de silueta");
+    if (isSilhouetteConfig(config) || isAuctionConfig(config)) throw new Error("«Doble tipo» no juega con la configuración de otro juego");
     return createGame(config, creator, now, options);
   },
   reduce: (state, event, now, ctx) => reduce(state as GameState, event, now, { catalog: ctx.catalog, rng: ctx.rng }),
@@ -65,7 +68,18 @@ const silhouetteEngine: GameEngine = {
   gameEnded: (state, catalog) => buildSilhouetteGameEnded(state as SilhouetteState, catalog),
 };
 
+const auctionEngine: GameEngine = {
+  create: (config, creator, now, options) => {
+    if (!isAuctionConfig(config)) throw new Error("La subasta necesita una configuración de subasta");
+    return createAuctionGame(config, creator, now, options);
+  },
+  reduce: (state, event, now, ctx) => reduceAuction(state as AuctionState, event, now, ctx),
+  roomState: (state, seat, code, catalog, now) => buildAuctionRoomState(state as AuctionState, seat, code, catalog, now),
+  gameEnded: (state, catalog) => buildAuctionGameEnded(state as AuctionState, catalog),
+};
+
 /** El motor del juego de una configuración. */
 export function engineFor(config: RoomConfig): GameEngine {
+  if (isAuctionConfig(config)) return auctionEngine;
   return isSilhouetteConfig(config) ? silhouetteEngine : dobleTipoEngine;
 }

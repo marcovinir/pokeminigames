@@ -571,3 +571,26 @@ describe("RoomManager: la silueta", () => {
     expect(repository.headToHeadCalls).toEqual([]);
   });
 });
+
+describe("una sala de subasta en el RoomManager", () => {
+  it("funciona con la sala real: registra siluetas, envía estados y no guarda nada", async () => {
+    const { manager, time, store, broadcaster } = setup(() => "SUB234");
+    const created = await manager.createRoom(ash, { game: "subasta", traps: false });
+    manager.joinRoom(misty, created.code);
+    const room = store.get(created.code)!;
+    room.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    room.dispatch({ type: "PLAYER_CONNECTED", seat: 2 });
+    time.advance(5000);
+    expect(room.view(1).phase).toBe("auction");
+    const turn = room.view(1).auction!.lot!.turn;
+    room.dispatch({ type: "BID", seat: turn, step: null });
+    expect(room.view(1).auction!.lot!.leader).toBe(turn);
+    room.dispatch({ type: "PASS", seat: turn === 1 ? 2 : 1 });
+    expect(room.view(1).auction!.teamSizes[turn]).toBe(1);
+    expect(broadcaster.payloads("auction-sale")).toHaveLength(1);
+    // Nadie responde: los turnos se agotan solos y la partida llega al final.
+    for (let tick = 0; tick < 40 && room.view(1).phase !== "finished"; tick++) time.advance(10_000);
+    expect(room.view(1).phase).toBe("finished");
+    expect(room.view(1).auction!.reveal).toHaveLength(6);
+  });
+});

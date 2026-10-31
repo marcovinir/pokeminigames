@@ -1,4 +1,4 @@
-import { GAME_KINDS } from "@pokemon-minigames/shared";
+import { PLAYABLE_GAMES } from "@pokemon-minigames/shared";
 import type { ReactNode } from "react";
 import { FEEDBACK_REPO_URL, GITHUB_PROFILE_URL, newIssueUrl } from "../links";
 import { GAME_CARDS } from "./es";
@@ -119,7 +119,7 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
       <>
         <Section title="¿A qué se juega?">
           <List>
-            {GAME_KINDS.map((game) => (
+            {PLAYABLE_GAMES.map((game) => (
               <li key={game}>
                 <strong>{GAME_CARDS[game].name}:</strong> {GAME_CARDS[game].description}
               </li>

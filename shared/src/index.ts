@@ -1,3 +1,4 @@
+export * from "./auction.js";
 export * from "./avatars.js";
 export * from "./deleted-account.js";
 export * from "./errors.js";
