@@ -71,6 +71,13 @@ describe("revelación y alineación", () => {
     expect(battle(h, 1).deadline).toBe(h.now + 20_000);
   });
 
+  it("confirmar dos veces la misma persona no salta la revelación", () => {
+    const h = toReveal();
+    h.dispatch({ type: "READY", seat: 1 });
+    h.dispatch({ type: "READY", seat: 1 });
+    expect(h.state.phase).toBe("reveal");
+  });
+
   it("recargar en la revelación la conserva", () => {
     const h = toReveal();
     h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
@@ -409,6 +416,21 @@ describe("nada se adelanta en el combate", () => {
     const sentBefore = h.emitted.length;
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
     expect(h.emitted.slice(sentBefore).filter((e) => e.to === 2 || e.to === "all")).toEqual([]);
+  });
+
+  it("al decidir solo se actualiza quien decidió: al rival no le llega ni un aviso", () => {
+    const onlyTo = (effects: ReturnType<AuctionHarness["dispatch"]>, seat: Seat) => {
+      const sent = effects.filter((one) => one.kind === "send_state" || one.kind === "emit");
+      expect(sent).toEqual([{ kind: "send_state", to: seat }]);
+    };
+    const lineup = toLineup();
+    onlyTo(lineup.dispatch({ type: "CHOOSE_LINEUP", seat: 1, order: [...lineup.state.teams[1]] }), 1);
+    const fight = toBattle();
+    onlyTo(fight.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" }), 2);
+    const pause = toPause();
+    const loser = loserOf(pause);
+    const next = pause.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
+    onlyTo(pause.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [], titular: next } }), loser);
   });
 });
 
