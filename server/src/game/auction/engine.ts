@@ -229,8 +229,13 @@ function drawAllLots(c: Ctx): AuctionLot[] {
   const { rng, catalog } = c.deps;
   const pool = catalog.all().map((pokemon) => ({ ...pokemon, total: pokemon.totalStats }));
   const lots: AuctionLot[] = [];
-  drawLots(pool, rng).forEach((real, index) => {
-    const shown = c.s.config.traps && rng.int(TRAP_ODDS) === 0 ? pickOne(rng, pool) : real;
+  const reals = drawLots(pool, rng);
+  const shownIds = new Set(reals.map((real) => real.id));
+  reals.forEach((real, index) => {
+    // Nunca la silueta de otro lote: verla dos veces delataría la trampa.
+    const decoys = pool.filter((pokemon) => !shownIds.has(pokemon.id));
+    const shown = c.s.config.traps && rng.int(TRAP_ODDS) === 0 ? pickOne(rng, decoys) : real;
+    shownIds.add(shown.id);
     lots.push({ kind: "pokemon", realId: real.id, shownId: shown.id, price: startingPrice(shown.total, rng), token: null });
     if ((index + 1) % ITEM_EVERY === 0) {
       const item = pickOne(rng, AUCTION_ITEMS);
@@ -363,7 +368,7 @@ function revealAll(c: Ctx): void {
   s.bidding = null;
   const ownerOf = (id: number): Seat => (s.teams[1].includes(id) ? 1 : 2);
   s.reveal = s.lots.flatMap((lot) =>
-    lot.kind === "pokemon" ? [{ owner: ownerOf(lot.realId), pokemon: toPokemonView(c.deps.catalog.get(lot.realId)!), wasTrap: lot.shownId !== lot.realId }] : [],
+    lot.kind === "pokemon" ? [{ owner: ownerOf(lot.realId), pokemon: toPokemonView(c.deps.catalog.get(lot.realId)!), wasTrap: lot.token !== null && lot.shownId !== lot.realId }] : [],
   );
   emit(c, "all", { name: "auction-reveal", payload: { reveal: structuredClone(s.reveal) } });
   sendStates(c);

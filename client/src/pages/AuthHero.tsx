@@ -8,7 +8,7 @@ import { AUTH_HERO_TEXT, GAME_CARDS, MENU_TEXT } from "../i18n/es";
 import { DOBLE_TIPO_EXAMPLES, pickRandom } from "./menu-art";
 
 /**
- * La parte de la izquierda de las pantallas de acceso: el lema y los minijuegos que hay (uno por cada `GAME_KINDS`,
+ * La parte de la izquierda de las pantallas de acceso: el lema y los minijuegos que hay (uno por cada `PLAYABLE_GAMES`,
  * con el mismo dibujo que en el menú). En pantallas estrechas solo queda el lema, para que el formulario esté a la vista.
  */
 export function AuthHero({ random = Math.random }: { random?: () => number } = {}) {

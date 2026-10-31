@@ -130,12 +130,16 @@ function runAuction(pool: readonly AuctionPokemon[], players: [Player, Player], 
     result.spent[seat] += paid;
   };
 
+  const shownIds = new Set(lots.map((lot) => lot.id));
+  const decoys = () => pool.filter((one) => !shownIds.has(one.id));
+
   lots.forEach((real, index) => {
     const isTrap = options.traps && rng.int(TRAP_ODDS) === 0;
     let shown = real;
     if (isTrap) {
-      shown = pickOne(rng, pool);
-      if (shown.id !== real.id) result.traps++;
+      shown = pickOne(rng, decoys());
+      shownIds.add(shown.id);
+      result.traps++;
     }
     const price = startingPrice(shown.total, rng);
     const full = players.map((player) => player.team.length >= TEAM_SIZE);
@@ -159,8 +163,9 @@ function runAuction(pool: readonly AuctionPokemon[], players: [Player, Player], 
         pay(seat, price);
         players[seat].team.push(real);
       }
+      // Solo se turnan en los lotes con puja, como en el motor.
+      starter = other(starter);
     }
-    starter = other(starter);
 
     if ((index + 1) % 2 === 0) {
       const item = pickOne(rng, ITEMS);

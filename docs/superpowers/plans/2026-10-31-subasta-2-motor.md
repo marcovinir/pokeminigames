@@ -30,7 +30,7 @@
 - `GameKind` incluye `subasta`, con su slug. Un `PLAYABLE_GAMES` deja fuera este juego para que el menú, el lobby y `POST /rooms` no cambien.
 - `GamePhase` añade `auction` y `reveal`.
 - Vistas: `AuctionStateView` con dinero de los dos, equipos ya comprados por cantidad (no identidad), objetos ganados, lote actual (`kind`, `silhouetteUrl` o nombre del objeto, `price`, puja actual, líder, turno, `deadline`, tope propio) y el número de lote.
-- Eventos: `auction-turn` y `auction-sale`, tipados. `auction-reveal` lleva los 6 Pokémon reales con `wasTrap`.
+- Eventos: `auction-sale` y `auction-reveal` (los 6 Pokémon reales con `wasTrap`). El turno y las pujas llegan por `room-state`.
 
 ### Task 2: Reparto de lotes y estado inicial
 
@@ -40,7 +40,7 @@ Pruebas que fallan primero: sala de espera y cuenta atrás como la silueta; al e
 
 ### Task 3: Pujas por turnos
 
-**Eventos nuevos en `GameEvent`:** `BID { seat, step }` y `PASS { seat }`; `TimerId` añade `{ kind: "bid"; lot; turn }`.
+**Eventos nuevos en `GameEvent`:** `BID { seat, step }` y `PASS { seat }`; `TimerId` añade `{ kind: "bid"; turn }`.
 
 Pruebas que fallan primero:
 

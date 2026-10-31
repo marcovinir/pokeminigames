@@ -283,3 +283,35 @@ describe("subasta: precio de las trampas y máximo de 3", () => {
     expect(h.state.teams[2]).toHaveLength(3);
   });
 });
+
+describe("subasta: lo que se aprendió de la revisión", () => {
+  it("un lote que nadie llegó a ver no cuenta como trampa en la revelación", () => {
+    const h = started();
+    const pokemonLots = h.state.lots.filter((lot) => lot.kind === "pokemon");
+    const last = pokemonLots.at(-1)!;
+    if (last.kind === "pokemon") last.shownId = last.realId === 1 ? 2 : 1;
+    let bought = 0;
+    while (bought < 3) {
+      if (h.lot().kind === "item") {
+        h.noBids();
+      } else {
+        if (h.lot().turn === 2) h.pass(2);
+        h.bid(1);
+        h.pass(2);
+        bought++;
+      }
+    }
+    while (h.state.phase === "auction") h.noBids();
+    const reveal = h.payloads("auction-reveal")[0]!.reveal;
+    expect(reveal.find((entry) => last.kind === "pokemon" && entry.pokemon.id === last.realId)!.wasTrap).toBe(false);
+  });
+
+  it("una silueta trampa nunca es la de otro lote: ver la misma dos veces delataría la trampa", () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const lots = started(seed, true).state.lots.flatMap((lot) => (lot.kind === "pokemon" ? [lot] : []));
+      const reals = lots.map((lot) => lot.realId);
+      for (const lot of lots) if (lot.shownId !== lot.realId) expect(reals).not.toContain(lot.shownId);
+      expect(new Set(lots.map((lot) => lot.shownId)).size).toBe(6);
+    }
+  });
+});
