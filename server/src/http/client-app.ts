@@ -35,7 +35,7 @@ export function createClientApp(distDir: string): Router | null {
     }),
   );
   router.use((req, res, next) => {
-    if ((req.method !== "GET" && req.method !== "HEAD") || isServerPath(req.path) || extname(req.path) !== "") return next();
+    if ((req.method !== "GET" && req.method !== "HEAD") || isServerPath(req.path) || (extname(req.path) !== "" && !req.path.startsWith("/pokedex/"))) return next();
     res.setHeader("Cache-Control", "no-cache");
     res.sendFile(index);
   });

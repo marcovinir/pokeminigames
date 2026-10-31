@@ -1,3 +1,4 @@
+import type { PokedexDetail } from "@pokemon-minigames/shared";
 import { createPokedexStore } from "../../src/catalog/pokedex-store.js";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
@@ -15,6 +16,19 @@ const INDEX = '<!doctype html><html><body><div id="root"></div><script type="mod
 let workdir: string;
 let server: Server;
 let baseUrl: string;
+const POKEMON: PokedexDetail = {
+  id: 6,
+  names: { es: "Charizard", en: "Charizard" },
+  types: ["fire", "flying"],
+  total: 534,
+  generation: 1,
+  spriteUrl: "https://sprite/6.png",
+  stats: { hp: 78, attack: 84, defense: 78, spAttack: 109, spDefense: 85, speed: 100 },
+  abilities: [],
+  lore: null,
+  evolution: { id: 6, name: "Charizard", condition: null, next: [] },
+};
+
 const requests: { method: string; path: string; origin: string | undefined }[] = [];
 
 beforeAll(async () => {
@@ -25,7 +39,7 @@ beforeAll(async () => {
   writeFileSync(join(workdir, "assets", "app.abc123.js"), "console.log('cliente');");
 
   const { env, tokens, roomManager, catalog } = buildTestContext({ NODE_ENV: "production", COOKIE_SECURE: "true", TRUST_PROXY: "1" });
-  const app = createApp({ pokedex: createPokedexStore([]), env, prisma, tokens, roomManager, catalog, clientDist: workdir, silhouettes: createSilhouetteRegistry() });
+  const app = createApp({ pokedex: createPokedexStore([POKEMON]), env, prisma, tokens, roomManager, catalog, clientDist: workdir, silhouettes: createSilhouetteRegistry() });
   // Anota todo lo que llega, para comprobar que la prueba de humo no escribe nada.
   const logged = (await import("express")).default();
   logged.use((req, _res, next) => {
@@ -107,6 +121,19 @@ describe("cuando algo no está bien", () => {
     const checks = await runSmoke({ baseUrl, expectedNames: 10, fetch: wrong, ...instant });
     expect(failing(checks).length).toBeGreaterThan(0);
     expect(failing(checks).join(" ")).toMatch(/cliente/i);
+  });
+
+  it("detecta una Pokédex vacía o sin ficha", async () => {
+    const empty = async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      if (String(input).endsWith("/pokemon/dex")) return new Response('{"pokemon":[]}', { headers: { "content-type": "application/json" } });
+      return fetch(input, init);
+    };
+    expect(failing(await runSmoke({ baseUrl, expectedNames: 10, fetch: empty, ...instant })).join(" ")).toMatch(/Pokédex/);
+    const noDetail = async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+      if (String(input).endsWith("/pokemon/dex/6")) return new Response("{}", { status: 404, headers: { "content-type": "application/json" } });
+      return fetch(input, init);
+    };
+    expect(failing(await runSmoke({ baseUrl, expectedNames: 10, fetch: noDetail, ...instant })).join(" ")).toMatch(/Pokédex/);
   });
 
   it("detecta que una ruta protegida responde sin pedir sesión", async () => {

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { type ReactNode, Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { LoadBoundary } from "./components/LoadBoundary";
 import { LoadingScreen } from "./components/LoadingScreen";
@@ -18,6 +18,16 @@ const TypesPage = lazy(() => import("./pages/types/TypesPage").then((module) => 
 const PokedexPage = lazy(() => import("./pages/pokedex/PokedexPage").then((module) => ({ default: module.PokedexPage })));
 
 const PokemonPage = lazy(() => import("./pages/pokedex/PokemonPage").then((module) => ({ default: module.PokemonPage })));
+
+/** Una página que se carga aparte: si falla, lo dice; y al cambiar de dirección se vuelve a intentar. */
+function LazyPage({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <LoadBoundary resetKey={pathname}>
+      <Suspense fallback={<LoadingScreen />}>{children}</Suspense>
+    </LoadBoundary>
+  );
+}
 
 /** Rutas que exigen sesión: sin ella llevan a /login y, tras entrar, vuelven a donde se iba. */
 function RequireAuth() {
@@ -70,31 +80,25 @@ export function AppRoutes() {
       <Route
         path="/tipos"
         element={
-          <LoadBoundary>
-            <Suspense fallback={<LoadingScreen />}>
-              <TypesPage />
-            </Suspense>
-          </LoadBoundary>
+          <LazyPage>
+            <TypesPage />
+          </LazyPage>
         }
       />
       <Route
         path="/pokedex"
         element={
-          <LoadBoundary>
-            <Suspense fallback={<LoadingScreen />}>
-              <PokedexPage />
-            </Suspense>
-          </LoadBoundary>
+          <LazyPage>
+            <PokedexPage />
+          </LazyPage>
         }
       />
       <Route
         path="/pokedex/:id"
         element={
-          <LoadBoundary>
-            <Suspense fallback={<LoadingScreen />}>
-              <PokemonPage />
-            </Suspense>
-          </LoadBoundary>
+          <LazyPage>
+            <PokemonPage />
+          </LazyPage>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

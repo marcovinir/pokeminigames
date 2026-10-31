@@ -9,8 +9,10 @@ import { PlayPrompt } from "../../components/PlayPrompt";
 import { TypeChip } from "../../components/TypeChip";
 import { TypeSelect } from "../../components/TypeSelect";
 import { rise } from "../../components/rise";
+import { usePageTitle } from "../../components/use-page-title";
 import { POKEDEX_TEXT } from "../../i18n/es";
 import { useServices } from "../../services";
+import { dexErrorMessage } from "./dex-error";
 import { DEX_PAGE_SIZE, DEX_SORTS, type DexSort, filterPokedex, parsePokedexQuery, pokedexQueryParams } from "./pokedex-filter";
 
 const GENERATIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -59,7 +61,11 @@ export function PokedexPage() {
   // La posición guardada es de quien vuelve (Atrás, recargar o «Volver a la Pokédex»): entrar por otro enlace empieza arriba.
   const returning = navigationType === "POP" || (state as { restoreScroll?: boolean } | null)?.restoreScroll === true;
   const [entries, setEntries] = useState<PokedexEntry[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
+  const searchRef = useRef<HTMLInputElement>(null);
+  usePageTitle(POKEDEX_TEXT.title);
   const searchId = useId();
   const sortId = useId();
   const query = parsePokedexQuery(params);
@@ -76,8 +82,8 @@ export function PokedexPage() {
   const matches = useMemo(() => (entries ? filterPokedex(entries, parsePokedexQuery(params)) : []), [entries, params]);
 
   const load = useCallback(() => {
-    setFailed(false);
-    endpoints.catalog.dex().then(setEntries, () => setFailed(true));
+    setFailure(null);
+    endpoints.catalog.dex().then(setEntries, (error: unknown) => setFailure(dexErrorMessage(error, POKEDEX_TEXT.loadError)));
   }, [endpoints]);
   useEffect(load, [load]);
 
@@ -99,6 +105,8 @@ export function PokedexPage() {
     setParams(next, { replace: true });
   };
   const [first, second] = query.types;
+  // Con el panel plegado, esto es lo único que dice que la lista está filtrada.
+  const activeFilters = query.types.length + (query.sort === "numero" ? 0 : 1);
   const chooseTypes = (types: (TypeName | undefined)[]) => change({ types: [...new Set(types.filter((type) => type !== undefined && TYPE_NAMES.includes(type)))] as TypeName[] });
 
   return (
@@ -125,6 +133,7 @@ export function PokedexPage() {
           </label>
           <input
             id={searchId}
+            ref={searchRef}
             type="search"
             value={text}
             placeholder={POKEDEX_TEXT.searchHint}
@@ -135,6 +144,16 @@ export function PokedexPage() {
             className="framed-field w-full rounded-ui bg-surface px-4 py-3 text-fg"
           />
         </div>
+        <button
+          type="button"
+          aria-expanded={filtersOpen}
+          aria-controls={filtersId}
+          onClick={() => setFiltersOpen((open) => !open)}
+          className="rounded-ui border-2 border-line px-3 py-1.5 font-display text-sm font-semibold hover:bg-surface-2 md:hidden"
+        >
+          {activeFilters > 0 ? POKEDEX_TEXT.filtersWithCount(activeFilters) : POKEDEX_TEXT.filters}
+        </button>
+        <div id={filtersId} className={`w-full flex-wrap gap-3 md:flex ${filtersOpen ? "flex" : "hidden"}`}>
         <TypeSelect label={POKEDEX_TEXT.firstType} value={first} onChange={(type) => chooseTypes([type, second])} />
         <TypeSelect label={POKEDEX_TEXT.secondType} value={second} disabled={!first} exclude={first} onChange={(type) => chooseTypes([first, type])} />
         <div className="min-w-40 flex-1">
@@ -149,11 +168,15 @@ export function PokedexPage() {
             ))}
           </select>
         </div>
+        </div>
       </Card>
 
-      {failed ? (
+      <p role="status" className="text-sm text-muted">
+        {entries ? POKEDEX_TEXT.count(matches.length) : ""}
+      </p>
+      {failure ? (
         <Notice tone="danger" action={<Button onClick={load}>{POKEDEX_TEXT.retry}</Button>}>
-          {POKEDEX_TEXT.loadError}
+          {failure}
         </Notice>
       ) : !entries ? (
         <p role="status" className="text-center text-muted">
@@ -167,6 +190,7 @@ export function PokedexPage() {
               setText("");
               requested.current = new URLSearchParams();
               setParams(requested.current, { replace: true });
+              searchRef.current?.focus();
             }}
           >{POKEDEX_TEXT.clearFilters}</Button>
         </div>

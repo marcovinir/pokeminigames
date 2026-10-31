@@ -5,6 +5,7 @@ import { DamageList } from "../../components/DamageList";
 import { PlayPrompt } from "../../components/PlayPrompt";
 import { TypeSelect } from "../../components/TypeSelect";
 import { rise } from "../../components/rise";
+import { usePageTitle } from "../../components/use-page-title";
 import { TYPES_TEXT, TYPE_ABBREVIATIONS, TYPE_LABELS } from "../../i18n/es";
 import { typeChipStyle } from "../../theme/type-styles";
 import { parseTypeSelection, typeSelectionParams } from "./type-selection";
@@ -23,7 +24,7 @@ function TypeHeader({ type, scope, selected = false }: { type: TypeName; scope: 
       scope={scope}
       data-selected={selected || undefined}
       style={typeChipStyle(type)}
-      className={`px-1 py-1 text-xs font-semibold ${scope === "row" ? "sticky left-0 z-1" : ""} ${selected ? "outline-2 -outline-offset-2 outline-accent" : ""}`}
+      className={`px-1 py-1 text-xs font-semibold ${scope === "row" ? "sticky left-0 z-1" : "sticky top-0 z-1"} ${selected ? "outline-2 -outline-offset-2 outline-fg shadow-[inset_0_0_0_2px_var(--surface)]" : ""}`}
     >
       <span aria-hidden="true">{TYPE_ABBREVIATIONS[type]}</span>
       <span className="sr-only">
@@ -38,12 +39,12 @@ function TypeChart({ selected }: { selected: TypeName[] }) {
   return (
     // La tabla no cabe en un teléfono: se desplaza dentro de su caja, que se alcanza con Tab para moverla con las flechas.
     // `relative`: sin él, los textos `sr-only` (absolutos) de los encabezados escapan de la caja y ensanchan la página.
-    <div role="region" aria-label={TYPES_TEXT.chartLabel} tabIndex={0} className="relative mt-3 overflow-x-auto rounded-ui">
+    <div role="region" aria-label={TYPES_TEXT.chartLabel} tabIndex={0} className="relative mt-3 overflow-auto rounded-ui max-md:max-h-[80vh]">
       <table className="mx-auto border-collapse font-num text-sm">
         <caption className="sr-only">{`${TYPES_TEXT.chartTitle}. ${TYPES_TEXT.chartHint}`}</caption>
         <thead>
           <tr>
-            <th scope="col" className="sticky left-0 z-1 bg-surface p-1">
+            <th scope="col" className="sticky top-0 left-0 z-2 bg-surface p-1">
               <span className="sr-only">{TYPES_TEXT.cornerLabel}</span>
             </th>
             {TYPE_NAMES.map((type) => (
@@ -82,6 +83,7 @@ export function TypesPage() {
   const [params, setParams] = useSearchParams();
   const selected = parseTypeSelection(params);
   const [first, second] = selected;
+  usePageTitle(TYPES_TEXT.title);
   // Sin apilar historial: «Atrás» sale de la página en vez de deshacer cada cambio de una lista.
   const choose = (types: (TypeName | undefined)[]) =>
     setParams(typeSelectionParams([...new Set(types.filter((type) => type !== undefined))]), { replace: true });

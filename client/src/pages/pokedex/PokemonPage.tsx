@@ -1,5 +1,5 @@
 import type { BaseStats, EvolutionNode, LocalizedText, PokedexDetail } from "@pokemon-minigames/shared";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { ApiError } from "../../api/client";
 import { pokedexNumber } from "../../catalog/pokedex";
@@ -11,8 +11,10 @@ import { Notice } from "../../components/Notice";
 import { PlayPrompt } from "../../components/PlayPrompt";
 import { TypeChip } from "../../components/TypeChip";
 import { rise } from "../../components/rise";
+import { usePageTitle } from "../../components/use-page-title";
 import { POKEDEX_TEXT, STAT_LABELS, evolutionConditionText } from "../../i18n/es";
 import { useServices } from "../../services";
+import { dexErrorMessage } from "./dex-error";
 
 /** De qué búsqueda de la lista se vino: se conserva al pasar de un Pokémon a otro. */
 interface DexLinkState {
@@ -24,7 +26,7 @@ const LAST_POKEMON = 1025;
 const MAX_STAT = 255;
 const STAT_ORDER: (keyof BaseStats)[] = ["hp", "attack", "defense", "spAttack", "spDefense", "speed"];
 
-type Loaded = { id: number; status: "ready"; detail: PokedexDetail } | { id: number; status: "missing" } | { id: number; status: "failed" };
+type Loaded = { id: number; status: "ready"; detail: PokedexDetail } | { id: number; status: "missing" } | { id: number; status: "failed"; message: string };
 
 function Block({ title, children }: { title: string; children: ReactNode }) {
   const titleId = useId();
@@ -75,6 +77,11 @@ function Evolution({ node, current, state }: { node: EvolutionNode; current: num
 }
 
 function Details({ detail, state }: { detail: PokedexDetail; state: DexLinkState | null }) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  // El enlace de evolución que se pulsó desaparece con la ficha vieja: el foco va al nombre en vez de perderse.
+  useEffect(() => {
+    if (document.activeElement === null || document.activeElement === document.body) titleRef.current?.focus();
+  }, [detail.id]);
   return (
     <>
       <header className="flex flex-wrap items-center gap-4">
@@ -83,7 +90,9 @@ function Details({ detail, state }: { detail: PokedexDetail; state: DexLinkState
           <p className="text-sm text-muted">
             <span className="font-num">{pokedexNumber(detail.id)}</span> · <span>{POKEDEX_TEXT.generationName(detail.generation)}</span>
           </p>
-          <h1 className="font-display text-3xl font-semibold [overflow-wrap:anywhere]">{detail.names.es}</h1>
+          <h1 ref={titleRef} tabIndex={-1} className="font-display text-3xl font-semibold outline-none [overflow-wrap:anywhere]">
+            {detail.names.es}
+          </h1>
           <p className="mt-2 flex flex-wrap gap-1.5">
             {detail.types.map((type) => (
               <TypeChip key={type} type={type} />
@@ -98,9 +107,9 @@ function Details({ detail, state }: { detail: PokedexDetail; state: DexLinkState
             <div key={stat} className="grid grid-cols-[6rem_2.5rem_1fr] items-center gap-2 text-sm">
               <dt>{STAT_LABELS[stat]}</dt>
               <dd className="text-right font-num font-semibold tabular-nums">{detail.stats[stat]}</dd>
-              <div aria-hidden="true" className="h-2 overflow-hidden rounded-pill bg-surface-2">
+              <dd aria-hidden="true" className="h-2 overflow-hidden rounded-pill bg-surface-2">
                 <div style={{ width: `${(detail.stats[stat] / MAX_STAT) * 100}%` }} className="h-full rounded-pill bg-accent" />
-              </div>
+              </dd>
             </div>
           ))}
           <div className="grid grid-cols-[6rem_2.5rem_1fr] items-center gap-2 border-t border-line pt-2 text-sm font-semibold">
@@ -171,7 +180,7 @@ export function PokemonPage() {
           if (isCurrent()) setLoaded({ id: wanted, status: "ready", detail });
         },
         (error: unknown) => {
-          if (isCurrent()) setLoaded({ id: wanted, status: error instanceof ApiError && error.status === 404 ? "missing" : "failed" });
+          if (isCurrent()) setLoaded(error instanceof ApiError && error.status === 404 ? { id: wanted, status: "missing" } : { id: wanted, status: "failed", message: dexErrorMessage(error, POKEDEX_TEXT.loadDetailError) });
         },
       );
     },
@@ -189,6 +198,8 @@ export function PokemonPage() {
 
   // Lo guardado de otro Pokémon no vale: mientras llega el nuevo, se dice que carga.
   const shown = loaded?.id === id ? loaded : null;
+  const ready = shown?.status === "ready" ? shown.detail : null;
+  usePageTitle(ready?.names.es ?? POKEDEX_TEXT.title);
   const backToList = (
     <Link to={`/pokedex${linkState?.fromSearch ?? ""}`} state={{ restoreScroll: true }} className="font-semibold text-accent underline underline-offset-4">
       {POKEDEX_TEXT.backToList}
@@ -215,11 +226,21 @@ export function PokemonPage() {
         ) : null}
       </nav>
       <PlayPrompt />
+      {/* La región existe desde el principio para que se anuncie cada Pokémon nuevo al pasar de ficha. */}
+      <p role="status" data-testid="dex-announcer" className="sr-only">
+        {ready?.names.es ?? ""}
+      </p>
+      {ready ? null : <h1 className="sr-only">{POKEDEX_TEXT.title}</h1>}
       {id === null || shown?.status === "missing" ? (
         <Notice>{POKEDEX_TEXT.notFound}</Notice>
       ) : shown?.status === "failed" ? (
-        <Notice tone="danger" action={<Button onClick={() => setAttempt((count) => count + 1)}>{POKEDEX_TEXT.retry}</Button>}>
-          {POKEDEX_TEXT.loadDetailError}
+        <Notice tone="danger" action={<Button
+              onClick={() => {
+                setLoaded(null);
+                setAttempt((count) => count + 1);
+              }}
+            >{POKEDEX_TEXT.retry}</Button>}>
+          {shown.message}
         </Notice>
       ) : shown?.status === "ready" ? (
         <Details detail={shown.detail} state={linkState} />

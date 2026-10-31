@@ -36,3 +36,23 @@ describe("LoadBoundary", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
+
+describe("LoadBoundary al cambiar de página", () => {
+  it("el error no sigue a la persona: otra página se intenta cargar", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { rerender } = render(
+      <LoadBoundary resetKey="/pokedex/6">
+        <Broken />
+      </LoadBoundary>,
+    );
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    rerender(
+      <LoadBoundary resetKey="/pokedex">
+        <p>La lista</p>
+      </LoadBoundary>,
+    );
+    expect(screen.getByText("La lista")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    vi.restoreAllMocks();
+  });
+});

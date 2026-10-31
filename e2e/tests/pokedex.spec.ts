@@ -84,3 +84,41 @@ for (const theme of ["clasico", "pokedex"]) {
     });
   }
 }
+
+test("en el teléfono, los filtros plegados dejan ver las primeras tarjetas y se despliegan al tocar", async ({ browser }) => {
+  const visitor = await newPlayer(browser, "visita");
+  const { page } = visitor;
+  try {
+    await page.setViewportSize({ width: 375, height: 740 });
+    await page.goto("/pokedex");
+    const firstTile = page.getByRole("list", { name: "Pokémon" }).getByRole("listitem").first();
+    await expect(firstTile).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Tipo 1" })).toBeHidden();
+    const box = await firstTile.boundingBox();
+    expect(box!.y).toBeLessThan(740);
+    await page.getByRole("button", { name: /^Filtros/ }).click();
+    await page.getByRole("combobox", { name: "Tipo 1" }).selectOption("fire");
+    await expect(page.getByRole("button", { name: "Filtros (1)" })).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(page.getByRole("button", { name: /^Filtros/ })).toBeHidden();
+    await expect(page.getByRole("combobox", { name: "Tipo 1" })).toBeVisible();
+  } finally {
+    await visitor.context.close();
+  }
+});
+
+test("a 360 px la tabla de la Matriz mantiene los nombres de las columnas al bajar", async ({ browser }) => {
+  const visitor = await newPlayer(browser, "visita");
+  const { page } = visitor;
+  try {
+    await page.setViewportSize({ width: 360, height: 500 });
+    await page.goto("/tipos");
+    const box = page.getByRole("region", { name: "Tabla de efectividad de tipos" });
+    const header = box.getByRole("columnheader").nth(1);
+    await box.evaluate((element) => { element.scrollTop = 200; });
+    const [boxArea, headerArea] = [await box.boundingBox(), await header.boundingBox()];
+    expect(Math.abs(headerArea!.y - boxArea!.y)).toBeLessThan(2);
+  } finally {
+    await visitor.context.close();
+  }
+});

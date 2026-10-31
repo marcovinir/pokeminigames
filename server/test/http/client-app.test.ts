@@ -50,6 +50,12 @@ describe("el cliente construido", () => {
     },
   );
 
+  it("/pokedex/6.5 da la página, que dirá que no existe, y no un 404 en JSON", async () => {
+    const response = await request(app()).get("/pokedex/6.5");
+    expect(response.status).toBe(200);
+    expect(response.text).toBe(INDEX);
+  });
+
   it("HEAD también responde (sin cuerpo)", async () => {
     const response = await request(app()).head("/perfil");
     expect(response.status).toBe(200);
