@@ -1,4 +1,4 @@
-import {
+import { type AuctionItem, type AuctionSalePayload,
   type BaseStats,
   type DobleTipoConfig,
   type ErrorCode,
@@ -401,7 +401,43 @@ export const AUCTION_TEXT = {
   trapsHint: "A veces la silueta no es el Pokémon que compras.",
   withTraps: "Con siluetas trampa",
   withoutTraps: "Sin siluetas trampa",
-} as const;
+  players: "Jugadores",
+  question: "¿Cuánto pagas por este Pokémon?",
+  startingPrice: "Precio inicial",
+  currentBid: "Puja actual",
+  turnTimer: "Tiempo del turno",
+  cannotBid: "No te alcanza: solo puedes pasar.",
+  pass: "Pasar",
+  revealTitle: "¿Qué compró cada uno?",
+  revealLog: "Revelación",
+  wasTrap: "¡Era una trampa!",
+  ready: "Listo",
+  waitingRival: "Esperando al rival…",
+  battleSoon: "El combate llega pronto",
+  noWinner: "Sin ganador",
+  lotOf: (lot: number): string => `Lote ${lot} de 9`,
+  bid: (amount: number): string => `Pujar ${auctionMoney(amount)}`,
+  rivalTurn: (rival: string): string => `Le toca a ${rival}`,
+  teamSize: (size: number): string => `${size} de 3 Pokémon`,
+  teamOf: (name: string): string => `Equipo de ${name}`,
+};
+
+/** «1.000.000»: siempre con punto de miles, sea cual sea el idioma del navegador. */
+export function auctionMoney(amount: number): string {
+  return String(amount).replace(/\B(?=(\d{3})+$)/g, ".");
+}
+
+export const AUCTION_ITEM_LABELS: Record<AuctionItem, { name: string; description: string }> = {
+  pocion: { name: "Poción Máxima", description: "Cura todos los PS." },
+  revivir: { name: "Revivir", description: "Revive con el 50 % de los PS." },
+  cinta: { name: "Cinta", description: "+25 % de daño durante un asalto." },
+};
+
+/** Cómo se cerró un lote, para los lectores de pantalla. */
+export function auctionSaleText(sale: AuctionSalePayload, winner: string | null): string {
+  if (winner === null) return "Nadie se lleva el objeto";
+  return `${winner} se lleva el lote por ${auctionMoney(sale.paid)}`;
+}
 
 export const SILHOUETTE_TEXT = {
   rounds: "Rondas",

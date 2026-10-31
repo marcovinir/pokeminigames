@@ -6,11 +6,14 @@ import * as durations from "../../src/game/durations";
 import { LobbyPage } from "../../src/pages/Lobby";
 import { DEFAULT_FORM, buildRequest } from "../../src/pages/room-form";
 import * as serverConstants from "../../../server/src/game/constants";
+import * as auctionRules from "../../../server/src/game/auction/rules";
 import { fakeServices, renderRoute, ASH, GUEST, signIn } from "../helpers/services";
 
 describe("límites y duraciones del cliente", () => {
   it("coinciden con los del servidor", () => {
     expect(durations.ROUND_MS).toBe(serverConstants.ROUND_SECONDS * 1000);
+    expect(durations.AUCTION_TURN_MS).toBe(auctionRules.BID_TURN_MS);
+    expect(durations.AUCTION_REVEAL_MS).toBe(auctionRules.REVEAL_MS);
     expect(durations.TYPE_CHOICE_MS).toBe(serverConstants.TYPE_CHOICE_SECONDS * 1000);
     expect(durations.START_COUNTDOWN_MS).toBe(serverConstants.START_COUNTDOWN_SECONDS * 1000);
     expect(durations.RESULT_PAUSE_MS).toBe(serverConstants.RESULT_PAUSE_SECONDS * 1000);
