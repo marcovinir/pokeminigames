@@ -1,9 +1,8 @@
-import type { AuctionItem, TypeName } from "@pokemon-minigames/shared";
+import type { TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 
 /** Valores de Subasta Pokémon. Son de partida: los ajusta lo que diga el simulador (`npm run auction:simulate -w server`). */
 export const STARTING_MONEY = 2_000_000;
-export const ITEM_PRICES: Record<AuctionItem, number> = { pocion: 100_000, revivir: 150_000, cinta: 100_000 };
 /** Una silueta trampa de cada tantos lotes. */
 export const TRAP_ODDS = 6;
 /** Tiempo de turno sin decidir antes del aviso «¿Sigues ahí?»: no hay reloj a la vista. */

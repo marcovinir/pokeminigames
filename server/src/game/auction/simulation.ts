@@ -201,7 +201,7 @@ function runBattle(players: [Player, Player], options: SimulationOptions, rng: R
     let turns = 0;
     while (a.hp > 0 && b.hp > 0 && turns < MAX_TURNS_PER_ROUND) {
       turns++;
-      const combat = { 1: { fighter: a, healed: sides[0].healed, cinta: false }, 2: { fighter: b, healed: sides[1].healed, cinta: false } };
+      const combat = { 1: { fighter: a, healed: sides[0].healed }, 2: { fighter: b, healed: sides[1].healed } };
       const actions = resolveTurn(combat, { 1: choose(sides[0], sides[1]), 2: choose(sides[1], sides[0]) }, rng, { criticals: options.criticals !== false });
       result.criticals += actions.filter((action) => action.critical).length;
       sides[0].healed = combat[1].healed;

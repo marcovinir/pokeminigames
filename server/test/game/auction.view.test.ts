@@ -21,7 +21,7 @@ describe("subasta: nada se adelanta", () => {
   it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])("con trampas (semilla %i), ningún evento ni estado dice el Pokémon real antes de la revelación", (seed) => {
     const h = new AuctionHarness({ seed, catalog, config: AUCTION_TRAPS });
     h.startGame();
-    const reals = h.state.lots.flatMap((lot) => (lot.kind === "pokemon" ? [catalog.get(lot.realId)!] : []));
+    const reals = h.state.lots.map((lot) => catalog.get(lot.realId)!);
     const leaks = (text: string) => reals.filter((one) => text.includes(`"id":${one.id},`) || text.includes(one.names.es) || text.includes(one.names.en));
     playAll(h, () => {
       if (h.state.phase !== "auction") return;
@@ -30,7 +30,7 @@ describe("subasta: nada se adelanta", () => {
       // Ni con otros nombres: el estado no lleva los campos internos del lote.
       expect(JSON.stringify(h.view(1))).not.toMatch(/realId|shownId|pokemonId/);
       const lotNow = h.state.lots[h.state.lotIndex];
-      if (lotNow?.kind === "pokemon") expect(JSON.stringify(h.view(1).auction!.lot)).not.toMatch(new RegExp(`[^0-9]${lotNow.realId}[^0-9]*$|"id"`));
+      if (lotNow) expect(JSON.stringify(h.view(1).auction!.lot)).not.toMatch(new RegExp(`[^0-9]${lotNow.realId}[^0-9]*$|"id"`));
       const events = h.emitted.filter((e) => e.event.name !== "auction-reveal" && e.event.name !== "game-ended");
       expect(leaks(JSON.stringify(events))).toEqual([]);
     });
@@ -46,20 +46,20 @@ describe("subasta: nada se adelanta", () => {
 });
 
 describe("subasta: revelación", () => {
-  it("al acabar los lotes revela los 6 Pokémon reales de los dos, con la marca de trampa", () => {
+  it("al acabar los lotes revela los 12 Pokémon reales de los dos, con la marca de trampa", () => {
     const h = new AuctionHarness({ seed: 3, catalog, config: AUCTION_TRAPS });
     h.startGame();
-    const lots = h.state.lots.flatMap((lot) => (lot.kind === "pokemon" ? [lot] : []));
+    const { lots } = h.state;
     playAll(h);
     const reveal = h.payloads("auction-reveal")[0]!.reveal;
-    expect(reveal).toHaveLength(6);
+    expect(reveal).toHaveLength(12);
     expect(reveal.map((entry) => entry.pokemon.id).sort()).toEqual(lots.map((lot) => lot.realId).sort());
     for (const entry of reveal) {
       const lot = lots.find((one) => one.realId === entry.pokemon.id)!;
       expect(entry.wasTrap).toBe(lot.shownId !== lot.realId);
     }
-    expect(reveal.filter((entry) => entry.owner === 1)).toHaveLength(3);
-    expect(reveal.filter((entry) => entry.owner === 2)).toHaveLength(3);
+    expect(reveal.filter((entry) => entry.owner === 1)).toHaveLength(6);
+    expect(reveal.filter((entry) => entry.owner === 2)).toHaveLength(6);
     expect(h.view(1).auction!.reveal).toEqual(reveal);
   });
 });
@@ -74,16 +74,6 @@ describe("subasta: desconexiones", () => {
     h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
     expect(h.view(1).auction).toEqual(before);
     expect(h.state.phase).toBe("auction");
-  });
-
-  it("si se cae quien tiene el turno, pasa al agotarse el reloj y la subasta sigue", () => {
-    const h = new AuctionHarness({ catalog, config: AUCTION });
-    h.startGame();
-    const { turn, number } = h.lot();
-    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: turn });
-    h.advance(10_000);
-    expect(h.state.phase).toBe("auction");
-    expect(h.state.lotIndex + 1 === number || h.lot().turn !== turn).toBe(true);
   });
 
   it("si no vuelve a tiempo, pierde; irse a mitad de la subasta, también", () => {

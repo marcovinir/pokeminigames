@@ -1,26 +1,35 @@
 import type { PokemonView, Seat, TypeName } from "./types.js";
 
-export const AUCTION_ITEMS = ["pocion", "revivir", "cinta"] as const;
-export type AuctionItem = (typeof AUCTION_ITEMS)[number];
+/** El fondo de cada lote. Se sortea sin mirar el Pokémon, para que no lo delate. */
+export const AUCTION_SCENES = ["bosque", "volcan", "playa", "noche"] as const;
+export type AuctionScene = (typeof AUCTION_SCENES)[number];
 
 /** Lo que se puede subir sobre la puja actual. */
 export const BID_STEPS = [10_000, 50_000, 100_000] as const;
 export type BidStep = (typeof BID_STEPS)[number];
 
-/** El lote abierto. De un Pokémon solo va la URL opaca de su silueta: nunca qué Pokémon es. */
+/** El lote abierto. Del Pokémon solo va la URL opaca de su silueta: nunca qué Pokémon es. */
 export interface AuctionLotView {
-  /** Del 1 al 9: lotes de Pokémon y de objetos, en orden. */
+  /** Del 1 al 12. */
   number: number;
-  kind: "pokemon" | "item";
-  silhouetteUrl?: string;
-  item?: AuctionItem;
+  silhouetteUrl: string;
+  scene: AuctionScene;
   price: number;
   currentBid: number | null;
   leader: Seat | null;
   turn: Seat;
-  deadline: number;
   /** Identifica este turno: una pulsación tardía lo manda y el servidor sabe que no era para el turno de ahora. */
   turnId: number;
+  /** Las pujas de este lote, de la primera a la última. */
+  bids: { seat: Seat; amount: number }[];
+  /** Quien se retiró sin haber pujas: ya no vuelve en este lote. */
+  retired: Seat | null;
+  /** Hasta cuándo puedo responder «Sigo aquí». Solo lo recibe quien tiene el turno. */
+  warningUntil: number | null;
+  /** El rival lleva tiempo sin decidir. */
+  rivalIdle: boolean;
+  /** Se reparte solo porque alguien ya completó su equipo: no hay botones. */
+  auto: boolean;
   /** Lo máximo que puedes pujar tú (reserva lo necesario para completar tu equipo). */
   myLimit: number;
 }
@@ -37,7 +46,8 @@ export interface AuctionStateView {
   money: Record<Seat, number>;
   /** Cuántos Pokémon lleva cada uno: quiénes son no se sabe hasta la revelación. */
   teamSizes: Record<Seat, number>;
-  items: Record<Seat, AuctionItem[]>;
+  /** Las siluetas compradas: quiénes son no se sabe hasta la revelación. */
+  purchases: Record<Seat, string[]>;
   lot: AuctionLotView | null;
   reveal: AuctionRevealEntry[];
   /** Desde la revelación hasta el final. */
@@ -47,11 +57,8 @@ export interface AuctionStateView {
 /** Cómo se cerró un lote. Sin identidad: el Pokémon no se revela al venderse. */
 export interface AuctionSalePayload {
   lot: number;
-  kind: "pokemon" | "item";
-  /** Nulo si nadie se llevó el objeto. */
-  winner: Seat | null;
+  winner: Seat;
   paid: number;
-  item?: AuctionItem;
 }
 
 /** Un movimiento: el ataque de un tipo, Forcejeo (sin tipo) o Recuperar. */
@@ -103,19 +110,17 @@ export interface BattleView {
   myTitular: number | null;
   rivalTitular: number | null;
   moves: BattleMoveView[];
-  cinta: Record<Seat, boolean>;
 }
 
-/** Lo que alguien decide en la pausa: objetos y quién sale a pelear. */
+/** Lo que alguien decide en la pausa: quién sale a pelear. */
 export interface PauseChoice {
-  items: { item: AuctionItem; target: number | null }[];
   titular: number;
 }
 
 /** Totales de la partida, para el resumen. */
 export interface AuctionSummary {
   damage: Record<Seat, number>;
-  spent: Record<Seat, { pokemon: number; items: number }>;
+  spent: Record<Seat, number>;
   reveal: AuctionRevealEntry[];
 }
 

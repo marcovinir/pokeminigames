@@ -1,4 +1,4 @@
-import { AUCTION_ITEMS, type AuctionConfig, BID_STEPS, type BattleMove, type BidStep, type ErrorCode, type PauseChoice, type Seat, type ServerEvent } from "@pokemon-minigames/shared";
+import { AUCTION_SCENES, type AuctionConfig, BID_STEPS, type BattleMove, type BidStep, type ErrorCode, type PauseChoice, type Seat, type ServerEvent } from "@pokemon-minigames/shared";
 import {
   RECONNECT_GRACE_SECONDS,
   REMATCH_ROOM_TTL_SECONDS,
@@ -10,14 +10,14 @@ import {
 import { type Effect, type GameEvent, type GameOutcome, type PlayerState, type SeatOccupant, type TimerId, otherSeat } from "../engine/types.js";
 import { toPokemonView } from "../engine/view.js";
 import { pickOne } from "../rng.js";
-import { type CombatSide, type Fighter, applyItem, bestMove, movesOf, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
-import { BID_TURN_MS, ITEM_PRICES, LINEUP_MS, MAX_TURNS_PER_ROUND, MOVE_MS, PAUSE_MS, REVEAL_MS, STARTING_MONEY, TEAM_SIZE, TRAP_ODDS, TURN_ANIMATION_MS, drawLots, startingPrice } from "./rules.js";
+import { type CombatSide, type Fighter, bestMove, movesOf, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
+import { AUTO_LOT_MS, INACTIVITY_MS, INACTIVITY_WARNING_MS, LINEUP_MS, MAX_STILL_HERE, MAX_TURNS_PER_ROUND, MOVE_MS, PAUSE_MS, REVEAL_MS, STARTING_MONEY, TEAM_SIZE, TRAP_ODDS, TURN_ANIMATION_MS, drawLots, startingPrice } from "./rules.js";
 import type { AuctionDeps, AuctionLot, AuctionState } from "./types.js";
 import { auctionLimit, buildAuctionGameEnded } from "./view.js";
 
 /*
  * El motor de «Subasta Pokémon»: un reductor puro con el mismo patrón que los otros dos. La sala, las conexiones y la
- * cuenta atrás se comportan igual; lo propio es la subasta abierta por turnos de 6 Pokémon y 3 objetos, la revelación y el
+ * cuenta atrás se comportan igual; lo propio es la subasta abierta por turnos de 12 Pokémon, sin reloj, la revelación y el
  * combate por turnos con elección secreta.
  */
 
@@ -67,13 +67,14 @@ export function createAuctionGame(config: AuctionConfig, creator: SeatOccupant, 
     lotIndex: 0,
     nextStarter: 1,
     bidding: null,
+    autoWinner: null,
     money: { 1: STARTING_MONEY, 2: STARTING_MONEY },
     teams: { 1: [], 2: [] },
-    items: { 1: [], 2: [] },
+    purchases: { 1: [], 2: [] },
     reveal: [],
     readyForBattle: [],
     battle: null,
-    spent: { 1: { pokemon: 0, items: 0 }, 2: { pokemon: 0, items: 0 } },
+    spent: { 1: 0, 2: 0 },
     nextTurnId: 1,
     expiresAt: now + (options.rematch ? seconds(REMATCH_ROOM_TTL_SECONDS) : minutes(WAITING_ROOM_TTL_MINUTES)),
     ...(options.rematch ? { rematch: true as const } : {}),
@@ -102,6 +103,9 @@ export function reduceAuction(prev: AuctionState, event: GameEvent, now: number,
       break;
     case "PASS":
       onPass(c, event.seat, event.turnId);
+      break;
+    case "STILL_HERE":
+      onStillHere(c, event.seat, event.turnId);
       break;
     case "READY":
       onReady(c, event.seat);
@@ -151,6 +155,7 @@ function onConnected(c: Ctx, seat: Seat): void {
     emit(c, otherSeat(seat), { name: "opponent-reconnected", payload: undefined });
     // El rival se cayó y se le acabó su tiempo mientras este tampoco estaba: ahora que volvió uno, gana.
     const rivalGrace = c.s.graceEndsAt[otherSeat(seat)];
+    if (rivalGrace === undefined || c.now < rivalGrace) lastWarningOnReturn(c, seat);
     if (rivalGrace !== undefined && c.now >= rivalGrace) {
       // Puede venir de recargar: sin su estado, su pantalla no sabría ni qué asiento es.
       c.fx.push({ kind: "send_state", to: seat });
@@ -225,9 +230,18 @@ function onTimer(c: Ctx, timer: TimerId): void {
     case "start":
       if (s.phase === "starting" && s.startsAt === timer.startsAt) beginAuction(c);
       break;
-    case "bid":
-      // Un temporizador de un turno anterior ya no vale: se pujó a tiempo.
-      if (s.phase === "auction" && s.bidding?.turnId === timer.turn) passTurn(c);
+    case "idle":
+      // Un temporizador de un turno anterior, o de antes de «Sigo aquí», ya no vale.
+      if (s.phase === "auction" && s.bidding?.turnId === timer.turn && (s.bidding.warningUntil ?? s.bidding.idleAt) === timer.at) onIdle(c);
+      break;
+    case "auto_lot":
+      if (s.phase === "auction" && s.autoWinner !== null && s.lotIndex === timer.lot) {
+        const winner = s.autoWinner;
+        s.autoWinner = null;
+        award(c, winner, s.lots[s.lotIndex]!.price);
+        s.lotIndex++;
+        openLot(c);
+      }
       break;
     case "grace": {
       const player = s.players[timer.seat];
@@ -251,25 +265,19 @@ function onTimer(c: Ctx, timer: TimerId): void {
 
 // --- La subasta -------------------------------------------------------------------------
 
-/** Sortea los lotes. Una trampa muestra otro Pokémon cualquiera, y de él salen la silueta y el precio. */
+/** Sortea los lotes. Una trampa muestra otro Pokémon cualquiera, y de él salen la silueta y el precio. El fondo es puro azar. */
 function drawAllLots(c: Ctx): AuctionLot[] {
   const { rng, catalog } = c.deps;
   const pool = catalog.all().map((pokemon) => ({ ...pokemon, total: pokemon.totalStats }));
-  const lots: AuctionLot[] = [];
   const reals = drawLots(pool, rng);
   const shownIds = new Set(reals.map((real) => real.id));
-  reals.forEach((real, index) => {
+  return reals.map((real) => {
     // Nunca la silueta de otro lote: verla dos veces delataría la trampa.
     const decoys = pool.filter((pokemon) => !shownIds.has(pokemon.id));
     const shown = c.s.config.traps && rng.int(TRAP_ODDS) === 0 ? pickOne(rng, decoys) : real;
     shownIds.add(shown.id);
-    lots.push({ kind: "pokemon", realId: real.id, shownId: shown.id, price: startingPrice(shown.total, rng), token: null });
-    if ((index + 1) % ITEM_EVERY === 0) {
-      const item = pickOne(rng, AUCTION_ITEMS);
-      lots.push({ kind: "item", item, price: ITEM_PRICES[item] });
-    }
+    return { realId: real.id, shownId: shown.id, price: startingPrice(shown.total, rng), token: null, scene: pickOne(rng, AUCTION_SCENES) };
   });
-  return lots;
 }
 
 function beginAuction(c: Ctx): void {
@@ -282,40 +290,81 @@ function beginAuction(c: Ctx): void {
   openLot(c);
 }
 
-/** Abre el lote actual. Si alguien ya tiene 3 Pokémon, los que queden van al otro sin pujar. */
+/** Abre el lote actual. Si alguien ya completó su equipo, se muestra un momento y va al otro sin pujar. */
 function openLot(c: Ctx): void {
   const { s } = c;
-  for (;;) {
-    const lot = s.lots[s.lotIndex];
-    if (!lot) {
-      revealAll(c);
-      return;
-    }
-    const full = (seat: Seat) => s.teams[seat].length >= TEAM_SIZE;
-    if (lot.kind === "pokemon" && (full(1) || full(2))) {
-      award(c, full(1) ? 2 : 1, lot.price);
-      s.lotIndex++;
-      continue;
-    }
-    if (lot.kind === "pokemon") {
-      // Solo ahora existe su silueta: antes de abrir el lote no hay nada que pedir al servidor.
-      lot.token = c.deps.newToken();
-      c.fx.push({ kind: "register_silhouette", token: lot.token, pokemonId: lot.shownId });
-    }
-    const starter = s.nextStarter;
-    s.nextStarter = otherSeat(starter);
-    s.bidding = { starter, turn: starter, currentBid: null, leader: null, firstPassed: false, deadline: 0, turnId: 0 };
-    startTurn(c);
+  const lot = s.lots[s.lotIndex];
+  if (!lot) return revealAll(c);
+  // Solo ahora existe su silueta: antes de abrir el lote no hay nada que pedir al servidor.
+  lot.token = c.deps.newToken();
+  c.fx.push({ kind: "register_silhouette", token: lot.token, pokemonId: lot.shownId });
+  const full = (seat: Seat) => s.teams[seat].length >= TEAM_SIZE;
+  if (full(1) || full(2)) {
+    s.autoWinner = full(1) ? 2 : 1;
+    schedule(c, c.now + AUTO_LOT_MS, { kind: "auto_lot", lot: s.lotIndex });
     sendStates(c);
     return;
   }
+  const starter = s.nextStarter;
+  s.nextStarter = otherSeat(starter);
+  s.bidding = { starter, turn: starter, currentBid: null, leader: null, bids: [], retired: null, turnId: 0, idleAt: 0, warningUntil: null, stillHere: 0, expiredAway: false };
+  startTurn(c);
+  sendStates(c);
 }
 
 function startTurn(c: Ctx): void {
   const bidding = c.s.bidding!;
   bidding.turnId = c.s.nextTurnId++;
-  bidding.deadline = c.now + BID_TURN_MS;
-  schedule(c, bidding.deadline, { kind: "bid", turn: bidding.turnId });
+  bidding.warningUntil = null;
+  bidding.stillHere = 0;
+  bidding.expiredAway = false;
+  waitForDecision(c);
+}
+
+/** Vuelve a contar los 60 s sin decidir. */
+function waitForDecision(c: Ctx): void {
+  const bidding = c.s.bidding!;
+  bidding.idleAt = c.now + INACTIVITY_MS;
+  schedule(c, bidding.idleAt, { kind: "idle", turn: bidding.turnId, at: bidding.idleAt });
+}
+
+function openWarning(c: Ctx): void {
+  const bidding = c.s.bidding!;
+  bidding.warningUntil = c.now + INACTIVITY_WARNING_MS;
+  schedule(c, bidding.warningUntil, { kind: "idle", turn: bidding.turnId, at: bidding.warningUntil });
+  sendStates(c);
+}
+
+/** Se cumplió un plazo sin decidir. Caído no se retira a nadie: eso lo deciden los 30 s de gracia. */
+function onIdle(c: Ctx): void {
+  const bidding = c.s.bidding!;
+  if (!c.s.players[bidding.turn]?.connected) {
+    bidding.warningUntil = null;
+    bidding.expiredAway = true;
+    return;
+  }
+  if (bidding.warningUntil !== null || bidding.stillHere >= MAX_STILL_HERE) return passTurn(c);
+  openWarning(c);
+}
+
+/** Volvió con el plazo vencido: un último aviso, que no cuenta para el máximo. */
+function lastWarningOnReturn(c: Ctx, seat: Seat): void {
+  const bidding = c.s.bidding;
+  if (c.s.phase !== "auction" || !bidding || bidding.turn !== seat || !bidding.expiredAway) return;
+  bidding.expiredAway = false;
+  openWarning(c);
+}
+
+function onStillHere(c: Ctx, seat: Seat, turnId: number): void {
+  const { s } = c;
+  const bidding = s.bidding;
+  if (s.phase !== "auction" || !bidding) return reject(c, seat, "WRONG_PHASE", "Ahora no hace falta");
+  if (bidding.turn !== seat || turnId !== bidding.turnId) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
+  if (bidding.warningUntil === null) return;
+  bidding.warningUntil = null;
+  bidding.stillHere++;
+  waitForDecision(c);
+  sendStates(c);
 }
 
 function onBid(c: Ctx, seat: Seat, step: BidStep | null, turnId?: number): void {
@@ -330,8 +379,14 @@ function onBid(c: Ctx, seat: Seat, step: BidStep | null, turnId?: number): void 
   if (opening ? step !== null : step === null || !BID_STEPS.includes(step)) return reject(c, seat, "INVALID_BID", "Esa puja no es válida");
   const amount = opening ? lot.price : bidding.currentBid! + step!;
   if (amount > auctionLimit(s, seat)) return reject(c, seat, "INVALID_BID", "No te alcanza para esa puja");
+  // El otro ya se retiró: abrir es llevárselo.
+  if (bidding.retired !== null) {
+    award(c, seat, amount);
+    return nextLot(c);
+  }
   bidding.currentBid = amount;
   bidding.leader = seat;
+  bidding.bids.push({ seat, amount });
   bidding.turn = otherSeat(seat);
   startTurn(c);
   sendStates(c);
@@ -339,12 +394,12 @@ function onBid(c: Ctx, seat: Seat, step: BidStep | null, turnId?: number): void 
 
 function onPass(c: Ctx, seat: Seat, turnId?: number): void {
   const { s } = c;
-  if (s.phase !== "auction" || !s.bidding) return reject(c, seat, "WRONG_PHASE", "Ahora no se puede pasar");
+  if (s.phase !== "auction" || !s.bidding) return reject(c, seat, "WRONG_PHASE", "Ahora no te puedes retirar");
   if (s.bidding.turn !== seat || (turnId !== undefined && turnId !== s.bidding.turnId)) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
   passTurn(c);
 }
 
-/** Quien tiene el turno pasa (o se le acabó el tiempo). */
+/** Quien tiene el turno se retira, y es definitivo en este lote. */
 function passTurn(c: Ctx): void {
   const { s } = c;
   const bidding = s.bidding!;
@@ -353,18 +408,14 @@ function passTurn(c: Ctx): void {
     award(c, bidding.leader, bidding.currentBid!);
     return nextLot(c);
   }
-  if (!bidding.firstPassed) {
-    bidding.firstPassed = true;
+  if (bidding.retired === null) {
+    bidding.retired = bidding.turn;
     bidding.turn = otherSeat(bidding.turn);
     startTurn(c);
     sendStates(c);
     return;
   }
-  // Los dos pasaron. Un objeto se queda sin dueño; un Pokémon va a quien tiene menos, para que todos terminen con 3.
-  if (lot.kind === "item") {
-    emit(c, "all", { name: "auction-sale", payload: { lot: s.lotIndex + 1, kind: "item", winner: null, paid: 0, item: lot.item } });
-    return nextLot(c);
-  }
+  // Los dos se retiraron: va a quien tiene menos, para que todos terminen con su equipo completo.
   const [a, b] = [s.teams[1].length, s.teams[2].length];
   award(c, a === b ? bidding.starter : a < b ? 1 : 2, lot.price);
   nextLot(c);
@@ -376,13 +427,10 @@ function award(c: Ctx, seat: Seat, price: number): void {
   const lot = s.lots[s.lotIndex]!;
   const paid = s.money[seat] >= price ? price : 0;
   s.money[seat] -= paid;
-  s.spent[seat][lot.kind === "pokemon" ? "pokemon" : "items"] += paid;
-  if (lot.kind === "pokemon") s.teams[seat].push(lot.realId);
-  else s.items[seat].push(lot.item);
-  emit(c, "all", {
-    name: "auction-sale",
-    payload: { lot: s.lotIndex + 1, kind: lot.kind, winner: seat, paid, ...(lot.kind === "item" ? { item: lot.item } : {}) },
-  });
+  s.spent[seat] += paid;
+  s.teams[seat].push(lot.realId);
+  s.purchases[seat].push(`/silhouettes/${lot.token}`);
+  emit(c, "all", { name: "auction-sale", payload: { lot: s.lotIndex + 1, winner: seat, paid } });
 }
 
 function nextLot(c: Ctx): void {
@@ -396,11 +444,7 @@ function revealAll(c: Ctx): void {
   s.phase = "reveal";
   s.bidding = null;
   const ownerOf = (id: number): Seat => (s.teams[1].includes(id) ? 1 : 2);
-  s.reveal = s.lots.flatMap((lot) =>
-    lot.kind === "pokemon"
-      ? [{ owner: ownerOf(lot.realId), pokemon: toPokemonView(c.deps.catalog.get(lot.realId)!), wasTrap: lot.token !== null && lot.shownId !== lot.realId }]
-      : [],
-  );
+  s.reveal = s.lots.map((lot) => ({ owner: ownerOf(lot.realId), pokemon: toPokemonView(c.deps.catalog.get(lot.realId)!), wasTrap: lot.shownId !== lot.realId }));
   emit(c, "all", { name: "auction-reveal", payload: { reveal: structuredClone(s.reveal) } });
   const fighters = (seat: Seat): Fighter[] => s.teams[seat].map((id) => newFighter(c.deps.catalog.get(id)!));
   s.battle = {
@@ -412,7 +456,6 @@ function revealAll(c: Ctx): void {
     moves: {},
     pauses: {},
     healed: { 1: false, 2: false },
-    cinta: { 1: false, 2: false },
     deadline: null,
     step: 0,
     roundOver: false,
@@ -520,7 +563,7 @@ function onMove(c: Ctx, seat: Seat, move: BattleMove): void {
 
 function resolveCurrentTurn(c: Ctx): void {
   const battle = c.s.battle!;
-  const sideOf = (seat: Seat): CombatSide => ({ fighter: titularOf(c, seat), healed: battle.healed[seat], cinta: battle.cinta[seat] });
+  const sideOf = (seat: Seat): CombatSide => ({ fighter: titularOf(c, seat), healed: battle.healed[seat] });
   const sides = { 1: sideOf(1), 2: sideOf(2) };
   const choiceOf = (seat: Seat): BattleMove => battle.moves[seat] ?? bestMove(sides[seat].fighter, sides[otherSeat(seat)].fighter);
   const actions = resolveTurn(sides, { 1: choiceOf(1), 2: choiceOf(2) }, c.deps.rng);
@@ -550,7 +593,6 @@ function afterAnimation(c: Ctx): void {
   const battle = s.battle!;
   if (battle.roundOver) {
     s.phase = "battle_pause";
-    battle.cinta = { 1: false, 2: false };
     battle.pauses = {};
     for (const seat of [1, 2] as const) if (titularOf(c, seat)?.hp === 0) battle.titular[seat] = null;
     startStep(c, PAUSE_MS);
@@ -566,25 +608,15 @@ function onPauseConfirm(c: Ctx, seat: Seat, choice: PauseChoice): void {
   if (!validPause(c, seat, choice)) return reject(c, seat, "INVALID_CHOICE", "Esa elección no es válida");
   const battle = s.battle!;
   battle.pauses[seat] = choice;
-  // Solo a quien confirmó: hasta cerrar la pausa el rival no ve ni objetos ni titular.
+  // Solo a quien confirmó: hasta cerrar la pausa el rival no ve el titular.
   c.fx.push({ kind: "send_state", to: seat });
   if (battle.pauses[otherSeat(seat)]) closePause(c);
 }
 
-/** Comprueba la elección sobre una copia: objetos que tiene, objetivos que sirven y un titular vivo tras usarlos. */
+/** Un titular propio y vivo. */
 function validPause(c: Ctx, seat: Seat, choice: PauseChoice): boolean {
-  if (typeof choice !== "object" || choice === null || !Array.isArray(choice.items)) return false;
-  const fighters = structuredClone(c.s.battle!.fighters[seat]);
-  const available = [...c.s.items[seat]];
-  for (const used of choice.items) {
-    const index = available.indexOf(used?.item);
-    if (index < 0) return false;
-    available.splice(index, 1);
-    if (used.item === "cinta") continue;
-    const target = fighters.find((fighter) => fighter.pokemon.id === used.target);
-    if (!target || !applyItem(used.item, target)) return false;
-  }
-  return fighters.some((fighter) => fighter.pokemon.id === choice.titular && fighter.hp > 0);
+  if (typeof choice !== "object" || choice === null) return false;
+  return c.s.battle!.fighters[seat].some((fighter) => fighter.pokemon.id === choice.titular && fighter.hp > 0);
 }
 
 function closePause(c: Ctx): void {
@@ -592,17 +624,9 @@ function closePause(c: Ctx): void {
   const battle = s.battle!;
   for (const seat of [1, 2] as const) {
     const choice = battle.pauses[seat];
-    if (choice) {
-      for (const used of choice.items) {
-        s.items[seat].splice(s.items[seat].indexOf(used.item), 1);
-        if (used.item === "cinta") battle.cinta[seat] = true;
-        else applyItem(used.item, battle.fighters[seat].find((fighter) => fighter.pokemon.id === used.target)!);
-      }
-      battle.titular[seat] = choice.titular;
-    } else if (battle.titular[seat] === null) {
-      // No decidió: sale el primero vivo, en su orden. Quien ganó el asalto sigue como estaba.
-      battle.titular[seat] = battle.fighters[seat].find((fighter) => fighter.hp > 0)?.pokemon.id ?? null;
-    }
+    if (choice) battle.titular[seat] = choice.titular;
+    // No decidió: sale el primero vivo, en su orden. Quien ganó el asalto sigue como estaba.
+    else if (battle.titular[seat] === null) battle.titular[seat] = battle.fighters[seat].find((fighter) => fighter.hp > 0)?.pokemon.id ?? null;
   }
   const out = ([1, 2] as const).find((seat) => battle.titular[seat] === null);
   if (out !== undefined) return finish(c, "completed", otherSeat(out));

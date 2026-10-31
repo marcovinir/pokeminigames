@@ -1,6 +1,7 @@
 import type { RoomStateView } from "@pokemon-minigames/shared";
 import request from "supertest";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { STARTING_MONEY } from "../../src/game/auction/rules.js";
 import { prisma, resetDatabase } from "../helpers/db.js";
 import { type TestUser, registerUser } from "../helpers/users.js";
 import { type RunningServer, TestClient, startServer } from "../realtime/client.js";
@@ -71,7 +72,7 @@ describe("subasta por sockets (base real)", () => {
     current.emit("auction-pass", { turnId: lot.turnId });
     const state = await other.next<RoomStateView>("room-state");
     other.emit("auction-pass", { turnId: state.auction!.lot!.turnId });
-    expect(await current.next("auction-sale")).toMatchObject({ lot: 1, kind: "pokemon" });
+    expect(await current.next("auction-sale")).toMatchObject({ lot: 1 });
   });
 
   it("rechaza pujas mal formadas sin cambiar nada", async () => {
@@ -124,8 +125,8 @@ describe("el combate por sockets", () => {
     const { current } = await startAuction();
     const bad: [string, unknown][] = [
       ["auction-move", { move: 7 }],
-      ["auction-pause", { choice: { items: "x", titular: 1 } }],
-      ["auction-pause", { choice: { items: [], titular: 1, extra: true } }],
+      ["auction-pause", { choice: { titular: "x" } }],
+      ["auction-pause", { choice: { titular: 1, extra: true } }],
       ["auction-lineup", { order: "x" }],
     ];
     for (const [name, payload] of bad) {
@@ -150,7 +151,7 @@ describe("el combate por sockets", () => {
     current.emit("join-room", { code });
     const state = await stateWhere(current, (s) => s.code === code);
     expect(state.config).toEqual({ game: "subasta", traps: false });
-    expect(state.auction!.money).toEqual({ 1: 1_000_000, 2: 1_000_000 });
+    expect(state.auction!.money).toEqual({ 1: STARTING_MONEY, 2: STARTING_MONEY });
     expect(state.auction!.teamSizes).toEqual({ 1: 0, 2: 0 });
   });
 });

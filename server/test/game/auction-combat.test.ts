@@ -1,10 +1,10 @@
 import type { BaseStats, TypeName } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
-import { type CombatSide, applyItem, bestMove, moveDamage, moveEffectiveness, movesOf, newFighter, resolveTurn, roundLimitLoser } from "../../src/game/auction/combat.js";
+import { type CombatSide, bestMove, moveDamage, moveEffectiveness, movesOf, newFighter, resolveTurn, roundLimitLoser } from "../../src/game/auction/combat.js";
 
 const stats = (overrides: Partial<BaseStats> = {}): BaseStats => ({ hp: 80, attack: 80, defense: 80, spAttack: 80, spDefense: 80, speed: 80, ...overrides });
 const mon = (id: number, types: TypeName[], overrides: Partial<BaseStats> = {}) => newFighter({ id, types, stats: stats(overrides) });
-const side = (fighter: ReturnType<typeof mon>, extra: Partial<CombatSide> = {}): CombatSide => ({ fighter, healed: false, cinta: false, ...extra });
+const side = (fighter: ReturnType<typeof mon>, extra: Partial<CombatSide> = {}): CombatSide => ({ fighter, healed: false, ...extra });
 /** Nunca crítico y empates para el asiento 1, salvo que se diga otra cosa. */
 const noCrit = { int: (max: number) => max - 1 };
 const crit = { int: () => 0 };
@@ -29,11 +29,10 @@ describe("movimientos y daño", () => {
     expect(moveDamage(attacker, defender, "fire")).toBe(8);
   });
 
-  it("crítico ×1,5 y Cinta +25 %", () => {
+  it("crítico ×1,5", () => {
     const [a, b] = [mon(1, ["normal"]), mon(2, ["normal"])];
     expect(moveDamage(a, b, "normal")).toBe(30);
     expect(moveDamage(a, b, "normal", { critical: true })).toBe(45);
-    expect(moveDamage(a, b, "normal", { cinta: true })).toBe(38);
   });
 
   it("el mejor movimiento es el que más daño hace; ante una inmunidad, Forcejeo", () => {
@@ -84,34 +83,9 @@ describe("un turno", () => {
     expect(me.healed).toBe(true);
   });
 
-  it("la Cinta suma daño a quien la lleva", () => {
-    const [action] = resolveTurn({ 1: side(mon(1, ["normal"], { speed: 90 }), { cinta: true }), 2: side(mon(2, ["normal"])) }, { 1: "normal", 2: "forcejeo" }, noCrit);
-    expect(action!.damage).toBe(38);
-  });
-
   it("sin críticos, si se apagan", () => {
     const [action] = resolveTurn({ 1: side(mon(1, ["normal"], { speed: 90 })), 2: side(mon(2, ["normal"])) }, { 1: "normal", 2: "forcejeo" }, crit, { criticals: false });
     expect(action!.critical).toBe(false);
-  });
-});
-
-describe("objetos", () => {
-  it("Poción Máxima cura del todo a un vivo; no sirve con un debilitado ni con uno sano", () => {
-    const hurt = mon(1, ["normal"]);
-    hurt.hp = 10;
-    expect(applyItem("pocion", hurt)).toBe(true);
-    expect(hurt.hp).toBe(140);
-    expect(applyItem("pocion", hurt)).toBe(false);
-    hurt.hp = 0;
-    expect(applyItem("pocion", hurt)).toBe(false);
-  });
-
-  it("Revivir devuelve el 50 % a un debilitado; no sirve con un vivo", () => {
-    const down = mon(1, ["normal"]);
-    down.hp = 0;
-    expect(applyItem("revivir", down)).toBe(true);
-    expect(down.hp).toBe(70);
-    expect(applyItem("revivir", down)).toBe(false);
   });
 });
 

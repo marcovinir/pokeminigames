@@ -1,6 +1,7 @@
 import type { AuctionConfig, ErrorCode, Seat, ServerEvent, ServerEventName } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
 import { createAuctionGame, reduceAuction } from "../../src/game/auction/engine.js";
+import { AUTO_LOT_MS } from "../../src/game/auction/rules.js";
 import type { AuctionState } from "../../src/game/auction/types.js";
 import { buildAuctionRoomState } from "../../src/game/auction/view.js";
 import type { Effect, GameEvent, TimerId } from "../../src/game/engine/types.js";
@@ -100,12 +101,14 @@ export class AuctionHarness {
 
   /** Avanza un lote: alterna entre comprar y que nadie puje, para llegar al final de cualquier forma. */
   sellToTurnOrNoBids(): void {
+    if (this.lot().auto) return this.advance(AUTO_LOT_MS);
     if (this.lot().number % 2 === 0) this.noBids();
     else this.sellToTurn();
   }
 
   /** Cierra el lote abierto sin que nadie puje. */
   noBids(): void {
+    if (this.lot().auto) return this.advance(AUTO_LOT_MS);
     const first = this.lot().turn;
     this.pass(first);
     this.pass(first === 1 ? 2 : 1);

@@ -89,7 +89,8 @@ export type TimerId =
   | { kind: "round"; round: number }
   | { kind: "result"; round: number }
   | { kind: "grace"; seat: Seat; graceEndsAt: number }
-  | { kind: "bid"; turn: number }
+  | { kind: "idle"; turn: number; at: number }
+  | { kind: "auto_lot"; lot: number }
   | { kind: "battle"; step: number };
 
 export type GameEvent =
@@ -100,6 +101,7 @@ export type GameEvent =
   | { type: "SUBMIT"; seat: Seat; text: string }
   | { type: "BID"; seat: Seat; step: BidStep | null; turnId?: number }
   | { type: "PASS"; seat: Seat; turnId?: number }
+  | { type: "STILL_HERE"; seat: Seat; turnId: number }
   | { type: "READY"; seat: Seat }
   | { type: "CHOOSE_LINEUP"; seat: Seat; order: number[] }
   | { type: "CHOOSE_MOVE"; seat: Seat; move: BattleMove }

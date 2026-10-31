@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { PokemonCatalog } from "../../src/catalog/pokemon-catalog.js";
 import type { CatalogSnapshot } from "../../src/catalog/snapshot.js";
 import { totalStats } from "../../src/catalog/snapshot.js";
+import { STARTING_MONEY } from "../../src/game/auction/rules.js";
 import { seededRng } from "../../src/game/auction/simulation.js";
 import { AUCTION, AUCTION_TRAPS, AuctionHarness } from "./auction-harness.js";
 
@@ -52,11 +53,11 @@ function toPause(seed = 1): AuctionHarness {
 const loserOf = (h: AuctionHarness): Seat => (h.state.battle!.titular[1] === null ? 1 : 2);
 
 describe("revelación y alineación", () => {
-  it("tras la subasta se ve la revelación, ya observable, y dura 18 s", () => {
+  it("tras la subasta se ve la revelación, ya observable, y dura 36 s", () => {
     const h = toReveal();
     expect(h.state.phase).toBe("reveal");
-    expect(h.view(1).auction!.reveal).toHaveLength(6);
-    h.advance(17_999);
+    expect(h.view(1).auction!.reveal).toHaveLength(12);
+    h.advance(35_999);
     expect(h.state.phase).toBe("reveal");
     h.advance(1);
     expect(h.state.phase).toBe("lineup");
@@ -68,7 +69,7 @@ describe("revelación y alineación", () => {
     expect(h.state.phase).toBe("reveal");
     h.dispatch({ type: "READY", seat: 2 });
     expect(h.state.phase).toBe("lineup");
-    expect(battle(h, 1).deadline).toBe(h.now + 20_000);
+    expect(battle(h, 1).deadline).toBe(h.now + 30_000);
   });
 
   it("confirmar dos veces la misma persona no salta la revelación", () => {
@@ -111,17 +112,18 @@ describe("revelación y alineación", () => {
 
   it("rechaza una alineación con Pokémon ajenos, repetidos o incompleta", () => {
     const h = toLineup();
-    const [a, b, c] = h.state.teams[1] as [number, number, number];
-    for (const order of [[a, b], [a, a, b], [a, b, h.state.teams[2][0]!], [a, b, c, 9], "x" as unknown as number[]]) {
+    const mine = h.state.teams[1];
+    const first = mine[0]!;
+    for (const order of [mine.slice(0, 2), [first, first, ...mine.slice(2)], [...mine.slice(0, 5), h.state.teams[2][0]!], [...mine, 9], "x" as unknown as number[]]) {
       h.dispatch({ type: "CHOOSE_LINEUP", seat: 1, order });
     }
     expect(h.errorCodes(1)).toEqual(Array(5).fill("INVALID_CHOICE"));
     expect(battle(h, 1).confirmed).toBe(false);
   });
 
-  it("sin confirmar en 20 s queda el orden de compra", () => {
+  it("sin confirmar en 30 s queda el orden de compra", () => {
     const h = toLineup();
-    h.advance(20_000);
+    h.advance(30_000);
     expect(h.state.phase).toBe("battle");
     expect(battle(h, 1).myTitular).toBe(h.state.teams[1][0]);
   });
@@ -254,60 +256,11 @@ describe("la pausa", () => {
     const winner: Seat = loser === 1 ? 2 : 1;
     const other = h.state.battle!.fighters[winner].find((one) => one.pokemon.id !== h.state.battle!.titular[winner] && one.hp > 0)!.pokemon.id;
     const next = h.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
-    h.dispatch({ type: "PAUSE_CONFIRM", seat: winner, choice: { items: [], titular: other } });
+    h.dispatch({ type: "PAUSE_CONFIRM", seat: winner, choice: { titular: other } });
     expect(h.state.phase).toBe("battle_pause");
-    h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [], titular: next } });
+    h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { titular: next } });
     expect(h.state.phase).toBe("battle");
     expect(h.state.battle!.titular).toEqual({ [winner]: other, [loser]: next });
-  });
-
-  it("rechaza objetos que no tiene, objetivos inválidos y un titular debilitado o ajeno", () => {
-    const h = toPause();
-    const loser = loserOf(h);
-    const rival: Seat = loser === 1 ? 2 : 1;
-    const down = h.state.battle!.fighters[loser].find((one) => one.hp <= 0)!.pokemon.id;
-    const up = h.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
-    const send = (choice: unknown) => h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: choice as never });
-    send({ items: [], titular: down });
-    send({ items: [], titular: h.state.battle!.fighters[rival][0]!.pokemon.id });
-    h.state.items[loser] = [];
-    send({ items: [{ item: "revivir", target: down }], titular: up });
-    h.state.items[loser] = ["revivir", "pocion"];
-    send({ items: [{ item: "revivir", target: up }], titular: up });
-    send({ items: [{ item: "pocion", target: down }], titular: up });
-    send({ items: [{ item: "revivir", target: down }, { item: "revivir", target: down }], titular: up });
-    send("basura");
-    expect(h.errorCodes(loser)).toEqual(Array(7).fill("INVALID_CHOICE"));
-    expect(battle(h, loser).confirmed).toBe(false);
-    expect(h.state.items[loser]).toEqual(["revivir", "pocion"]);
-  });
-
-  it("los objetos se aplican al cerrar la pausa, no antes: el rival no los ve", () => {
-    const h = toPause();
-    const loser = loserOf(h);
-    const down = h.state.battle!.fighters[loser].find((one) => one.hp <= 0)!;
-    h.state.items[loser] = ["revivir"];
-    const rival: Seat = loser === 1 ? 2 : 1;
-    const before = JSON.stringify(h.view(rival).auction!.battle);
-    h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [{ item: "revivir", target: down.pokemon.id }], titular: down.pokemon.id } });
-    expect(JSON.stringify(h.view(rival).auction!.battle)).toBe(before);
-    expect(h.state.battle!.fighters[loser].find((one) => one.pokemon.id === down.pokemon.id)!.hp).toBe(0);
-    h.advance(15_000);
-    expect(h.state.battle!.fighters[loser].find((one) => one.pokemon.id === down.pokemon.id)!.hp).toBe(Math.round(down.maxHp / 2));
-    expect(h.state.items[loser]).toEqual([]);
-    expect(h.state.battle!.titular[loser]).toBe(down.pokemon.id);
-  });
-
-  it("la Cinta dura un asalto", () => {
-    const h = toPause();
-    const loser = loserOf(h);
-    h.state.items[loser] = ["cinta"];
-    const up = h.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
-    h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [{ item: "cinta", target: null }], titular: up } });
-    h.advance(15_000);
-    expect(battle(h, 1).cinta[loser]).toBe(true);
-    for (let turn = 0; turn < 25 && h.state.phase === "battle"; turn++) playTurn(h);
-    expect(battle(h, 1).cinta[loser]).toBe(false);
   });
 
   it("Recuperar vuelve a estar disponible en el asalto siguiente", () => {
@@ -333,33 +286,12 @@ describe("el final", () => {
     expect(h.state.outcome).toEqual({ winnerSeat: winner, reason: "completed" });
     const ended = h.payloads("game-ended")[0]!;
     expect(ended.winnerSeat).toBe(winner);
-    expect(ended.teams[1]).toHaveLength(3);
-    expect(ended.auction!.reveal).toHaveLength(6);
+    expect(ended.teams[1]).toHaveLength(6);
+    expect(ended.auction!.reveal).toHaveLength(12);
     expect(ended.auction!.damage[winner]).toBeGreaterThan(0);
     const spent = ended.auction!.spent;
-    expect(spent[1].pokemon + spent[1].items).toBe(1_000_000 - h.state.money[1]);
-    expect(spent[2].pokemon + spent[2].items).toBe(1_000_000 - h.state.money[2]);
-  });
-
-  it("con un Revivir aún puede volver: tiene la pausa para usarlo", () => {
-    const h = toPause();
-    const loser = loserOf(h);
-    killAll(h, loser);
-    h.state.items[loser] = ["revivir"];
-    const target = h.state.battle!.fighters[loser][0]!.pokemon.id;
-    h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [{ item: "revivir", target }], titular: target } });
-    h.advance(15_000);
-    expect(h.state.phase).toBe("battle");
-    expect(h.state.battle!.titular[loser]).toBe(target);
-  });
-
-  it("con un Revivir sin usar, pierde igual", () => {
-    const h = toPause();
-    const loser = loserOf(h);
-    killAll(h, loser);
-    h.state.items[loser] = ["revivir"];
-    h.advance(15_000);
-    expect(h.state.phase).toBe("finished");
+    expect(spent[1]).toBe(STARTING_MONEY - h.state.money[1]);
+    expect(spent[2]).toBe(STARTING_MONEY - h.state.money[2]);
   });
 
   it("irse en pleno combate es abandono", () => {
@@ -430,7 +362,7 @@ describe("nada se adelanta en el combate", () => {
     const pause = toPause();
     const loser = loserOf(pause);
     const next = pause.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
-    onlyTo(pause.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [], titular: next } }), loser);
+    onlyTo(pause.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { titular: next } }), loser);
   });
 });
 
@@ -495,8 +427,8 @@ describe("partidas al azar, con mensajes inválidos", () => {
         else if (pick === 3) h.dispatch({ type: "READY", seat });
         else if (pick === 4) h.dispatch({ type: "CHOOSE_LINEUP", seat, order: [...h.state.teams[seat]].reverse() });
         else if (pick === 5) h.dispatch({ type: "CHOOSE_MOVE", seat, move: (["forcejeo", "recuperar", "fire", "hax"] as BattleMove[])[rng.int(4)]! });
-        else if (pick === 6) h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { items: [], titular: h.state.teams[seat][rng.int(3)] ?? 0 } });
-        else if (pick === 7) h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { items: [{ item: "revivir", target: h.state.teams[seat][0] ?? 0 }], titular: 0 } });
+        else if (pick === 6) h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { titular: h.state.teams[seat][rng.int(6)] ?? 0 } });
+        else if (pick === 7) h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { titular: 0 } });
         else h.advance(500);
         expect(Math.min(h.state.money[1], h.state.money[2])).toBeGreaterThanOrEqual(0);
         for (const s of [1, 2] as const) for (const fighter of h.state.battle?.fighters[s] ?? []) expect(fighter.hp).toBeGreaterThanOrEqual(0);
@@ -531,7 +463,7 @@ describe("el orden del rival", () => {
 
 describe("partidas al azar, con basura y desconexiones", () => {
   it("siempre terminan, sin excepciones", () => {
-    const garbage: unknown[] = [null, undefined, 7, "x", {}, { items: null, titular: 1 }, { items: [null], titular: 1 }, { items: [{ item: "cinta", target: { a: 1 } }], titular: "1" }];
+    const garbage: unknown[] = [null, undefined, 7, "x", {}, { titular: "1" }, { titular: null }];
     for (let seed = 1; seed <= 60; seed++) {
       const rng = seededRng(seed * 13);
       const h = new AuctionHarness({ seed, catalog, config: AUCTION_TRAPS });
@@ -547,7 +479,7 @@ describe("partidas al azar, con basura y desconexiones", () => {
           () => h.dispatch({ type: "CHOOSE_LINEUP", seat, order: junk }),
           () => h.dispatch({ type: "CHOOSE_MOVE", seat, move: junk }),
           () => h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: junk }),
-          () => h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { items: [{ item: "revivir", target: down }], titular: down } }),
+          () => h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { titular: down } }),
           () => h.dispatch({ type: "BID", seat, step: null }),
         ];
         events[rng.int(events.length)]!();

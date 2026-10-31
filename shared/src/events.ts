@@ -115,7 +115,10 @@ export interface ClientToServerEvents {
   "leave-room": () => void;
   /** Subir la puja; `null` abre el lote a su precio inicial. */
   "auction-bid": (payload: { step: BidStep | null; turnId: number }) => void;
+  /** Retirarse del lote: es definitivo. */
   "auction-pass": (payload: { turnId: number }) => void;
+  /** Respuesta a «¿Sigues ahí?». */
+  "auction-still-here": (payload: { turnId: number }) => void;
   /** Ya vi la revelación: si confirman los dos, se salta. */
   "auction-ready": () => void;
   "auction-lineup": (payload: { order: number[] }) => void;

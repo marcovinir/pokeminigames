@@ -1,4 +1,4 @@
-import { type AuctionItem, type BaseStats, type BattleAction, type BattleMove, type Seat, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
+import { type BaseStats, type BattleAction, type BattleMove, type Seat, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 import { CRITICAL_ODDS, combatHp, damage, movesFor } from "./rules.js";
 
@@ -18,16 +18,13 @@ export interface Fighter {
   maxHp: number;
 }
 
-/** Lo de un asalto: quién pelea, si ya usó Recuperar y si lleva la Cinta. */
+/** Lo de un asalto: quién pelea y si ya usó Recuperar. */
 export interface CombatSide {
   fighter: Fighter;
   healed: boolean;
-  cinta: boolean;
 }
 
-const CINTA_MULTIPLIER = 1.25;
 const HEAL_FRACTION = 0.25;
-const REVIVE_FRACTION = 0.5;
 
 export function newFighter(pokemon: CombatPokemon): Fighter {
   const maxHp = combatHp(pokemon.stats.hp);
@@ -46,18 +43,17 @@ export function moveEffectiveness(move: BattleMove, defender: Fighter): number {
   return defender.pokemon.types.reduce((total, type) => total * typeEffectiveness(move, type), 1);
 }
 
-export function moveDamage(attacker: Fighter, defender: Fighter, move: BattleMove, options: { critical?: boolean; cinta?: boolean } = {}): number {
+export function moveDamage(attacker: Fighter, defender: Fighter, move: BattleMove, options: { critical?: boolean } = {}): number {
   const attack = movesFor(attacker.pokemon.types).find((one) => one.name === move);
   if (!attack) return 0;
   const physical = attack.category === "physical";
-  const dealt = damage({
+  return damage({
     power: attack.power,
     attack: physical ? attacker.pokemon.stats.attack : attacker.pokemon.stats.spAttack,
     defense: physical ? defender.pokemon.stats.defense : defender.pokemon.stats.spDefense,
     effectiveness: moveEffectiveness(move, defender),
     critical: options.critical ?? false,
   });
-  return options.cinta ? Math.round(dealt * CINTA_MULTIPLIER) : dealt;
 }
 
 /** El ataque que más daño hace: es lo que se usa si alguien no elige a tiempo. */
@@ -88,26 +84,11 @@ export function resolveTurn(sides: Record<Seat, CombatSide>, choices: Record<Sea
     }
     const effectiveness = moveEffectiveness(move, rival.fighter);
     const critical = effectiveness !== 0 && options.criticals !== false && rng.int(CRITICAL_ODDS) === 0;
-    const dealt = Math.min(rival.fighter.hp, moveDamage(me.fighter, rival.fighter, move, { critical, cinta: me.cinta }));
+    const dealt = Math.min(rival.fighter.hp, moveDamage(me.fighter, rival.fighter, move, { critical }));
     rival.fighter.hp -= dealt;
     actions.push({ actor, move, damage: dealt, critical, effectiveness, healed: 0, actorHp: me.fighter.hp, targetHp: rival.fighter.hp });
   }
   return actions;
-}
-
-/** Usa un objeto sobre un Pokémon. `false` si no sirve con él. La Cinta no va sobre nadie: la aplica el asalto. */
-export function applyItem(item: AuctionItem, target: Fighter): boolean {
-  if (item === "pocion") {
-    if (target.hp <= 0 || target.hp >= target.maxHp) return false;
-    target.hp = target.maxHp;
-    return true;
-  }
-  if (item === "revivir") {
-    if (target.hp > 0) return false;
-    target.hp = Math.round(target.maxHp * REVIVE_FRACTION);
-    return true;
-  }
-  return false;
 }
 
 /** Al llegar al límite de turnos cae quien tiene menos porcentaje de PS; si empatan, el más lento; si no, al azar. */
