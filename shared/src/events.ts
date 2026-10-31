@@ -1,6 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
-import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView } from "./auction.js";
+import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction } from "./auction.js";
 import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
@@ -94,6 +94,8 @@ export interface GameEndedPayload {
   totals: Record<Seat, number>;
   /** Solo en la silueta: todas las revelaciones de la partida. En ella `teams` va vacío y `totals` son puntos. */
   silhouette?: { reveals: SilhouetteReveal[] };
+  /** Solo en la subasta. */
+  auction?: AuctionSummary;
 }
 
 export interface RoundStartedPayload {
@@ -140,6 +142,10 @@ export interface ServerToClientEvents {
   "auction-sale": (payload: AuctionSalePayload) => void;
   /** Acabó la subasta: los Pokémon reales de los dos. */
   "auction-reveal": (payload: { reveal: AuctionRevealEntry[] }) => void;
+  /** Se resolvió un turno: lo ocurrido en orden. */
+  "battle-turn": (payload: { round: number; turn: number; actions: BattleAction[] }) => void;
+  /** Cayó un Pokémon: `atLimit` si fue por el límite de turnos. */
+  "battle-round-ended": (payload: { round: number; loser: Seat; atLimit: boolean }) => void;
   "silhouette-round-started": (payload: { serverNow: number; round: number; totalRounds: number; deadline: number; silhouetteUrl: string }) => void;
   "silhouette-answer-received": (payload: { ms: number }) => void;
   "silhouette-round-result": (payload: { serverNow: number; reveal: SilhouetteReveal; totals: Record<Seat, number>; nextRoundAt: number | null }) => void;

@@ -1,4 +1,4 @@
-import { AUCTION_ITEMS, type AuctionConfig, BID_STEPS, type BidStep, type ErrorCode, type Seat, type ServerEvent } from "@pokemon-minigames/shared";
+import { AUCTION_ITEMS, type AuctionConfig, BID_STEPS, type BattleMove, type BidStep, type ErrorCode, type PauseChoice, type Seat, type ServerEvent } from "@pokemon-minigames/shared";
 import {
   RECONNECT_GRACE_SECONDS,
   REMATCH_ROOM_TTL_SECONDS,
@@ -10,14 +10,15 @@ import {
 import { type Effect, type GameEvent, type GameOutcome, type PlayerState, type SeatOccupant, type TimerId, otherSeat } from "../engine/types.js";
 import { toPokemonView } from "../engine/view.js";
 import { pickOne } from "../rng.js";
-import { BID_TURN_MS, ITEM_PRICES, STARTING_MONEY, TEAM_SIZE, TRAP_ODDS, drawLots, startingPrice } from "./rules.js";
+import { type CombatSide, type Fighter, applyItem, bestMove, movesOf, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
+import { BID_TURN_MS, ITEM_PRICES, LINEUP_MS, MAX_TURNS_PER_ROUND, MOVE_MS, PAUSE_MS, REVEAL_MS, STARTING_MONEY, TEAM_SIZE, TRAP_ODDS, TURN_ANIMATION_MS, drawLots, startingPrice } from "./rules.js";
 import type { AuctionDeps, AuctionLot, AuctionState } from "./types.js";
 import { auctionLimit, buildAuctionGameEnded } from "./view.js";
 
 /*
  * El motor de «Subasta Pokémon»: un reductor puro con el mismo patrón que los otros dos. La sala, las conexiones y la
- * cuenta atrás se comportan igual; lo propio es la subasta abierta por turnos de 6 Pokémon y 3 objetos. Se detiene en la
- * revelación: el combate llega después.
+ * cuenta atrás se comportan igual; lo propio es la subasta abierta por turnos de 6 Pokémon y 3 objetos, la revelación y el
+ * combate por turnos con elección secreta.
  */
 
 /** Un objeto tras cada 2 Pokémon. */
@@ -39,7 +40,7 @@ function newPlayer(seat: Seat, { userId, username, guest, avatarId }: SeatOccupa
   return { seat, userId, username, ...(guest ? { guest: true } : {}), ...(avatarId ? { avatarId } : {}), connected: false, totalStats: 0, team: [] };
 }
 
-const inGame = (s: AuctionState): boolean => s.phase === "auction" || s.phase === "reveal";
+const inGame = (s: AuctionState): boolean => s.phase === "auction" || s.phase === "reveal" || s.phase === "lineup" || s.phase === "battle" || s.phase === "battle_pause";
 
 function emit(c: Ctx, to: Seat | "all", event: ServerEvent): void {
   c.fx.push({ kind: "emit", to, event });
@@ -70,6 +71,9 @@ export function createAuctionGame(config: AuctionConfig, creator: SeatOccupant, 
     teams: { 1: [], 2: [] },
     items: { 1: [], 2: [] },
     reveal: [],
+    readyForBattle: [],
+    battle: null,
+    spent: { 1: { pokemon: 0, items: 0 }, 2: { pokemon: 0, items: 0 } },
     nextTurnId: 1,
     expiresAt: now + (options.rematch ? seconds(REMATCH_ROOM_TTL_SECONDS) : minutes(WAITING_ROOM_TTL_MINUTES)),
     ...(options.rematch ? { rematch: true as const } : {}),
@@ -98,6 +102,18 @@ export function reduceAuction(prev: AuctionState, event: GameEvent, now: number,
       break;
     case "PASS":
       onPass(c, event.seat);
+      break;
+    case "READY":
+      onReady(c, event.seat);
+      break;
+    case "CHOOSE_LINEUP":
+      onLineup(c, event.seat, event.order);
+      break;
+    case "CHOOSE_MOVE":
+      onMove(c, event.seat, event.move);
+      break;
+    case "PAUSE_CONFIRM":
+      onPauseConfirm(c, event.seat, event.choice);
       break;
     case "LEAVE":
       onLeave(c, event.seat);
@@ -133,6 +149,9 @@ function onConnected(c: Ctx, seat: Seat): void {
   if (inGame(c.s) && wasAway) {
     delete c.s.graceEndsAt[seat];
     emit(c, otherSeat(seat), { name: "opponent-reconnected", payload: undefined });
+    // El rival se cayó y se le acabó su tiempo mientras este tampoco estaba: ahora que volvió uno, gana.
+    const rivalGrace = c.s.graceEndsAt[otherSeat(seat)];
+    if (rivalGrace !== undefined && c.now >= rivalGrace) return finish(c, "disconnect", seat);
   }
   tryStart(c);
   c.fx.push({ kind: "send_state", to: seat });
@@ -211,10 +230,14 @@ function onTimer(c: Ctx, timer: TimerId): void {
       if (inGame(s) && player && !player.connected && s.graceEndsAt[timer.seat] === timer.graceEndsAt) {
         const other = otherSeat(timer.seat);
         if (s.players[other]?.connected) finish(c, "disconnect", other);
-        else finish(c, "abandoned", null);
+        // Los dos caídos: cada uno tiene sus 30 s. Solo se abandona cuando se le acaban también al otro.
+        else if (c.now >= (s.graceEndsAt[other] ?? 0)) finish(c, "abandoned", null);
       }
       break;
     }
+    case "battle":
+      if (s.battle?.step === timer.step) onBattleTimer(c);
+      break;
     case "choose":
     case "round":
     case "result":
@@ -348,6 +371,7 @@ function award(c: Ctx, seat: Seat, price: number): void {
   const lot = s.lots[s.lotIndex]!;
   const paid = s.money[seat] >= price ? price : 0;
   s.money[seat] -= paid;
+  s.spent[seat][lot.kind === "pokemon" ? "pokemon" : "items"] += paid;
   if (lot.kind === "pokemon") s.teams[seat].push(lot.realId);
   else s.items[seat].push(lot.item);
   emit(c, "all", {
@@ -368,12 +392,215 @@ function revealAll(c: Ctx): void {
   s.bidding = null;
   const ownerOf = (id: number): Seat => (s.teams[1].includes(id) ? 1 : 2);
   s.reveal = s.lots.flatMap((lot) =>
-    lot.kind === "pokemon" ? [{ owner: ownerOf(lot.realId), pokemon: toPokemonView(c.deps.catalog.get(lot.realId)!), wasTrap: lot.token !== null && lot.shownId !== lot.realId }] : [],
+    lot.kind === "pokemon"
+      ? [{ owner: ownerOf(lot.realId), pokemon: toPokemonView(c.deps.catalog.get(lot.realId)!), wasTrap: lot.token !== null && lot.shownId !== lot.realId }]
+      : [],
   );
   emit(c, "all", { name: "auction-reveal", payload: { reveal: structuredClone(s.reveal) } });
+  const fighters = (seat: Seat): Fighter[] => s.teams[seat].map((id) => newFighter(c.deps.catalog.get(id)!));
+  s.battle = {
+    fighters: { 1: fighters(1), 2: fighters(2) },
+    titular: { 1: null, 2: null },
+    round: 0,
+    turn: 0,
+    lineups: {},
+    moves: {},
+    pauses: {},
+    healed: { 1: false, 2: false },
+    cinta: { 1: false, 2: false },
+    deadline: null,
+    step: 0,
+    roundOver: false,
+    damage: { 1: 0, 2: 0 },
+  };
+  startStep(c, REVEAL_MS);
   sendStates(c);
-  // Hasta que llegue el combate, la partida termina aquí, sin ganador.
-  finish(c, "completed", null);
+}
+
+// --- El combate -------------------------------------------------------------------------
+
+/** Abre un paso con su plazo. El temporizador de cualquier paso anterior queda obsoleto. */
+function startStep(c: Ctx, ms: number): void {
+  const battle = c.s.battle!;
+  battle.step = c.s.nextTurnId++;
+  battle.deadline = c.now + ms;
+  schedule(c, battle.deadline, { kind: "battle", step: battle.step });
+}
+
+function onBattleTimer(c: Ctx): void {
+  const { s } = c;
+  const battle = s.battle!;
+  if (s.phase === "reveal") return beginLineup(c);
+  if (s.phase === "lineup") return beginFirstRound(c);
+  if (s.phase === "battle_pause") return closePause(c);
+  if (s.phase !== "battle") return;
+  // Sin plazo abierto es que acabó la animación; con él, se agotó el tiempo de elegir.
+  if (battle.deadline === null) afterAnimation(c);
+  else resolveCurrentTurn(c);
+}
+
+function onReady(c: Ctx, seat: Seat): void {
+  const { s } = c;
+  if (s.phase !== "reveal") return reject(c, seat, "WRONG_PHASE", "Ahora no hay nada que confirmar");
+  if (!s.readyForBattle.includes(seat)) s.readyForBattle.push(seat);
+  if (s.readyForBattle.length === 2) beginLineup(c);
+  else c.fx.push({ kind: "send_state", to: seat });
+}
+
+function beginLineup(c: Ctx): void {
+  c.s.phase = "lineup";
+  startStep(c, LINEUP_MS);
+  sendStates(c);
+}
+
+function onLineup(c: Ctx, seat: Seat, order: number[]): void {
+  const { s } = c;
+  if (s.phase !== "lineup") return reject(c, seat, "WRONG_PHASE", "Ahora no se elige la alineación");
+  const team = s.teams[seat];
+  const valid = Array.isArray(order) && order.length === team.length && new Set(order).size === team.length && order.every((id) => team.includes(id));
+  if (!valid) return reject(c, seat, "INVALID_CHOICE", "Esa alineación no es válida");
+  s.battle!.lineups[seat] = [...order];
+  c.fx.push({ kind: "send_state", to: seat });
+  if (s.battle!.lineups[otherSeat(seat)]) beginFirstRound(c);
+}
+
+function beginFirstRound(c: Ctx): void {
+  const battle = c.s.battle!;
+  for (const seat of [1, 2] as const) {
+    const order = battle.lineups[seat] ?? c.s.teams[seat];
+    battle.fighters[seat] = order.map((id) => battle.fighters[seat].find((fighter) => fighter.pokemon.id === id)!);
+    battle.titular[seat] = order[0]!;
+  }
+  beginRound(c);
+}
+
+function beginRound(c: Ctx): void {
+  const { s } = c;
+  const battle = s.battle!;
+  s.phase = "battle";
+  battle.round++;
+  battle.turn = 0;
+  battle.healed = { 1: false, 2: false };
+  battle.roundOver = false;
+  beginTurn(c);
+}
+
+function beginTurn(c: Ctx): void {
+  const battle = c.s.battle!;
+  battle.turn++;
+  battle.moves = {};
+  startStep(c, MOVE_MS);
+  sendStates(c);
+}
+
+const titularOf = (c: Ctx, seat: Seat): Fighter => {
+  const battle = c.s.battle!;
+  return battle.fighters[seat].find((fighter) => fighter.pokemon.id === battle.titular[seat])!;
+};
+
+function onMove(c: Ctx, seat: Seat, move: BattleMove): void {
+  const { s } = c;
+  const battle = s.battle;
+  // Sin plazo abierto se está animando el turno anterior.
+  if (s.phase !== "battle" || !battle || battle.deadline === null) return reject(c, seat, "WRONG_PHASE", "Ahora no se elige movimiento");
+  if (!movesOf(titularOf(c, seat)).includes(move)) return reject(c, seat, "INVALID_CHOICE", "Ese movimiento no es válido");
+  if (move === "recuperar" && battle.healed[seat]) return reject(c, seat, "INVALID_CHOICE", "Recuperar ya se usó en este asalto");
+  battle.moves[seat] = move;
+  // Solo a quien eligió: el rival no sabe ni que ya eligió.
+  c.fx.push({ kind: "send_state", to: seat });
+  if (battle.moves[otherSeat(seat)]) resolveCurrentTurn(c);
+}
+
+function resolveCurrentTurn(c: Ctx): void {
+  const battle = c.s.battle!;
+  const sideOf = (seat: Seat): CombatSide => ({ fighter: titularOf(c, seat), healed: battle.healed[seat], cinta: battle.cinta[seat] });
+  const sides = { 1: sideOf(1), 2: sideOf(2) };
+  const choiceOf = (seat: Seat): BattleMove => battle.moves[seat] ?? bestMove(sides[seat].fighter, sides[otherSeat(seat)].fighter);
+  const actions = resolveTurn(sides, { 1: choiceOf(1), 2: choiceOf(2) }, c.deps.rng);
+  battle.healed = { 1: sides[1].healed, 2: sides[2].healed };
+  for (const action of actions) battle.damage[action.actor] += action.damage;
+  emit(c, "all", { name: "battle-turn", payload: { round: battle.round, turn: battle.turn, actions } });
+
+  const fallen = ([1, 2] as const).find((seat) => sides[seat].fighter.hp <= 0);
+  if (fallen !== undefined || battle.turn >= MAX_TURNS_PER_ROUND) {
+    const atLimit = fallen === undefined;
+    const loser = fallen ?? roundLimitLoser({ 1: sides[1].fighter, 2: sides[2].fighter }, c.deps.rng);
+    sides[loser].fighter.hp = 0;
+    battle.roundOver = true;
+    emit(c, "all", { name: "battle-round-ended", payload: { round: battle.round, loser, atLimit } });
+  }
+  // Mientras se anima no hay plazo abierto.
+  battle.step = c.s.nextTurnId++;
+  battle.deadline = null;
+  battle.moves = {};
+  schedule(c, c.now + TURN_ANIMATION_MS, { kind: "battle", step: battle.step });
+  sendStates(c);
+}
+
+/** Terminó la animación: otro turno, o la pausa si cayó alguien. */
+function afterAnimation(c: Ctx): void {
+  const { s } = c;
+  const battle = s.battle!;
+  if (battle.roundOver) {
+    s.phase = "battle_pause";
+    battle.cinta = { 1: false, 2: false };
+    battle.pauses = {};
+    for (const seat of [1, 2] as const) if (titularOf(c, seat)?.hp === 0) battle.titular[seat] = null;
+    startStep(c, PAUSE_MS);
+    sendStates(c);
+    return;
+  }
+  beginTurn(c);
+}
+
+function onPauseConfirm(c: Ctx, seat: Seat, choice: PauseChoice): void {
+  const { s } = c;
+  if (s.phase !== "battle_pause") return reject(c, seat, "WRONG_PHASE", "Ahora no hay pausa");
+  if (!validPause(c, seat, choice)) return reject(c, seat, "INVALID_CHOICE", "Esa elección no es válida");
+  const battle = s.battle!;
+  battle.pauses[seat] = choice;
+  // Solo a quien confirmó: hasta cerrar la pausa el rival no ve ni objetos ni titular.
+  c.fx.push({ kind: "send_state", to: seat });
+  if (battle.pauses[otherSeat(seat)]) closePause(c);
+}
+
+/** Comprueba la elección sobre una copia: objetos que tiene, objetivos que sirven y un titular vivo tras usarlos. */
+function validPause(c: Ctx, seat: Seat, choice: PauseChoice): boolean {
+  if (typeof choice !== "object" || choice === null || !Array.isArray(choice.items)) return false;
+  const fighters = structuredClone(c.s.battle!.fighters[seat]);
+  const available = [...c.s.items[seat]];
+  for (const used of choice.items) {
+    const index = available.indexOf(used?.item);
+    if (index < 0) return false;
+    available.splice(index, 1);
+    if (used.item === "cinta") continue;
+    const target = fighters.find((fighter) => fighter.pokemon.id === used.target);
+    if (!target || !applyItem(used.item, target)) return false;
+  }
+  return fighters.some((fighter) => fighter.pokemon.id === choice.titular && fighter.hp > 0);
+}
+
+function closePause(c: Ctx): void {
+  const { s } = c;
+  const battle = s.battle!;
+  for (const seat of [1, 2] as const) {
+    const choice = battle.pauses[seat];
+    if (choice) {
+      for (const used of choice.items) {
+        s.items[seat].splice(s.items[seat].indexOf(used.item), 1);
+        if (used.item === "cinta") battle.cinta[seat] = true;
+        else applyItem(used.item, battle.fighters[seat].find((fighter) => fighter.pokemon.id === used.target)!);
+      }
+      battle.titular[seat] = choice.titular;
+    } else if (battle.titular[seat] === null) {
+      // No decidió: sale el primero vivo, en su orden. Quien ganó el asalto sigue como estaba.
+      battle.titular[seat] = battle.fighters[seat].find((fighter) => fighter.hp > 0)?.pokemon.id ?? null;
+    }
+  }
+  const out = ([1, 2] as const).find((seat) => battle.titular[seat] === null);
+  if (out !== undefined) return finish(c, "completed", otherSeat(out));
+  battle.pauses = {};
+  beginRound(c);
 }
 
 function finish(c: Ctx, reason: GameOutcome["reason"], winnerSeat: Seat | null): void {

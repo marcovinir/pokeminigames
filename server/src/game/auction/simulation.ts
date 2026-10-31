@@ -1,19 +1,15 @@
-import { AUCTION_ITEMS, type AuctionItem, BID_STEPS, type BaseStats, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
+import { AUCTION_ITEMS, type AuctionItem, BID_STEPS, type BaseStats, type BattleMove, type TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 import { pickOne } from "../rng.js";
+import { type Fighter, applyItem, bestMove, hpShare, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
 import {
-  type AttackMove,
-  CRITICAL_ODDS,
   ITEM_PRICES,
   MAX_TURNS_PER_ROUND,
   STARTING_MONEY,
   TRAP_ODDS,
   TEAM_SIZE,
   bidCap,
-  combatHp,
-  damage,
   drawLots,
-  movesFor,
   startingPrice,
 } from "./rules.js";
 
@@ -31,11 +27,8 @@ export interface AuctionPokemon {
 type ItemName = AuctionItem;
 
 const ITEMS = AUCTION_ITEMS;
-const HEAL_FRACTION = 0.25;
-const REVIVE_FRACTION = 0.5;
 const POTION_BELOW = 0.4;
 const HEAL_BELOW = 0.35;
-const CINTA_MULTIPLIER = 1.25;
 
 export interface Strategy {
   name: string;
@@ -181,12 +174,6 @@ function runAuction(pool: readonly AuctionPokemon[], players: [Player, Player], 
   });
 }
 
-interface Fighter {
-  pokemon: AuctionPokemon;
-  hp: number;
-  maxHp: number;
-}
-
 interface Side {
   fighters: Fighter[];
   items: ItemName[];
@@ -196,80 +183,52 @@ interface Side {
 }
 
 const alive = (side: Side) => side.fighters.filter((fighter) => fighter.hp > 0);
-const hpShare = (fighter: Fighter) => fighter.hp / fighter.maxHp;
+const strongest = (fighters: Fighter[]) => [...fighters].sort((a, b) => totalOf(b) - totalOf(a))[0] ?? null;
+const totalOf = (fighter: Fighter) => (fighter.pokemon as AuctionPokemon).total;
+const take = (side: Side, item: ItemName) => side.items.splice(side.items.indexOf(item), 1);
 
-function moveDamage(attacker: Fighter, defender: Fighter, move: AttackMove, critical: boolean, cinta: boolean): number {
-  const physical = move.category === "physical";
-  const effectiveness = move.type === null ? 1 : defender.pokemon.types.reduce((total, type) => total * typeEffectiveness(move.type!, type), 1);
-  const dealt = damage({
-    power: move.power,
-    attack: physical ? attacker.pokemon.stats.attack : attacker.pokemon.stats.spAttack,
-    defense: physical ? defender.pokemon.stats.defense : defender.pokemon.stats.spDefense,
-    effectiveness,
-    critical,
-  });
-  return cinta ? Math.round(dealt * CINTA_MULTIPLIER) : dealt;
-}
-
-/** Lo que haría alguien razonable en la pausa: revivir si no le queda nadie o tiene con qué, curar a quien va mal y sacar a su mejor Pokémon. */
+/** Lo que haría alguien razonable en la pausa: revivir si tiene con qué, curar a quien va mal y sacar a su mejor Pokémon. */
 function prepare(side: Side): void {
-  const fainted = side.fighters.filter((fighter) => fighter.hp <= 0).sort((a, b) => b.pokemon.total - a.pokemon.total);
-  if (fainted[0] && side.items.includes("revivir")) {
-    side.items.splice(side.items.indexOf("revivir"), 1);
-    fainted[0].hp = Math.round(fainted[0].maxHp * REVIVE_FRACTION);
-  }
+  const fainted = strongest(side.fighters.filter((fighter) => fighter.hp <= 0));
+  if (fainted && side.items.includes("revivir") && applyItem("revivir", fainted)) take(side, "revivir");
   const hurt = alive(side).sort((a, b) => hpShare(a) - hpShare(b))[0];
-  if (hurt && hpShare(hurt) < POTION_BELOW && side.items.includes("pocion")) {
-    side.items.splice(side.items.indexOf("pocion"), 1);
-    hurt.hp = hurt.maxHp;
-  }
+  if (hurt && hpShare(hurt) < POTION_BELOW && side.items.includes("pocion") && applyItem("pocion", hurt)) take(side, "pocion");
   side.cinta = side.items.includes("cinta");
-  if (side.cinta) side.items.splice(side.items.indexOf("cinta"), 1);
-  if (!side.titular || side.titular.hp <= 0) side.titular = alive(side).sort((a, b) => b.pokemon.total - a.pokemon.total)[0] ?? null;
+  if (side.cinta) take(side, "cinta");
+  if (!side.titular || side.titular.hp <= 0) side.titular = strongest(alive(side));
   side.healed = false;
 }
 
-function act(actor: Side, target: Side, options: SimulationOptions, rng: Rng, result: SimulationResult): void {
-  const attacker = actor.titular!;
-  const defender = target.titular!;
-  if (!actor.healed && hpShare(attacker) < HEAL_BELOW) {
-    actor.healed = true;
-    attacker.hp = Math.min(attacker.maxHp, attacker.hp + Math.round(attacker.maxHp * HEAL_FRACTION));
-    return;
-  }
-  const best = movesFor(attacker.pokemon.types).reduce((top, move) => (moveDamage(attacker, defender, move, false, false) > moveDamage(attacker, defender, top, false, false) ? move : top));
-  const critical = options.criticals !== false && rng.int(CRITICAL_ODDS) === 0;
-  if (critical) result.criticals++;
-  defender.hp -= moveDamage(attacker, defender, best, critical, actor.cinta);
+function choose(me: Side, rival: Side): BattleMove {
+  if (!me.healed && hpShare(me.titular!) < HEAL_BELOW) return "recuperar";
+  return bestMove(me.titular!, rival.titular!);
 }
 
 function runBattle(players: [Player, Player], options: SimulationOptions, rng: Rng, result: SimulationResult): Seat {
   const sides = players.map((player) => ({
-    fighters: player.team.map((pokemon) => ({ pokemon, hp: combatHp(pokemon.stats.hp), maxHp: combatHp(pokemon.stats.hp) })),
+    fighters: player.team.map(newFighter),
     items: [...player.items],
     titular: null,
     healed: false,
     cinta: false,
   })) as [Side, Side];
   // La alineación del principio no gasta objetos: aún no hay nada que curar.
-  for (const side of sides) side.titular = alive(side).sort((a, b) => b.pokemon.total - a.pokemon.total)[0]!;
+  for (const side of sides) side.titular = strongest(alive(side));
 
   for (;;) {
     const [a, b] = [sides[0].titular!, sides[1].titular!];
     let turns = 0;
     while (a.hp > 0 && b.hp > 0 && turns < MAX_TURNS_PER_ROUND) {
       turns++;
-      const speedA = a.pokemon.stats.speed;
-      const speedB = b.pokemon.stats.speed;
-      const first: Seat = speedA === speedB ? (rng.int(2) as Seat) : speedA > speedB ? 0 : 1;
-      act(sides[first], sides[other(first)], options, rng, result);
-      if (sides[other(first)].titular!.hp > 0) act(sides[other(first)], sides[first], options, rng, result);
+      const combat = { 1: { fighter: a, healed: sides[0].healed, cinta: sides[0].cinta }, 2: { fighter: b, healed: sides[1].healed, cinta: sides[1].cinta } };
+      const actions = resolveTurn(combat, { 1: choose(sides[0], sides[1]), 2: choose(sides[1], sides[0]) }, rng, { criticals: options.criticals !== false });
+      result.criticals += actions.filter((action) => action.critical).length;
+      sides[0].healed = combat[1].healed;
+      sides[1].healed = combat[2].healed;
     }
     if (a.hp > 0 && b.hp > 0) {
       result.roundsAtLimit++;
-      const diff = hpShare(a) - hpShare(b) || a.pokemon.stats.speed - b.pokemon.stats.speed;
-      const loser = diff === 0 ? rng.int(2) : diff < 0 ? 0 : 1;
-      (loser === 0 ? a : b).hp = 0;
+      (roundLimitLoser({ 1: a, 2: b }, rng) === 1 ? a : b).hp = 0;
     }
     result.rounds++;
     result.turnsPerRound.push(turns);

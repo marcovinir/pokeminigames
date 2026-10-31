@@ -302,6 +302,8 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     // La subasta aún no tiene pantallas: el cliente solo la verá cuando se abra al público.
     case "auction-sale":
     case "auction-reveal":
+    case "battle-turn":
+    case "battle-round-ended":
       return view;
 
     case "silhouette-answer-received": {

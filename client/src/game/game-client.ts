@@ -59,6 +59,8 @@ const SERVER_EVENTS: Record<ServerEventName, true> = {
   "silhouette-answer-received": true,
   "auction-sale": true,
   "auction-reveal": true,
+  "battle-turn": true,
+  "battle-round-ended": true,
   "silhouette-round-result": true,
 };
 /**

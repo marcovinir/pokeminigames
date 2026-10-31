@@ -589,7 +589,7 @@ describe("una sala de subasta en el RoomManager", () => {
     expect(room.view(1).auction!.teamSizes[turn]).toBe(1);
     expect(broadcaster.payloads("auction-sale")).toHaveLength(1);
     // Nadie responde: los turnos se agotan solos y la partida llega al final.
-    for (let tick = 0; tick < 40 && room.view(1).phase !== "finished"; tick++) time.advance(10_000);
+    for (let tick = 0; tick < 2000 && room.view(1).phase !== "finished"; tick++) time.advance(10_000);
     expect(room.view(1).phase).toBe("finished");
     expect(room.view(1).auction!.reveal).toHaveLength(6);
   });

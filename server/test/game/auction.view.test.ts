@@ -62,15 +62,6 @@ describe("subasta: revelación", () => {
     expect(reveal.filter((entry) => entry.owner === 2)).toHaveLength(3);
     expect(h.view(1).auction!.reveal).toEqual(reveal);
   });
-
-  it("hasta que llegue el combate, la partida termina tras la revelación, sin ganador", () => {
-    const h = new AuctionHarness({ catalog, config: AUCTION });
-    h.startGame();
-    playAll(h);
-    expect(h.state.phase).toBe("finished");
-    expect(h.state.outcome).toEqual({ winnerSeat: null, reason: "completed" });
-    expect(h.payloads("game-ended")[0]!.teams[1]).toHaveLength(3);
-  });
 });
 
 describe("subasta: desconexiones", () => {

@@ -51,6 +51,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   USER_NOT_FOUND: "No encontramos a ese jugador.",
   NOT_YOUR_TURN: "Aún no es tu turno.",
   INVALID_BID: "Esa puja no es válida.",
+  INVALID_CHOICE: "Esa elección no es válida.",
   POKEMON_NOT_FOUND: "Ese Pokémon no existe.",
   INTERNAL_ERROR: "Algo falló en el servidor. Inténtalo de nuevo.",
   ALREADY_IN_GAME: "Ya estás en una partida. Vuelve a ella desde el lobby.",
