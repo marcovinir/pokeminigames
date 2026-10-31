@@ -16,10 +16,12 @@ export interface EffectCue {
 
 /** El efecto de acierto o fallo de la silueta suena después de la revelación. */
 const AFTER_REVEAL_MS = 600;
+/** Cada Pokémon de la revelación aparece 3 s después del anterior: su trampa suena entonces. */
+const REVEAL_STEP_MS = 3000;
 /** El efecto de ganar o perder, tras el acierto o el fallo de la última ronda. */
 const AFTER_LAST_ROUND_MS = 500;
 
-const BATTLE_PHASES = new Set<GameView["phase"]>(["starting", "choosing_types", "round_active", "round_result"]);
+const BATTLE_PHASES = new Set<GameView["phase"]>(["starting", "choosing_types", "round_active", "round_result", "auction", "reveal", "lineup", "battle", "battle_pause"]);
 
 /**
  * Cómo terminó la partida para mí: ganarla por cualquier motivo (también porque el rival se fue) es `win`; perderla,
@@ -68,6 +70,13 @@ export function effectsForEvent(before: GameView, event: ServerEvent, after: Gam
     case "silhouette-round-result":
       if (seat === null) return [];
       return [now("reveal"), { effect: event.payload.reveal.answers[seat].correct ? "correct" : "wrong", delayMs: AFTER_REVEAL_MS }];
+    case "auction-sale":
+      return [now("round")];
+    case "auction-reveal":
+      return [
+        now("reveal"),
+        ...event.payload.reveal.flatMap((entry, index) => (entry.wasTrap ? [{ effect: "wrong" as const, delayMs: index * REVEAL_STEP_MS }] : [])),
+      ];
     case "game-ended": {
       const outcome = endOutcome(event.payload, seat);
       if (!outcome) return [];

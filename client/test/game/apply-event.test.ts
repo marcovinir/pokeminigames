@@ -446,3 +446,29 @@ describe("el rival ya respondió", () => {
     expect(other.silhouette?.round?.opponentAnswered).toBe(false);
   });
 });
+
+describe("la subasta", () => {
+  const auction = { money: { 1: 900, 2: 800 }, teamSizes: { 1: 1, 2: 0 }, items: { 1: [], 2: [] }, lot: null, reveal: [] };
+  const roomState = (extra: object) =>
+    ({
+      name: "room-state",
+      payload: { code: "ABC", phase: "auction", config: { game: "subasta", traps: true }, mySeat: 1, players: [], myTeam: [], opponentTeam: [], roundsPlayed: 0, startsAt: null, round: null, opponentGraceEndsAt: null, serverNow: 0, ...extra },
+    }) as never;
+
+  it("copia su estado de room-state, y sin él queda vacío", () => {
+    expect(applyServerEvent(initialGameView, roomState({ auction }), 0).auction).toEqual(auction);
+    expect(applyServerEvent({ ...initialGameView, auction: auction as never }, roomState({}), 0).auction).toBeNull();
+  });
+
+  it("guarda la última venta y la olvida al llegar otra", () => {
+    const sale = { lot: 2, kind: "item", winner: null, paid: 0, item: "cinta" } as const;
+    const after = applyServerEvent(initialGameView, { name: "auction-sale", payload: sale }, 0);
+    expect(after.lastSale).toEqual(sale);
+    expect(applyServerEvent(after, { name: "auction-sale", payload: { lot: 3, kind: "pokemon", winner: 1, paid: 5 } }, 0).lastSale?.lot).toBe(3);
+  });
+
+  it("la revelación no cambia la fase: la trae room-state", () => {
+    const before = { ...initialGameView, phase: "auction" as const };
+    expect(applyServerEvent(before, { name: "auction-reveal", payload: { reveal: [] } }, 0).phase).toBe("auction");
+  });
+});
