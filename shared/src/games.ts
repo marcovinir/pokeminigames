@@ -4,7 +4,7 @@ import type { AuctionConfig, DobleTipoConfig, RoomConfig, SilhouetteConfig } fro
 export const GAME_KINDS = ["doble_tipo", "silueta", "subasta"] as const;
 export type GameKind = (typeof GAME_KINDS)[number];
 
-/** Los que ya se pueden jugar: el menú y `POST /rooms` solo ofrecen estos. La subasta entra cuando tenga sus pantallas. */
+/** Los que ofrece el menú. La subasta entra cuando tenga el combate: hasta entonces solo se llega escribiendo su dirección. */
 export const PLAYABLE_GAMES: readonly GameKind[] = ["doble_tipo", "silueta"];
 
 /** El trozo de ruta de cada juego (`/jugar/:slug`). */

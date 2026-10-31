@@ -1,5 +1,5 @@
 import type { Server as HttpServer } from "node:http";
-import type { ClientToServerEvents, ErrorCode, Seat, ServerToClientEvents } from "@pokemon-minigames/shared";
+import { BID_STEPS, type BidStep, type ClientToServerEvents, type ErrorCode, type Seat, type ServerToClientEvents } from "@pokemon-minigames/shared";
 import { Server } from "socket.io";
 import { z } from "zod";
 import type { TokenService } from "../auth/tokens.js";
@@ -23,6 +23,7 @@ export interface RealtimeDeps {
 const joinSchema = z.object({ code: z.string().min(1).max(20) });
 const chooseSchema = z.object({ type: z.string().min(1).max(30) });
 const submitSchema = z.object({ text: z.string().max(MAX_ANSWER_LENGTH) });
+const bidSchema = z.object({ step: z.custom<BidStep | null>((value) => value === null || BID_STEPS.includes(value as BidStep)) });
 
 export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
@@ -133,6 +134,30 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
     handle(submitSchema, ({ text }) => {
       const { room, seat } = requireBinding();
       room.dispatch({ type: "SUBMIT", seat, text });
+    }),
+  );
+
+  socket.on(
+    "auction-bid",
+    handle(bidSchema, ({ step }) => {
+      const { room, seat } = requireBinding();
+      room.dispatch({ type: "BID", seat, step });
+    }),
+  );
+
+  socket.on(
+    "auction-pass",
+    handle(null, () => {
+      const { room, seat } = requireBinding();
+      room.dispatch({ type: "PASS", seat });
+    }),
+  );
+
+  socket.on(
+    "auction-ready",
+    handle(null, () => {
+      const { room, seat } = requireBinding();
+      room.dispatch({ type: "READY", seat });
     }),
   );
 

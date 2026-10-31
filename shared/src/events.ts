@@ -1,6 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
-import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction } from "./auction.js";
+import type { BidStep, AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction } from "./auction.js";
 import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
@@ -113,6 +113,11 @@ export interface ClientToServerEvents {
   "choose-type": (payload: { type: string }) => void;
   "submit-pokemon": (payload: { text: string }) => void;
   "leave-room": () => void;
+  /** Subir la puja; `null` abre el lote a su precio inicial. */
+  "auction-bid": (payload: { step: BidStep | null }) => void;
+  "auction-pass": () => void;
+  /** Ya vi la revelación: si confirman los dos, se salta. */
+  "auction-ready": () => void;
   /** Pedir la revancha o aceptar la que pidió el rival. */
   "rematch-request": () => void;
   /** Cancelar la revancha que pedí o rechazar la que pidió el rival. */

@@ -19,7 +19,13 @@ export interface CreateSilhouetteRoomRequest {
 }
 
 /** Cuerpo de `POST /rooms`. */
-export type CreateRoomRequest = CreateDobleTipoRoomRequest | CreateSilhouetteRoomRequest;
+export interface CreateAuctionRoomRequest {
+  game: "subasta";
+  /** Siluetas trampa; sin este campo, encendidas. */
+  traps?: boolean;
+}
+
+export type CreateRoomRequest = CreateDobleTipoRoomRequest | CreateSilhouetteRoomRequest | CreateAuctionRoomRequest;
 
 export interface CreateRoomResponse {
   code: string;
