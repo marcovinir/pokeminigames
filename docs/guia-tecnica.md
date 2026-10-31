@@ -228,6 +228,9 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `auction-bid` | Subasta: `{ step, turnId }`: sube la puja 10.000, 50.000 o 100.000; `null` abre el lote al precio inicial. Puja inválida: `INVALID_BID`; de otro turno: `NOT_YOUR_TURN` |
 | `auction-pass` | Subasta: `{ turnId }`: pasar en el lote abierto |
 | `auction-ready` | Subasta: ya vi la revelación; si confirman los dos, se salta |
+| `auction-lineup` | Subasta: `{ order }`: titular y orden |
+| `auction-move` | Subasta: `{ move }`: el tipo del ataque, `forcejeo` o `recuperar` |
+| `auction-pause` | Subasta: `{ choice: { items, titular } }`: objetos y titular entre asaltos |
 | `rematch-request` | — (pedir la revancha o aceptar la del rival) |
 | `rematch-cancel` | — (cancelar la propia o rechazar la del rival) |
 
@@ -246,5 +249,7 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `silhouette-round-result` | Silueta: la revelación (`reveal` con el Pokémon y la respuesta, el acierto, los ms y los puntos de cada uno), `totals` y `nextRoundAt` |
 | `auction-sale` | Subasta: se cerró un lote: `{ lot, kind, winner, paid, item? }`, sin decir qué Pokémon era |
 | `auction-reveal` | Subasta: los 6 Pokémon reales, con quién los compró y si eran trampa |
+| `battle-turn` | Subasta: se resolvió un turno: `{ round, turn, actions }` |
+| `battle-round-ended` | Subasta: cayó un Pokémon: `{ round, loser, atLimit }` |
 | `rematch-room` | Los dos aceptaron: `{ code }` de la sala nueva (que trae `rematch: true` en su `room-state`) |
 | `error` | `{ code, message }` |

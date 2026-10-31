@@ -424,6 +424,13 @@ export const AUCTION_TEXT = {
   teamOf: (name: string): string => `Equipo de ${name}`,
 };
 
+export const AUCTION_SUMMARY_TEXT = {
+  title: "Resumen del combate",
+  damage: "Daño hecho",
+  spentPokemon: "Gastado en Pokémon",
+  spentItems: "Gastado en objetos",
+} as const;
+
 export const BATTLE_TEXT = {
   lineupTitle: "Elige tu alineación",
   lineupTimer: "Tiempo para elegir la alineación",

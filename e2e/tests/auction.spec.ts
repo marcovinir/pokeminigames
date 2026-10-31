@@ -1,12 +1,9 @@
 import { type Page, expect, test } from "@playwright/test";
 import { joinRoom, newPlayer, register } from "../support/app";
 
-/**
- * La subasta en dos navegadores reales, sin trampas: el servidor sortea de verdad, así que se comprueba la estructura
- * (9 lotes, dinero, recarga, revelación). El juego aún no se ofrece en el menú: se entra por la dirección.
- */
+/** La subasta en dos navegadores reales, sin trampas: el servidor sortea de verdad, así que se comprueba la estructura. */
 
-test.setTimeout(240_000);
+test.setTimeout(420_000);
 
 const passButton = (page: Page) => page.getByRole("button", { name: "Pasar" });
 
@@ -32,7 +29,13 @@ async function pageInTurn(pages: [Page, Page], revealTitle: (page: Page) => Retu
   return found;
 }
 
-test("dos navegadores pujan, recargan a mitad y llegan a la revelación", async ({ browser }) => {
+/** A lo ancho de la pantalla no sobra nada. */
+async function expectFits(page: Page, where: string): Promise<void> {
+  const { scroll, client } = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect.soft(scroll, `${where}: desplazamiento horizontal`).toBeLessThanOrEqual(client);
+}
+
+test("una partida completa: puja, revelación, alineación, combate, resumen y revancha, con recargas", async ({ browser }) => {
   const ash = await newPlayer(browser, "a".repeat(24));
   const misty = await newPlayer(browser, "misty");
   await register(ash);
@@ -79,13 +82,57 @@ test("dos navegadores pujan, recargan a mitad y llegan a la revelación", async 
   await ash.page.getByRole("button", { name: "Listo" }).click();
   await expect(ash.page.getByRole("button", { name: "Esperando al rival…" })).toBeDisabled();
   await misty.page.getByRole("button", { name: "Listo" }).click();
-  for (const page of pages) await expect(page.getByRole("heading", { name: "El combate llega pronto" })).toBeVisible({ timeout: 15_000 });
+
+  // Alineación: uno cambia el orden, y el titular es el que eligió.
+  for (const page of pages) await expect(page.getByRole("heading", { name: "Elige tu alineación" })).toBeVisible({ timeout: 15_000 });
+  const firstUp = ash.page.getByRole("button", { name: /^Subir/ }).nth(1);
+  const newTitular = ((await firstUp.getAttribute("aria-label")) ?? "").replace("Subir ", "");
+  await firstUp.click();
+  for (const page of pages) await page.getByRole("button", { name: "Confirmar" }).click();
+  await expect(ash.page.getByRole("meter", { name: `PS de ${newTitular}` })).toBeVisible({ timeout: 15_000 });
+  await expectFits(ash.page, "combate");
+
+  // Recargar en el combate vuelve al combate, con la barra.
+  await misty.page.reload();
+  await expect(misty.page.getByRole("meter").first()).toBeVisible({ timeout: 30_000 });
+
+  // Se pelea hasta el final, eligiendo movimiento y titular. Recargar en la primera pausa la conserva.
+  const verdict = (page: Page) => page.getByRole("heading", { name: /^(Ganaste|Perdiste)$/ });
+  let reloadedInPause = false;
+  for (let tick = 0; tick < 1500 && !(await verdict(ash.page).isVisible()); tick++) {
+    for (const page of pages) {
+      if (!reloadedInPause && (await page.getByRole("heading", { name: "Pausa entre asaltos" }).isVisible())) {
+        reloadedInPause = true;
+        await expectFits(page, "pausa");
+        await page.reload();
+        await expect(page.getByRole("heading", { name: "Pausa entre asaltos" })).toBeVisible({ timeout: 30_000 });
+      }
+      const move = page.getByRole("button", { name: /^(Ataque|Forcejeo)/ }).first();
+      if (await move.isVisible()) await move.click({ timeout: 500 }).catch(() => undefined);
+      const confirm = page.getByRole("button", { name: "Confirmar" });
+      if (await confirm.isVisible()) {
+        if (await confirm.isDisabled()) await page.getByRole("button", { name: /^Sacar a/ }).first().click({ timeout: 500 }).catch(() => undefined);
+        await confirm.click({ timeout: 500 }).catch(() => undefined);
+      }
+    }
+    await ash.page.waitForTimeout(150);
+  }
+  for (const page of pages) await expect(verdict(page)).toBeVisible({ timeout: 60_000 });
+  expect(reloadedInPause, "hubo una pausa").toBe(true);
+  await expect(ash.page.getByRole("region", { name: "Resumen del combate" })).toBeVisible();
+  await expectFits(ash.page, "resumen");
+
+  // Revancha: empieza de cero.
+  await ash.page.getByRole("button", { name: "Revancha" }).click();
+  await misty.page.getByRole("button", { name: "Aceptar" }).click();
+  for (const page of pages) await expect(page.getByText("Lote 1 de 9", { exact: true })).toBeVisible({ timeout: 45_000 });
+  await expect(misty.page.getByLabel("Jugadores").getByText("1.000.000")).toHaveCount(2);
 });
 
-test("el menú aún no ofrece la subasta", async ({ browser }) => {
+test("el menú ofrece la subasta", async ({ browser }) => {
   const ash = await newPlayer(browser, "ash");
   await register(ash);
   await ash.page.goto("/");
-  await expect(ash.page.getByRole("link", { name: /Silueta|Quién es/i }).first()).toBeVisible();
-  await expect(ash.page.getByText("Subasta Pokémon")).toHaveCount(0);
+  await ash.page.getByRole("article").filter({ hasText: "Subasta Pokémon" }).getByRole("link", { name: /Jugar/ }).click();
+  await expect(ash.page.getByRole("switch", { name: "Siluetas trampa" })).toBeChecked();
 });

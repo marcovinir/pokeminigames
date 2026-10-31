@@ -18,6 +18,7 @@
 | | |
 |---|---|
 | **Doble tipo** | Each round shows a pair of types. Both players have 15 seconds to name a Pokémon that has both; whoever collects the most base stats wins. |
+| **Subasta Pokémon** | Bid on Pokémon you only see as silhouettes (some are traps), then battle with what you bought, in turns with secret choices. |
 | **¿Quién es ese Pokémon?** | Both players see the same silhouette and get a single guess. The faster you answer, the more points you score. Pick the generations to play with. |
 
 Create a room, share its code with a friend and play. No account needed (guest mode), or sign up for a profile with stats, match history and a Pokémon avatar. After a match, ask for a **rematch** with the same settings.
