@@ -57,7 +57,7 @@ for (const width of [360, 375]) {
   });
 }
 
-const WIDTHS = [360, 375, 414, 640, 700, 768, 900, 1024, 1280];
+const WIDTHS = [320, 360, 375, 414, 640, 700, 768, 900, 1024, 1280];
 
 /** Lo que más a la derecha queda del encabezado, por si la fila se parte o algo se sale sin ensanchar el documento. */
 async function expectHeaderFits(page: Page, where: string): Promise<void> {

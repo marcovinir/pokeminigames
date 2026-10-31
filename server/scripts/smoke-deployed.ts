@@ -104,6 +104,16 @@ export async function runSmoke(options: SmokeOptions): Promise<SmokeCheck[]> {
     return `${names.length} nombres`;
   });
 
+  await check("La Pokédex responde: lista, ficha de Charizard y su página", async () => {
+    const list = await json(await doFetch(`${base}/pokemon/dex`));
+    expect(Array.isArray(list?.pokemon) && list.pokemon.length > 0, "la lista de la Pokédex viene vacía");
+    const detail = await doFetch(`${base}/pokemon/dex/6`);
+    expect(detail.status === 200, `la ficha de la Pokédex responde ${detail.status}`);
+    const page = await doFetch(`${base}/pokedex/6`);
+    expect(page.status === 200, `la página de la Pokédex responde ${page.status}`);
+    return `${list.pokemon.length} Pokémon`;
+  });
+
   await check("Las rutas protegidas piden sesión (401 UNAUTHORIZED)", async () => {
     for (const path of ["/stats", "/stats/history", "/rooms/current", "/auth/me"]) {
       const response = await doFetch(`${base}${path}`);

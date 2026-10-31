@@ -145,6 +145,8 @@ export const LOAD_ERROR_TEXT = {
 export const POKEDEX_TEXT = {
   title: "Pokédex",
   filters: "Filtros",
+  filtersWithCount: (count: number) => `Filtros (${count})`,
+  count: (count: number) => `${count} Pokémon`,
   search: "Buscar",
   searchHint: "Nombre o número",
   firstType: "Tipo 1",

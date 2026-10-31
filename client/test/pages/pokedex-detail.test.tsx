@@ -240,3 +240,81 @@ describe("volver a la lista", () => {
     await waitFor(() => expect(screen.getByRole("link", { name: "Volver a la Pokédex" })).toHaveAttribute("href", "/pokedex?tipo1=fire"));
   });
 });
+
+describe("detalles de la ficha", () => {
+  function renderRoutes(services: FakeServices) {
+    return renderWithServices(
+      <Routes>
+        <Route path="/pokedex/:id" element={<PokemonPage />} />
+      </Routes>,
+      { route: "/pokedex/6", services },
+    );
+  }
+
+  it("el título de la pestaña lleva el nombre", async () => {
+    renderAt("/pokedex/6");
+    await screen.findByRole("heading", { level: 1, name: "Charizard" });
+    expect(document.title).toBe("Charizard · PokeMiniGames");
+  });
+
+  it("al seguir un enlace de evolución el foco va al nombre del Pokémon nuevo", async () => {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dexEntry).mockImplementation(async (id) => ({ ...charizard, id, names: { es: id === 6 ? "Charizard" : "Charmander", en: "x" } }));
+    const user = userEvent.setup();
+    renderRoutes(services);
+    await screen.findByRole("heading", { level: 1, name: "Charizard" });
+    await user.click(screen.getByRole("link", { name: "Charmander" }));
+    const heading = await screen.findByRole("heading", { level: 1, name: "Charmander" });
+    await waitFor(() => expect(heading).toHaveFocus());
+  });
+
+  it("con «Siguiente» el foco se queda ahí y el Pokémon nuevo se anuncia", async () => {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dexEntry).mockImplementation(async (id) => ({ ...charizard, id, names: { es: id === 6 ? "Charizard" : "Squirtle", en: "x" } }));
+    const user = userEvent.setup();
+    renderRoutes(services);
+    await screen.findByRole("heading", { level: 1, name: "Charizard" });
+    const next = screen.getByRole("link", { name: "Siguiente" });
+    const announcer = screen.getByTestId("dex-announcer");
+    await user.click(next);
+    await screen.findByRole("heading", { level: 1, name: "Squirtle" });
+    expect(next).toHaveFocus();
+    expect(announcer).toHaveTextContent("Squirtle");
+    expect(announcer).toHaveAttribute("role", "status");
+  });
+
+  it("los estados de carga y «no existe» también tienen título de página", async () => {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dexEntry).mockImplementation(() => new Promise(() => {}));
+    const view = renderRoutes(services);
+    expect(screen.getByRole("heading", { level: 1, name: "Pokédex" })).toBeInTheDocument();
+    view.unmount();
+    renderAt("/pokedex/abc");
+    expect(await screen.findByRole("heading", { level: 1, name: "Pokédex" })).toBeInTheDocument();
+  });
+
+  it("la lista de stats es HTML válido: dentro de cada fila solo dt y dd", async () => {
+    renderAt("/pokedex/6");
+    const stats = await screen.findByRole("region", { name: "Estadísticas base" });
+    for (const row of stats.querySelectorAll("dl > div")) {
+      expect([...row.children].map((child) => child.tagName).every((tag) => tag === "DT" || tag === "DD")).toBe(true);
+    }
+  });
+
+  it("un error del servidor no echa la culpa a la conexión, y «Reintentar» muestra que carga", async () => {
+    const services = fakeServices();
+    let answer: (detail: PokedexDetail) => void = () => {};
+    vi.mocked(services.endpoints.catalog.dexEntry)
+      .mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR"))
+      .mockImplementation(() => new Promise((resolve) => (answer = resolve)));
+    const user = userEvent.setup();
+    renderRoutes(services);
+    const alert = await screen.findByRole("alert");
+    expect(alert).not.toHaveTextContent("conexión");
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("Cargando…")).toBeInTheDocument();
+    answer(charizard);
+    expect(await screen.findByRole("heading", { level: 1, name: "Charizard" })).toBeInTheDocument();
+  });
+});

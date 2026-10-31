@@ -122,7 +122,7 @@ describe("la página de la tabla de tipos", () => {
     renderAt("/tipos");
     const box = screen.getByRole("region", { name: "Tabla de efectividad de tipos" });
     expect(box).toHaveAttribute("tabindex", "0");
-    expect(box.className).toContain("overflow-x-auto");
+    expect(box.className).toContain("overflow-auto");
   });
 });
 
@@ -197,3 +197,27 @@ describe("de la Matriz de Tipos a la Pokédex", () => {
   });
 });
 
+describe("detalles de la tabla", () => {
+  it("el encabezado elegido lleva un contorno de dos colores: siempre contrasta con alguno, sea cual sea el tipo", () => {
+    renderAt("/tipos?tipo1=fire");
+    const header = within(table()).getAllByRole("columnheader").find((one) => one.hasAttribute("data-selected"))!;
+    expect(header.className).toContain("outline-fg");
+    expect(header.className).toContain("shadow-[inset_0_0_0_2px_var(--surface)]");
+  });
+
+  it("los nombres de las columnas quedan fijos al bajar en el teléfono", () => {
+    renderAt("/tipos");
+    const box = screen.getByRole("region", { name: "Tabla de efectividad de tipos" });
+    expect(box.className).toContain("max-md:max-h-[80vh]");
+    expect(box.className).toContain("overflow-auto");
+    const headers = within(table()).getAllByRole("columnheader");
+    expect(headers[1]!.className).toContain("sticky");
+    expect(headers[1]!.className).toContain("top-0");
+    expect(headers[0]!.className).toContain("z-2");
+  });
+
+  it("cambia el título de la pestaña", () => {
+    renderAt("/tipos");
+    expect(document.title).toBe("Matriz de Tipos · PokeMiniGames");
+  });
+});

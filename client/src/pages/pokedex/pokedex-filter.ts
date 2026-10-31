@@ -47,8 +47,11 @@ export function pokedexQueryParams(query: PokedexQuery): URLSearchParams {
 function matchesText(entry: PokedexEntry, text: string): boolean {
   const number = /^#?(\d+)$/.exec(text.trim());
   if (number) return entry.id === Number(number[1]);
+  if (text.trim() === "") return true;
+  // ♀ y ♂ se normalizan a una letra: buscarlos encontraría a todos los que la tienen.
+  if (/[♀♂]/.test(text)) return entry.names.es.includes(text.trim()) || entry.names.en.includes(text.trim());
   const wanted = normalizeName(text);
-  return wanted === "" || normalizeName(entry.names.es).includes(wanted) || normalizeName(entry.names.en).includes(wanted);
+  return wanted !== "" && (normalizeName(entry.names.es).includes(wanted) || normalizeName(entry.names.en).includes(wanted));
 }
 
 const COMPARE: Record<DexSort, (a: PokedexEntry, b: PokedexEntry) => number> = {

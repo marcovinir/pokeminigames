@@ -6,6 +6,8 @@ import { Notice } from "./Notice";
 interface LoadBoundaryProps {
   children: ReactNode;
   onReload?: () => void;
+  /** Al cambiar (la dirección), el error ya no vale: la otra página se intenta cargar. */
+  resetKey?: string;
 }
 
 /**
@@ -17,6 +19,10 @@ export class LoadBoundary extends Component<LoadBoundaryProps, { failed: boolean
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  override componentDidUpdate(previous: LoadBoundaryProps) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false });
   }
 
   override render() {

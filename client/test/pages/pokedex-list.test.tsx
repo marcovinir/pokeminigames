@@ -348,3 +348,75 @@ describe("cambios de filtro muy seguidos", () => {
   });
 });
 
+describe("filtros plegables en el teléfono", () => {
+  const toggle = () => screen.getByRole("button", { name: /^Filtros/ });
+  const panel = () => document.getElementById(toggle().getAttribute("aria-controls")!)!;
+
+  it("el buscador se ve siempre; lo demás empieza plegado y el botón lo despliega", async () => {
+    const { user } = renderList();
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    expect(toggle().className).toContain("md:hidden");
+    expect(panel().className).toContain("hidden");
+    expect(panel().className).toContain("md:flex");
+    expect(panel()).not.toContainElement(screen.getByRole("searchbox", { name: "Buscar" }));
+    expect(panel()).toContainElement(screen.getByRole("combobox", { name: "Tipo 1" }));
+    expect(panel()).toContainElement(screen.getByRole("combobox", { name: "Ordenar por" }));
+    await user.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(panel().className.split(" ")).not.toContain("hidden");
+  });
+
+  it("el botón dice cuántos filtros hay puestos, también con el panel plegado", async () => {
+    const first = renderList("/pokedex");
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(toggle()).toHaveTextContent(/^Filtros$/);
+    first.unmount();
+    renderList("/pokedex?tipo1=fire&tipo2=flying&orden=total");
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(toggle()).toHaveTextContent("Filtros (3)");
+  });
+});
+
+describe("el resultado de filtrar", () => {
+  it("dice cuántos hay, en una región que se anuncia y existe desde el principio", async () => {
+    const { user } = renderList();
+    await screen.findByRole("link", { name: /Charizard/ });
+    const count = screen.getByText("5 Pokémon");
+    expect(count).toHaveAttribute("role", "status");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Tipo 1" }), "ghost");
+    expect(count).toHaveTextContent("1 Pokémon");
+  });
+
+  it("«Limpiar filtros» deja el foco en el buscador", async () => {
+    const { user } = renderList("/pokedex?q=nadie");
+    await user.click(await screen.findByRole("button", { name: "Limpiar filtros" }));
+    expect(screen.getByRole("searchbox", { name: "Buscar" })).toHaveFocus();
+  });
+
+  it("buscar algo sin letras ni números no muestra a todos", () => {
+    expect(ids("q=!!!")).toEqual([]);
+    expect(ids("q=%20%20")).toEqual([6, 122, 146, 250, 479]);
+  });
+
+  it("buscar ♀ encuentra a quien lo lleva en el nombre, no a quien tiene una f", () => {
+    const nido = entry(29, "Nidoran♀", "Nidoran♀", ["poison"], 275);
+    expect(ids("q=%E2%99%80", [...SAMPLE, nido])).toEqual([29]);
+    expect(ids("q=nidoran", [...SAMPLE, nido])).toEqual([29]);
+  });
+
+  it("un error del servidor no echa la culpa a la conexión", async () => {
+    const services = fakeServices();
+    vi.mocked(services.endpoints.catalog.dex).mockRejectedValue(new ApiError(429, "RATE_LIMITED"));
+    renderWithServices(<PokedexPage />, { route: "/pokedex", services });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Vas muy rápido");
+    expect(alert).not.toHaveTextContent("conexión");
+  });
+
+  it("cambia el título de la pestaña", async () => {
+    renderList();
+    await screen.findByRole("link", { name: /Charizard/ });
+    expect(document.title).toBe("Pokédex · PokeMiniGames");
+  });
+});
