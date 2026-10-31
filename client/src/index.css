@@ -296,6 +296,12 @@ body::before {
   }
   /* La Poké Ball de la pantalla «¡Revancha!»: colores fijos porque es la de siempre y es decorativa (sin texto). */
   /* Los rayos amarillos de «¿Quién es ese Pokémon?» (decorativos, con colores fijos como la Poké Ball). */
+  /* La sala de subastas: telón rojo y un foco dorado que ilumina el lote. */
+  .auction-stage {
+    background:
+      radial-gradient(ellipse 45% 80% at 50% 100%, #fde68a 0 55%, #f59e0b 75%, transparent 100%),
+      repeating-linear-gradient(90deg, #7f1d1d 0 14px, #991b1b 14px 28px);
+  }
   .silhouette-rays {
     background: repeating-conic-gradient(#fde047 0deg 10deg, #facc15 10deg 20deg);
   }

@@ -44,6 +44,20 @@ export const MENU_BACKGROUNDS: readonly MenuBackground[] = [
 ];
 
 /** Uno al azar (o nada si la lista está vacía). */
+/** Pokémon de silueta inconfundible para las portadas de «¿Quién es ese Pokémon?» y de la subasta. */
+export const SILHOUETTE_COVERS: readonly number[] = [94, 25, 6, 150, 143, 133, 448, 658, 59, 39, 384, 130];
+
+export interface GameCovers {
+  silhouette: number;
+  auction: number;
+}
+
+/** Una silueta para cada juego, siempre distintas: si no, las dos tarjetas se parecerían. */
+export function pickCovers(random: () => number = Math.random): GameCovers {
+  const index = Math.min(SILHOUETTE_COVERS.length - 1, Math.floor(random() * SILHOUETTE_COVERS.length));
+  return { silhouette: SILHOUETTE_COVERS[index]!, auction: SILHOUETTE_COVERS[(index + 1) % SILHOUETTE_COVERS.length]! };
+}
+
 export function pickRandom<T>(items: readonly T[], random: () => number = Math.random): T | undefined {
   if (items.length === 0) return undefined;
   return items[Math.min(items.length - 1, Math.floor(random() * items.length))];
