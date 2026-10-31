@@ -166,3 +166,18 @@ describe("la subasta suena", () => {
     ]);
   });
 });
+
+describe("el combate suena", () => {
+  const me = { ...initialGameView, mySeat: 1 as const };
+  const action = { actor: 1 as const, move: "fire" as const, damage: 5, critical: false, effectiveness: 1, healed: 0, actorHp: 9, targetHp: 9 };
+  const turn = (actor: 1 | 2): ServerEvent => ({ name: "battle-turn", payload: { round: 1, turn: 1, actions: [{ ...action, actor }] } });
+
+  it("distinto si ataco yo primero o el rival", () => {
+    expect(effectsForEvent(me, turn(1), me)).toEqual([{ effect: "round", delayMs: 0 }]);
+    expect(effectsForEvent(me, turn(2), me)).toEqual([{ effect: "rival", delayMs: 0 }]);
+  });
+
+  it("y el K.O.", () => {
+    expect(effectsForEvent(me, { name: "battle-round-ended", payload: { round: 1, loser: 2, atLimit: false } }, me)).toEqual([{ effect: "wrong", delayMs: 0 }]);
+  });
+});

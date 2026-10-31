@@ -1,5 +1,6 @@
 import type {
   AuctionSalePayload,
+  BattleAction,
   AuctionStateView,
   ErrorCode,
   GameEndedPayload,
@@ -87,9 +88,29 @@ export interface GameView {
   auction: AuctionStateView | null;
   /** Cómo se cerró el último lote, para anunciarlo. */
   lastSale: AuctionSalePayload | null;
+  /** Los últimos turnos del combate, con los nombres de quienes pelearon entonces. Se pierde al recargar. */
+  battleLog: BattleLogEntry[];
+  lastRoundEnd: { round: number; loser: Seat; atLimit: boolean } | null;
   /** Hora del servidor menos hora del navegador. */
   clockOffset: number;
   lastError: { code: ErrorCode; message: string } | null;
+}
+
+export interface BattleLogEntry {
+  round: number;
+  turn: number;
+  actions: BattleAction[];
+  names: Record<Seat, string>;
+}
+
+const BATTLE_LOG_MAX = 30;
+
+/** Quiénes pelean ahora mismo: el `room-state` con los PS nuevos llega después del `battle-turn`. */
+function fightingNames(view: GameView): Record<Seat, string> {
+  const battle = view.auction?.battle;
+  const mine = battle?.myTeam.find((one) => one.pokemon.id === battle.myTitular)?.pokemon.names.es ?? "Tu Pokémon";
+  const theirs = battle?.rivalTeam.find((one) => one.pokemon.id === battle.rivalTitular)?.pokemon.names.es ?? "Rival";
+  return view.mySeat === 2 ? { 1: theirs, 2: mine } : { 1: mine, 2: theirs };
 }
 
 export const initialGameView: GameView = {
@@ -112,6 +133,8 @@ export const initialGameView: GameView = {
   silhouette: null,
   auction: null,
   lastSale: null,
+  battleLog: [],
+  lastRoundEnd: null,
   clockOffset: 0,
   lastError: null,
 };
@@ -311,10 +334,16 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
     case "auction-sale":
       return { ...view, lastSale: event.payload };
 
-    // Lo que cambian llega en `room-state`; el combate tendrá sus pantallas en la #39.
-    case "auction-reveal":
-    case "battle-turn":
+    case "battle-turn": {
+      const { round, turn, actions } = event.payload;
+      return { ...view, battleLog: [...view.battleLog, { round, turn, actions, names: fightingNames(view) }].slice(-BATTLE_LOG_MAX) };
+    }
+
     case "battle-round-ended":
+      return { ...view, lastRoundEnd: event.payload };
+
+    // Lo que cambia llega en `room-state`.
+    case "auction-reveal":
       return view;
 
     case "silhouette-answer-received": {
