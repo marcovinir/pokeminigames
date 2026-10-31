@@ -39,7 +39,7 @@ export type Seat = 1 | 2;
 
 export type PickResult = "VALID" | "NOT_FOUND" | "WRONG_TYPES" | "ALREADY_OWNED" | "TAKEN" | "NO_ANSWER";
 
-export type GamePhase = "waiting" | "starting" | "choosing_types" | "round_active" | "round_result" | "auction" | "reveal" | "finished";
+export type GamePhase = "waiting" | "starting" | "choosing_types" | "round_active" | "round_result" | "auction" | "reveal" | "lineup" | "battle" | "battle_pause" | "finished";
 
 /**
  * Por qué terminó la partida. completed, forfeit, disconnect y exhausted son partidas
