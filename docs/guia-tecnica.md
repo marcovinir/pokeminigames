@@ -224,6 +224,9 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `choose-type` | `{ type }` (modo elegido) |
 | `submit-pokemon` | `{ text }` (un intento por ronda, máximo 100 caracteres) |
 | `leave-room` | — (también cuenta como salir de una oferta de revancha: el rival ve «se fue») |
+| `auction-bid` | Subasta: `{ step }`: sube la puja 10.000, 50.000 o 100.000; `null` abre el lote al precio inicial |
+| `auction-pass` | Subasta: pasar en el lote abierto |
+| `auction-ready` | Subasta: ya vi la revelación; si confirman los dos, se salta |
 | `rematch-request` | — (pedir la revancha o aceptar la del rival) |
 | `rematch-cancel` | — (cancelar la propia o rechazar la del rival) |
 
@@ -240,5 +243,7 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `silhouette-round-started` | Silueta: empieza una ronda: `{ round, totalRounds, deadline, silhouetteUrl, serverNow }` (nunca dice qué Pokémon es) |
 | `silhouette-answer-received` | Silueta: solo a quien respondió, `{ ms }` |
 | `silhouette-round-result` | Silueta: la revelación (`reveal` con el Pokémon y la respuesta, el acierto, los ms y los puntos de cada uno), `totals` y `nextRoundAt` |
+| `auction-sale` | Subasta: se cerró un lote: `{ lot, kind, winner, paid, item? }`, sin decir qué Pokémon era |
+| `auction-reveal` | Subasta: los 6 Pokémon reales, con quién los compró y si eran trampa |
 | `rematch-room` | Los dos aceptaron: `{ code }` de la sala nueva (que trae `rematch: true` en su `room-state`) |
 | `error` | `{ code, message }` |
