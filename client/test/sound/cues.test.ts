@@ -153,7 +153,7 @@ describe("la subasta suena", () => {
   });
 
   it("un aviso al venderse un lote", () => {
-    const event = { name: "auction-sale", payload: { lot: 1, kind: "pokemon", winner: 1, paid: 100 } } as const;
+    const event = { name: "auction-sale", payload: { lot: 1, winner: 1, paid: 100 } } as const;
     expect(effectsForEvent(view, event, view)).toEqual([{ effect: "round", delayMs: 0 }]);
   });
 

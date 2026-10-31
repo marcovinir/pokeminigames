@@ -12,10 +12,8 @@ export function AuctionSummary({ summary, names, mySeat }: { summary: Summary; n
           <p className="font-display font-semibold [overflow-wrap:anywhere]">{names[seat]}</p>
           <dt className="mt-2 text-muted">{AUCTION_SUMMARY_TEXT.damage}</dt>
           <dd className="font-num text-xl font-semibold tabular-nums">{summary.damage[seat]}</dd>
-          <dt className="mt-2 text-muted">{AUCTION_SUMMARY_TEXT.spentPokemon}</dt>
-          <dd className="font-num tabular-nums">{auctionMoney(summary.spent[seat].pokemon)}</dd>
-          <dt className="mt-2 text-muted">{AUCTION_SUMMARY_TEXT.spentItems}</dt>
-          <dd className="font-num tabular-nums">{auctionMoney(summary.spent[seat].items)}</dd>
+          <dt className="mt-2 text-muted">{AUCTION_SUMMARY_TEXT.spent}</dt>
+          <dd className="font-num tabular-nums">{auctionMoney(summary.spent[seat])}</dd>
         </dl>
       ))}
     </Card>

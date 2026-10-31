@@ -21,6 +21,7 @@ export interface GameClientApi {
   bid(step: BidStep | null, turnId: number): void;
   pass(turnId: number): void;
   /** Ya vi la revelación. */
+  stillHere(turnId: number): void;
   ready(): void;
   lineup(order: number[]): void;
   move(move: BattleMove): void;
@@ -113,6 +114,10 @@ export class GameClient implements GameClientApi {
 
   pass(turnId: number): void {
     this.socket?.emit("auction-pass", { turnId });
+  }
+
+  stillHere(turnId: number): void {
+    this.socket?.emit("auction-still-here", { turnId });
   }
 
   ready(): void {

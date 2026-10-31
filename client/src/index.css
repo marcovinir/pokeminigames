@@ -6,6 +6,15 @@
  * subconjuntos latino y latino extendido, que cubren el español; el navegador descarga cada archivo únicamente si la página
  * usa caracteres de su `unicode-range`. (Importar el CSS de cada paquete declararía también cirílico, griego, hebreo y vietnamita.)
  */
+/* pixelify-sans-latin: solo en las pantallas de subasta */
+@font-face {
+  font-family: "Pixelify Sans Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 700;
+  src: url(@fontsource-variable/pixelify-sans/files/pixelify-sans-latin-wght-normal.woff2) format("woff2-variations");
+}
+
 /* fredoka-latin-ext */
 @font-face {
   font-family: "Fredoka Variable";
@@ -167,6 +176,122 @@ body::before {
    color de su texto. Solo ese encabezado: un <header> de una página (el del perfil) va sobre el fondo normal y lleva el aro del tema. */
 [data-app-header] :focus-visible {
   outline-color: var(--header-fg);
+}
+
+/* La subasta: colores propios, iguales en los cuatro temas, porque la escena es pixel art. */
+.font-pixel {
+  font-family: "Pixelify Sans Variable", var(--font-display, sans-serif);
+}
+.auction-screen {
+  background: #141033;
+  border-radius: 16px;
+  color: #141033;
+}
+.auction-panel {
+  background: #ffffff;
+  color: #141033;
+  border-radius: 12px;
+}
+.auction-panel-me {
+  outline: 4px solid #ffcb05;
+}
+.auction-panel-rival {
+  outline: 4px solid #ff8cc0;
+}
+.auction-money-me {
+  background: #fff3bf;
+}
+.auction-money-rival {
+  background: #ffe0ee;
+}
+.auction-slot-empty {
+  border: 2px dashed #8a84b3;
+}
+.auction-banner-me {
+  background: #ffcb05;
+}
+.auction-banner-rival {
+  background: #ff8cc0;
+}
+.auction-pixel {
+  image-rendering: pixelated;
+}
+.auction-silhouette {
+  filter: drop-shadow(0 0 14px rgb(255 255 255 / 0.55));
+}
+.auction-bid {
+  border: 0;
+  border-radius: 12px;
+  color: #141033;
+  cursor: pointer;
+  font-family: "Pixelify Sans Variable", var(--font-display, sans-serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.auction-bid:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.auction-bid-green {
+  background: #22c55e;
+  box-shadow: 0 5px 0 #127a39;
+}
+.auction-bid-blue {
+  background: #60a5fa;
+  box-shadow: 0 5px 0 #2563a8;
+}
+.auction-bid-purple {
+  background: #c4b5fd;
+  box-shadow: 0 5px 0 #7b68c9;
+}
+.auction-bid-retire {
+  background: #ffffff;
+  color: #a51f1b;
+  box-shadow: 0 5px 0 #a51f1b;
+}
+@keyframes auction-float {
+  50% {
+    margin-bottom: 8px;
+  }
+}
+@keyframes auction-pulse {
+  50% {
+    transform: scale(1.012);
+  }
+}
+@keyframes auction-bump {
+  40% {
+    transform: scale(1.18);
+  }
+}
+@keyframes auction-stamp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-12deg) scale(2);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-12deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-12deg) scale(1);
+  }
+}
+.auction-float {
+  animation: auction-float 2.6s ease-in-out infinite;
+}
+.auction-pulse {
+  animation: auction-pulse 1.4s ease-in-out infinite;
+}
+.auction-bump {
+  animation: auction-bump 300ms ease-out;
+  transform-origin: right;
+}
+.auction-stamp {
+  animation: auction-stamp 1.4s ease-out forwards;
+  opacity: 0;
 }
 
 /* La barra de vida del combate: verde, amarilla o roja. */

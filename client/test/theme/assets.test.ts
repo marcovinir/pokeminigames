@@ -18,8 +18,8 @@ describe("tipografías empaquetadas", () => {
   // Spec §3: solo los subconjuntos latino y latino extendido, que cubren el español. Importar el CSS de cada paquete
   // declaraba también cirílico, griego, hebreo y vietnamita (14 reglas): no se descargan, pero engordaban el CSS (estaba
   // en 39 899 de 40 000 B) y copiaban al directorio de salida 8 archivos que nadie usa.
-  it("se declaran solo los subconjuntos latino y latino extendido de cada familia: seis reglas @font-face", () => {
-    expect(faces).toHaveLength(6);
+  it("se declaran solo los subconjuntos latino y latino extendido de cada familia, más el latino de la letra de la subasta: siete reglas @font-face", () => {
+    expect(faces).toHaveLength(7);
     for (const [family, folder] of [
       ["Fredoka Variable", "fredoka"],
       ["Nunito Variable", "nunito"],
@@ -40,7 +40,7 @@ describe("tipografías empaquetadas", () => {
 
   it("los archivos de fuente que referencia el CSS existen en el paquete instalado", () => {
     const files = [...css.matchAll(/url\(@fontsource-variable\/([\w-]+)\/files\/([\w.-]+)\)/g)];
-    expect(files).toHaveLength(6);
+    expect(files).toHaveLength(7);
     for (const [, folder, file] of files) {
       const found = ["../node_modules", "node_modules"].some((base) => existsSync(join(client, base, "@fontsource-variable", folder!, "files", file!)));
       expect(found, `${folder}/${file}`).toBe(true);

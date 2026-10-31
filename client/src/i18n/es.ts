@@ -1,4 +1,4 @@
-import { type AuctionItem, type AuctionSalePayload,
+import { type AuctionSalePayload,
   type BaseStats,
   type DobleTipoConfig,
   type ErrorCode,
@@ -401,13 +401,19 @@ export const AUCTION_TEXT = {
   trapsHint: "A veces la silueta no es el Pokémon que compras.",
   withTraps: "Con siluetas trampa",
   withoutTraps: "Sin siluetas trampa",
-  players: "Jugadores",
-  question: "¿Cuánto pagas por este Pokémon?",
+  yourMoney: "Tu dinero",
+  theirMoney: "Su dinero",
+  boughtSilhouette: "Silueta comprada",
+  lotBids: "Pujas de este lote",
+  yourTurn: "¡Te toca pujar!",
   startingPrice: "Precio inicial",
   currentBid: "Puja actual",
-  turnTimer: "Tiempo del turno",
-  cannotBid: "No te alcanza: solo puedes pasar.",
-  pass: "Pasar",
+  stillThere: "¿Sigues ahí?",
+  stillHere: "Sigo aquí",
+  sold: "¡Vendido!",
+  cannotBid: "No te alcanza: solo puedes retirarte.",
+  retire: "Retirarme",
+  bothRetire: "Va a quien tenga menos",
   revealTitle: "¿Qué compró cada uno?",
   revealLog: "Revelación",
   wasTrap: "¡Era una trampa!",
@@ -416,19 +422,38 @@ export const AUCTION_TEXT = {
   noWinner: "Sin ganador",
   noPurchases: "No llegó a comprar ninguno.",
   youTurn: "Te toca.",
-  lotOf: (lot: number): string => `Lote ${lot} de 9`,
-  bid: (amount: number): string => `Pujar ${auctionMoney(amount)}`,
+  lotOf: (lot: number): string => `Lote ${lot} de 12`,
+  openAt: (amount: string): string => `Abrir en ${amount}`,
+  endsAt: (amount: string): string => `queda en ${amount}`,
   rivalTurn: (rival: string): string => `Le toca a ${rival}`,
+  autoFor: (name: string): string => `Este va para ${name}`,
   leading: (name: string): string => `Va ganando ${name}`,
-  teamSize: (size: number): string => `${size} de 3 Pokémon`,
+  rivalTakes: (rival: string): string => `${rival} se lo lleva`,
+  rivalDecides: (rival: string): string => `${rival} decide si lo abre`,
+  rivalRetired: (rival: string): string => `${rival} se retiró. Si abres, es tuyo.`,
+  youRetired: (rival: string): string => `Te retiraste. ${rival} decide si lo abre.`,
+  rivalDeciding: (rival: string): string => `${rival} decide: si se retira, será tu turno de abrir o retirarte.`,
+  ifRivalRetires: (rival: string): string => `Si ${rival} se retira, es tuyo. Si sube, volverá a tocarte a ti.`,
+  waitingFor: (rival: string): string => `Esperando a ${rival}…`,
+  teamSize: (size: number): string => `${size} de 6`,
   teamOf: (name: string): string => `Equipo de ${name}`,
+  limitNote: (limit: string): string => `Puedes pujar hasta ${limit}. El resto se guarda para completar tus 6.`,
 };
+
+export const AUCTION_HELP = {
+  title: "Cómo se puja",
+  close: "Entendido",
+  steps: [
+    "Cuando te toque, sube la puja. No hay prisa: no hay reloj.",
+    "O retírate. Si ya hay una puja, el otro se lleva el Pokémon a ese precio; si no, decide él.",
+    "Cada uno termina con 6 Pokémon, y al final se revela quiénes eran. ¡Algunas siluetas son trampa!",
+  ],
+} as const;
 
 export const AUCTION_SUMMARY_TEXT = {
   title: "Resumen del combate",
   damage: "Daño hecho",
-  spentPokemon: "Gastado en Pokémon",
-  spentItems: "Gastado en objetos",
+  spent: "Dinero gastado",
 } as const;
 
 export const BATTLE_TEXT = {
@@ -457,21 +482,14 @@ export const BATTLE_TEXT = {
   roundTurn: (round: number, turn: number): string => `Asalto ${round} · Turno ${turn}`,
 };
 
-/** «1.000.000»: siempre con punto de miles, sea cual sea el idioma del navegador. */
+/** «₽ 1.000.000»: siempre con punto de miles, sea cual sea el idioma del navegador. */
 export function auctionMoney(amount: number): string {
-  return String(amount).replace(/\B(?=(\d{3})+$)/g, ".");
+  return "₽ " + String(amount).replace(/\B(?=(\d{3})+$)/g, ".");
 }
 
-export const AUCTION_ITEM_LABELS: Record<AuctionItem, { name: string; description: string }> = {
-  pocion: { name: "Poción Máxima", description: "Cura todos los PS." },
-  revivir: { name: "Revivir", description: "Revive con el 50 % de los PS." },
-  cinta: { name: "Cinta", description: "+25 % de daño durante un asalto." },
-};
-
-/** Cómo se cerró un lote, para los lectores de pantalla. */
-export function auctionSaleText(sale: AuctionSalePayload, winner: string | null): string {
-  if (winner === null) return `Lote ${sale.lot}: nadie se lleva el objeto`;
-  return `Lote ${sale.lot}: ${winner} se lleva el lote por ${auctionMoney(sale.paid)}`;
+/** Cómo se cerró un lote. */
+export function auctionSaleText(sale: AuctionSalePayload, winner: string): string {
+  return `Lote ${sale.lot}: ${winner} se lo lleva por ${auctionMoney(sale.paid)}`;
 }
 
 export const SILHOUETTE_TEXT = {

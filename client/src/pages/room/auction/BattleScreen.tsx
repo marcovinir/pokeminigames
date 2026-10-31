@@ -1,6 +1,5 @@
 import type { Seat } from "@pokemon-minigames/shared";
 import { useEffect, useRef, useState } from "react";
-import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
 import { Timer } from "../../../components/Timer";
@@ -8,7 +7,7 @@ import { effectivenessLabel, moveLabel, turnLines } from "../../../game/battle";
 import { BATTLE_MOVE_MS } from "../../../game/durations";
 import { useReducedMotion } from "../../../game/motion";
 import { rivalSeat } from "../../../game/seats";
-import { AUCTION_ITEM_LABELS, BATTLE_TEXT } from "../../../i18n/es";
+import { BATTLE_TEXT } from "../../../i18n/es";
 import { useLastSeconds } from "../../../sound/use-last-seconds";
 import { LeaveButton } from "../LeaveButton";
 import { focusWasLost } from "../RematchPanel";
@@ -76,12 +75,10 @@ export function BattleScreen() {
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3">
         <div className="min-w-0">
           {mine ? <HpBar fighter={mine} reverse /> : null}
-          {battle.cinta[mySeat] ? <Badge tone="info">{AUCTION_ITEM_LABELS.cinta.name}</Badge> : null}
         </div>
         <Timer deadline={deadline} offset={view.clockOffset} totalMs={BATTLE_MOVE_MS} label={BATTLE_TEXT.moveTimer} size={56} />
         <div className="min-w-0">
           {theirs ? <HpBar fighter={theirs} /> : null}
-          {battle.cinta[rival] ? <Badge tone="info">{AUCTION_ITEM_LABELS.cinta.name}</Badge> : null}
         </div>
       </div>
 

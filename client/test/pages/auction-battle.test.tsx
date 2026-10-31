@@ -147,8 +147,4 @@ describe("el combate", () => {
     expect(screen.getAllByText("Uno").length).toBeGreaterThan(1);
   });
 
-  it("la Cinta se ve en la barra de quien la lleva", () => {
-    renderRoom([battleState("battle", { cinta: { 1: false, 2: true } })]);
-    expect(screen.getByText("Cinta")).toBeInTheDocument();
-  });
 });

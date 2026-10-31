@@ -98,7 +98,7 @@ function announcement(view: GameView): string {
       const nameOf = (seat: number | null) => view.players.find((player) => player.seat === seat)?.username ?? "Tu rival";
       const sale = view.lastSale;
       const lot = view.auction?.lot;
-      const parts = sale ? [auctionSaleText(sale, sale.winner === null ? null : nameOf(sale.winner))] : [];
+      const parts = sale ? [auctionSaleText(sale, nameOf(sale.winner))] : [];
       if (lot) {
         parts.push(AUCTION_TEXT.lotOf(lot.number));
         parts.push(`${lot.currentBid === null ? AUCTION_TEXT.startingPrice : AUCTION_TEXT.currentBid}: ${auctionMoney(lot.currentBid ?? lot.price)}`);

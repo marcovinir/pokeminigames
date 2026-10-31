@@ -12,7 +12,7 @@ import { fakeServices, renderRoute, ASH, GUEST, signIn } from "../helpers/servic
 describe("límites y duraciones del cliente", () => {
   it("coinciden con los del servidor", () => {
     expect(durations.ROUND_MS).toBe(serverConstants.ROUND_SECONDS * 1000);
-    expect(durations.AUCTION_TURN_MS).toBe(auctionRules.BID_TURN_MS);
+    expect(durations.AUCTION_WARNING_MS).toBe(auctionRules.INACTIVITY_WARNING_MS);
     expect(durations.AUCTION_REVEAL_MS).toBe(auctionRules.REVEAL_MS);
     expect(durations.BATTLE_LINEUP_MS).toBe(auctionRules.LINEUP_MS);
     expect(durations.BATTLE_MOVE_MS).toBe(auctionRules.MOVE_MS);

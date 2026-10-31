@@ -25,9 +25,9 @@ function RevealEntry({ entry, shown, animated }: { entry: AuctionRevealEntry; sh
   }
   return (
     <li data-reveal-entry className={`framed flex min-w-0 items-center gap-3 rounded-card bg-surface p-3 ${animated ? "animate-rise" : ""} ${entry.wasTrap ? "border-danger" : ""}`}>
-      <ArtImage id={entry.pokemon.id} spriteUrl={entry.pokemon.spriteUrl} size={64} eager className="size-16 shrink-0 object-contain" />
+      <ArtImage id={entry.pokemon.id} spriteUrl={entry.pokemon.spriteUrl} size={72} variant="sprite" eager className="auction-pixel size-18 shrink-0 object-contain" />
       <span className="min-w-0">
-        <span className="block font-display font-semibold [overflow-wrap:anywhere]">{entry.pokemon.names.es}</span>
+        <span className="font-pixel block text-lg font-bold [overflow-wrap:anywhere]">{entry.pokemon.names.es}</span>
         {entry.wasTrap ? <span className="block text-sm font-semibold text-danger">{AUCTION_TEXT.wasTrap}</span> : null}
       </span>
     </li>
@@ -52,7 +52,7 @@ export function RevealView() {
   const column = (title: string, seat: number) => (
     <section aria-label={AUCTION_TEXT.teamOf(title)} className="flex min-w-0 flex-col gap-2">
       <h2 className="font-display text-lg font-semibold [overflow-wrap:anywhere]">{title}</h2>
-      <ul className="flex flex-col gap-2">
+      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {auction.reveal.map((entry, index) =>
           entry.owner === seat ? <RevealEntry key={entry.pokemon.id} entry={entry} shown={index < count} animated={!reduced} /> : null,
         )}
@@ -61,12 +61,12 @@ export function RevealView() {
   );
 
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+    <section className="mx-auto flex w-full max-w-5xl flex-col gap-4">
       <p role="log" aria-label={AUCTION_TEXT.revealLog} className="sr-only">
         {last ? `${last.pokemon.names.es}${last.wasTrap ? `. ${AUCTION_TEXT.wasTrap}` : ""}` : ""}
       </p>
       <Card tone="raised" className="p-6 text-center">
-        <h1 className="font-display text-2xl font-semibold">{AUCTION_TEXT.revealTitle}</h1>
+        <h1 className="font-pixel text-3xl font-bold">{AUCTION_TEXT.revealTitle}</h1>
       </Card>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {column(me?.username ?? "Tú", view.mySeat)}

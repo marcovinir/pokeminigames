@@ -16,7 +16,7 @@ const REVEAL = [entry(1, "Uno", 1), entry(2, "Dos", 2, true), entry(3, "Tres", 1
 const battleView = (over: Partial<BattleView> = {}): BattleView => ({
   round: 0,
   turn: 0,
-  deadline: SERVER_NOW + 18_000,
+  deadline: SERVER_NOW + 36_000,
   confirmed: false,
   myLineup: null,
   myMove: null,
@@ -26,7 +26,6 @@ const battleView = (over: Partial<BattleView> = {}): BattleView => ({
   myTitular: null,
   rivalTitular: null,
   moves: [],
-  cinta: { 1: false, 2: false },
   ...over,
 });
 
@@ -35,7 +34,7 @@ const state = (phase: "reveal" | "lineup", over: Partial<BattleView> = {}) =>
     phase,
     config: { game: "subasta", traps: true },
     players: [ash(), misty()],
-    auction: { money: { 1: 1, 2: 2 }, teamSizes: { 1: 3, 2: 3 }, items: { 1: [], 2: [] }, lot: null, reveal: REVEAL, battle: battleView(over) },
+    auction: { money: { 1: 1, 2: 2 }, teamSizes: { 1: 3, 2: 3 }, purchases: { 1: [], 2: [] }, lot: null, reveal: REVEAL, battle: battleView(over) },
   });
 
 beforeEach(() => {
@@ -47,7 +46,7 @@ afterEach(() => {
 });
 
 describe("revealedCount", () => {
-  const deadline = 18_000;
+  const deadline = 36_000;
   it("uno cada 3 s", () => {
     expect(revealedCount(deadline, 0, 6)).toBe(1);
     expect(revealedCount(deadline, 2999, 6)).toBe(1);
@@ -70,7 +69,7 @@ describe("la revelación", () => {
   });
 
   it("al recargar a mitad se ven de golpe los que ya tocaban, y la trampa", () => {
-    renderRoom([state("reveal", { deadline: SERVER_NOW + 6000 })]);
+    renderRoom([state("reveal", { deadline: SERVER_NOW + 24_000 })]);
     for (const name of ["Uno", "Dos", "Tres", "Cuatro", "Cinco"]) expect(screen.getByText(name, { ignore: "[role=log]" })).toBeInTheDocument();
     expect(screen.queryByText("Seis")).toBeNull();
     expect(screen.getAllByText("¡Era una trampa!")).toHaveLength(1);
@@ -111,7 +110,7 @@ describe("el resumen de una subasta", () => {
         reason,
         teams: { 1: [pokemon(1, 400)], 2: [] },
         totals: { 1: 0, 2: 0 },
-        auction: { damage: { 1: 0, 2: 0 }, spent: { 1: { pokemon: 0, items: 0 }, 2: { pokemon: 0, items: 0 } }, reveal: [] },
+        auction: { damage: { 1: 0, 2: 0 }, spent: { 1: 0, 2: 0 }, reveal: [] },
       },
     }) as never;
   const base = event.roomState({ phase: "finished", config: { game: "subasta", traps: true }, players: [ash(), misty()] });
@@ -129,14 +128,13 @@ describe("el resumen de una subasta", () => {
   });
 
   it("cuenta el daño y el dinero gastado de cada uno", () => {
-    const summary = { damage: { 1: 321, 2: 123 }, spent: { 1: { pokemon: 400_000, items: 100_000 }, 2: { pokemon: 900_000, items: 0 } }, reveal: [] };
+    const summary = { damage: { 1: 321, 2: 123 }, spent: { 1: 400_000, 2: 900_000 }, reveal: [] };
     renderRoom([base, { name: "game-ended", payload: { winnerSeat: 1, reason: "completed", teams: { 1: [], 2: [] }, totals: { 1: 0, 2: 0 }, auction: summary } } as never]);
     const section = screen.getByRole("region", { name: "Resumen del combate" });
     const mine = section.querySelector("[data-summary-seat='1']")!;
     expect(mine).toHaveTextContent("ash");
     expect(mine).toHaveTextContent("321");
     expect(mine).toHaveTextContent("400.000");
-    expect(mine).toHaveTextContent("100.000");
     expect(section.querySelector("[data-summary-seat='2']")).toHaveTextContent("900.000");
   });
 
