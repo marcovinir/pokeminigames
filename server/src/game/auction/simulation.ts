@@ -1,11 +1,13 @@
-import { type BaseStats, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
+import { AUCTION_ITEMS, type AuctionItem, BID_STEPS, type BaseStats, type TypeName, typeEffectiveness } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 import { pickOne } from "../rng.js";
 import {
   type AttackMove,
   CRITICAL_ODDS,
+  ITEM_PRICES,
   MAX_TURNS_PER_ROUND,
   STARTING_MONEY,
+  TRAP_ODDS,
   TEAM_SIZE,
   bidCap,
   combatHp,
@@ -26,12 +28,9 @@ export interface AuctionPokemon {
   stats: BaseStats;
 }
 
-type ItemName = "pocion" | "revivir" | "cinta";
+type ItemName = AuctionItem;
 
-const ITEM_PRICES: Record<ItemName, number> = { pocion: 100_000, revivir: 150_000, cinta: 100_000 };
-const ITEMS = Object.keys(ITEM_PRICES) as ItemName[];
-const BID_STEPS = [10_000, 50_000, 100_000];
-const TRAP_ODDS = 6;
+const ITEMS = AUCTION_ITEMS;
 const HEAL_FRACTION = 0.25;
 const REVIVE_FRACTION = 0.5;
 const POTION_BELOW = 0.4;

@@ -49,6 +49,8 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   INVALID_REFRESH_TOKEN: "Tu sesión expiró. Inicia sesión de nuevo.",
   NOT_FOUND: "No encontramos lo que buscas.",
   USER_NOT_FOUND: "No encontramos a ese jugador.",
+  NOT_YOUR_TURN: "Aún no es tu turno.",
+  INVALID_BID: "Esa puja no es válida.",
   POKEMON_NOT_FOUND: "Ese Pokémon no existe.",
   INTERNAL_ERROR: "Algo falló en el servidor. Inténtalo de nuevo.",
   ALREADY_IN_GAME: "Ya estás en una partida. Vuelve a ella desde el lobby.",
@@ -390,6 +392,7 @@ export const MENU_TEXT = {
 export const GAME_CARDS: Record<GameKind, { name: string; description: string; isNew: boolean }> = {
   doble_tipo: { name: "Doble tipo", description: "Nombra un Pokémon con los dos tipos. Gana quien sume más stats.", isNew: false },
   silueta: { name: "¿Quién es ese Pokémon?", description: "Adivina la silueta. Cuanto más rápido, más puntos.", isNew: true },
+  subasta: { name: "Subasta Pokémon", description: "Puja por siluetas y combate con lo que compres.", isNew: true },
 };
 
 export const SILHOUETTE_TEXT = {

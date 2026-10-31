@@ -1,4 +1,4 @@
-import { GAME_KINDS } from "@pokemon-minigames/shared";
+import { PLAYABLE_GAMES } from "@pokemon-minigames/shared";
 import { useState } from "react";
 import { Badge } from "../components/Badge";
 import { GameArt } from "../components/GameArt";
@@ -24,7 +24,7 @@ export function AuthHero({ random = Math.random }: { random?: () => number } = {
 
       <div className="hidden md:block">
         <ul aria-label={AUTH_HERO_TEXT.gamesLabel} role="list" className="flex flex-col gap-4">
-          {GAME_KINDS.map((game) => {
+          {PLAYABLE_GAMES.map((game) => {
             const card = GAME_CARDS[game];
             return (
               <li key={game} className="flex items-center gap-4">

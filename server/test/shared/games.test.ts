@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 
 describe("los juegos", () => {
   it("son dos, con su slug de ruta", () => {
-    expect(GAME_KINDS).toEqual(["doble_tipo", "silueta"]);
+    expect(GAME_KINDS).toEqual(["doble_tipo", "silueta", "subasta"]);
     expect(GAME_SLUGS).toEqual({ doble_tipo: "doble-tipo", silueta: "silueta" });
     expect(gameFromSlug("silueta")).toBe("silueta");
     expect(gameFromSlug("doble-tipo")).toBe("doble_tipo");

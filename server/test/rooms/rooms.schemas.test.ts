@@ -7,6 +7,10 @@ const messages = (body: unknown): string[] => {
 };
 
 describe("createRoomSchema", () => {
+  it("todavía no acepta salas de subasta", () => {
+    expect(createRoomSchema.safeParse({ game: "subasta", traps: true }).success).toBe(false);
+  });
+
   it("un cuerpo sin juego sigue validando como hoy y sale como «Doble tipo»", () => {
     expect(createRoomSchema.parse({ typeMode: "random", lengthMode: "fixed_rounds", roundsLimit: 3 })).toEqual({
       typeMode: "random",

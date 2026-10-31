@@ -1,4 +1,4 @@
-import { GAME_KINDS } from "@pokemon-minigames/shared";
+import { PLAYABLE_GAMES } from "@pokemon-minigames/shared";
 import { useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/Badge";
@@ -88,7 +88,7 @@ export function MainMenu({
         <h1 className="font-display text-3xl font-semibold">{MENU_TEXT.title}</h1>
         <p className="text-muted">{MENU_TEXT.subtitle}</p>
       </div>
-      {GAME_KINDS.map((game, index) => {
+      {PLAYABLE_GAMES.map((game, index) => {
         const card = GAME_CARDS[game];
         return (
           <Card as="article" key={game} style={rise(index + 1)} className="animate-rise p-5">

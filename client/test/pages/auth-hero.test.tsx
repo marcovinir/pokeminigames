@@ -1,4 +1,4 @@
-import { GAME_KINDS } from "@pokemon-minigames/shared";
+import { PLAYABLE_GAMES } from "@pokemon-minigames/shared";
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { GAME_CARDS } from "../../src/i18n/es";
@@ -26,8 +26,8 @@ describe("pantallas de acceso: la presentación de PokeMiniGames", () => {
     renderWithServices(page);
     const list = screen.getByRole("list", { name: "Minijuegos" });
     const items = within(list).getAllByRole("listitem");
-    expect(items).toHaveLength(GAME_KINDS.length);
-    GAME_KINDS.forEach((game, index) => {
+    expect(items).toHaveLength(PLAYABLE_GAMES.length);
+    PLAYABLE_GAMES.forEach((game, index) => {
       expect(items[index]).toHaveTextContent(GAME_CARDS[game].name);
       expect(items[index]).toHaveTextContent(GAME_CARDS[game].description);
     });
@@ -37,14 +37,14 @@ describe("pantallas de acceso: la presentación de PokeMiniGames", () => {
     renderWithServices(<LoginPage />);
     const list = screen.getByRole("list", { name: "Minijuegos" });
     const arts = list.querySelectorAll("img");
-    expect(arts.length).toBeGreaterThanOrEqual(GAME_KINDS.length);
+    expect(arts.length).toBeGreaterThanOrEqual(PLAYABLE_GAMES.length);
     for (const img of arts) expect(img.closest("[aria-hidden='true']")).not.toBeNull();
   });
 
   it("el juego nuevo lleva su insignia", () => {
     renderWithServices(<LoginPage />);
     const items = within(screen.getByRole("list", { name: "Minijuegos" })).getAllByRole("listitem");
-    GAME_KINDS.forEach((game, index) => {
+    PLAYABLE_GAMES.forEach((game, index) => {
       if (GAME_CARDS[game].isNew) expect(items[index]).toHaveTextContent("NUEVO");
       else expect(items[index]).not.toHaveTextContent("NUEVO");
     });

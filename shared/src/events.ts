@@ -1,5 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
+import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView } from "./auction.js";
 import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
@@ -42,6 +43,8 @@ export interface RoomStateView {
   rematch?: true;
   /** Solo en las salas de silueta: su ronda y sus revelaciones. En ellas `round` es nulo y `totalStats` son puntos. */
   silhouette?: SilhouetteStateView;
+  /** Solo en las salas de subasta. */
+  auction?: AuctionStateView;
   /** Hasta cuándo puede volver el rival si está desconectado. */
   opponentGraceEndsAt: number | null;
   /** Solo en la pausa entre rondas de «Doble tipo»: el último resultado, para quien reconecta en ese momento. */
@@ -133,6 +136,10 @@ export interface ServerToClientEvents {
   "rematch-state": (payload: RematchState) => void;
   /** Los dos aceptaron: la sala de la revancha ya existe, hay que entrar a ella. */
   "rematch-room": (payload: { code: string }) => void;
+  /** Se cerró un lote. El turno, las pujas y el dinero llegan en `room-state`. */
+  "auction-sale": (payload: AuctionSalePayload) => void;
+  /** Acabó la subasta: los Pokémon reales de los dos. */
+  "auction-reveal": (payload: { reveal: AuctionRevealEntry[] }) => void;
   "silhouette-round-started": (payload: { serverNow: number; round: number; totalRounds: number; deadline: number; silhouetteUrl: string }) => void;
   "silhouette-answer-received": (payload: { ms: number }) => void;
   "silhouette-round-result": (payload: { serverNow: number; reveal: SilhouetteReveal; totals: Record<Seat, number>; nextRoundAt: number | null }) => void;

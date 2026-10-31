@@ -1,3 +1,4 @@
+import type { BidStep } from "@pokemon-minigames/shared";
 import type {
   ErrorCode,
   GameEndReason,
@@ -87,7 +88,8 @@ export type TimerId =
   | { kind: "choose"; round: number }
   | { kind: "round"; round: number }
   | { kind: "result"; round: number }
-  | { kind: "grace"; seat: Seat; graceEndsAt: number };
+  | { kind: "grace"; seat: Seat; graceEndsAt: number }
+  | { kind: "bid"; turn: number };
 
 export type GameEvent =
   | { type: "PLAYER_JOINED"; userId: string; username: string; guest?: boolean; avatarId?: number }
@@ -95,6 +97,8 @@ export type GameEvent =
   | { type: "PLAYER_DISCONNECTED"; seat: Seat }
   | { type: "CHOOSE_TYPE"; seat: Seat; typeName: string }
   | { type: "SUBMIT"; seat: Seat; text: string }
+  | { type: "BID"; seat: Seat; step: BidStep | null }
+  | { type: "PASS"; seat: Seat }
   | { type: "LEAVE"; seat: Seat }
   | { type: "TIMER"; timer: TimerId };
 

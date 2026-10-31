@@ -1,8 +1,12 @@
-import type { TypeName } from "@pokemon-minigames/shared";
+import type { AuctionItem, TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 
 /** Valores de Subasta Pokémon. Son de partida: los ajusta lo que diga el simulador (`npm run auction:simulate -w server`). */
 export const STARTING_MONEY = 1_000_000;
+export const ITEM_PRICES: Record<AuctionItem, number> = { pocion: 100_000, revivir: 150_000, cinta: 100_000 };
+/** Una silueta trampa de cada tantos lotes. */
+export const TRAP_ODDS = 6;
+export const BID_TURN_MS = 10_000;
 export const TEAM_SIZE = 3;
 /** Lo que se reserva por cada hueco del equipo, para poder completarlo. */
 export const SLOT_RESERVE = 50_000;

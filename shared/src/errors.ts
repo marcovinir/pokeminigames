@@ -25,6 +25,8 @@ export const ERROR_CODES = [
   // Partida (Socket.io)
   "NOT_IN_ROOM",
   "WRONG_PHASE",
+  "NOT_YOUR_TURN",
+  "INVALID_BID",
   "ALREADY_ANSWERED",
   "ALREADY_CHOSEN",
   "INVALID_TYPE",
