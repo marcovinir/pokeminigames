@@ -7,6 +7,9 @@ import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
 import {
   MENU_TEXT,
+  AUCTION_TEXT,
+  auctionMoney,
+  auctionSaleText,
   REMATCH_TEXT,
   ROOM_GONE_CODES,
   SILHOUETTE_SCREEN,
@@ -19,6 +22,9 @@ import {
   silhouetteReveal,
 } from "../../i18n/es";
 import { useGame, useServices } from "../../services";
+import { AuctionView } from "./auction/AuctionView";
+import { BattleSoonView } from "./auction/BattleSoonView";
+import { RevealView } from "./auction/RevealView";
 import { CountdownView } from "./CountdownView";
 import { RematchLoadingView, RematchNoShow } from "./RematchLoadingView";
 import { RoundResultView } from "./RoundResultView";
@@ -66,6 +72,18 @@ function announcement(view: GameView): string {
   if (view.silhouette && view.phase === "round_active") return `Ronda ${view.silhouette.round?.number ?? ""}: ${SILHOUETTE_SCREEN.question}`;
   if (view.silhouette && view.phase === "round_result") return view.silhouette.lastReveal ? silhouetteReveal(view.silhouette.lastReveal.pokemon.names.es) : "";
   switch (view.phase) {
+    case "auction": {
+      const nameOf = (seat: number | null) => view.players.find((player) => player.seat === seat)?.username ?? "Tu rival";
+      const sale = view.lastSale;
+      const lot = view.auction?.lot;
+      const parts = sale ? [auctionSaleText(sale, sale.winner === null ? null : nameOf(sale.winner))] : [];
+      if (lot) {
+        parts.push(AUCTION_TEXT.lotOf(lot.number));
+        parts.push(`${lot.currentBid === null ? AUCTION_TEXT.startingPrice : AUCTION_TEXT.currentBid}: ${auctionMoney(lot.currentBid ?? lot.price)}`);
+        parts.push(lot.turn === view.mySeat ? AUCTION_TEXT.youTurn : `${AUCTION_TEXT.rivalTurn(nameOf(lot.turn))}.`);
+      }
+      return parts.join(". ");
+    }
     case "starting":
       return "La partida empieza.";
     case "choosing_types":
@@ -79,6 +97,7 @@ function announcement(view: GameView): string {
       if (view.isRematchRoom && view.ended.reason === "expired") {
         return rematchNoShow(view.players.find((player) => player.seat !== view.mySeat)?.username ?? "Tu rival");
       }
+      if (view.ended.auction) return verdictLabel(view.ended, view.mySeat);
       return `${verdictLabel(view.ended, view.mySeat)}. ${scoreLabel(view.ended, view.mySeat)}`;
     }
     default:
@@ -101,6 +120,14 @@ function RoomView() {
       return isSilhouette ? <SilhouetteRoundView /> : <RoundView />;
     case "round_result":
       return isSilhouette ? <SilhouetteRevealView /> : <RoundResultView />;
+    case "auction":
+      return <AuctionView />;
+    case "reveal":
+      return <RevealView />;
+    case "lineup":
+    case "battle":
+    case "battle_pause":
+      return <BattleSoonView />;
     case "finished":
       // Si la sala de la revancha caducó porque el rival no entró, no hubo partida: no hay veredicto.
       return view.isRematchRoom && view.ended?.reason === "expired" ? <RematchNoShow /> : <SummaryView />;
@@ -149,6 +176,8 @@ export function RoomPage() {
   // La sala ya no existe, terminó o no eres parte de ella: no hay nada más que hacer aquí.
   // Con la partida terminada el resumen se queda: el servidor ya cerró la sala y es lo esperable.
   const gone = error !== null && ROOM_GONE_CODES.includes(error.code);
+  // Pulsar justo cuando el turno cambió no es un fallo: la pantalla ya muestra de quién es.
+  const lateBid = (phase === "auction" || phase === "reveal") && (error?.code === "NOT_YOUR_TURN" || error?.code === "WRONG_PHASE");
   if (error && gone && !ended) {
     return (
       <section className="mx-auto max-w-md text-center">
@@ -185,7 +214,7 @@ export function RoomPage() {
         </Notice>
       ) : null}
       <OpponentAwayNotice />
-      {error && !gone ? <Notice tone="danger">{errorMessage(error.code)}</Notice> : null}
+      {error && !gone && !lateBid ? <Notice tone="danger">{errorMessage(error.code)}</Notice> : null}
       <RoomView />
     </div>
   );

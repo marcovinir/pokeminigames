@@ -4,14 +4,14 @@ import type { AuctionConfig, DobleTipoConfig, RoomConfig, SilhouetteConfig } fro
 export const GAME_KINDS = ["doble_tipo", "silueta", "subasta"] as const;
 export type GameKind = (typeof GAME_KINDS)[number];
 
-/** Los que ya se pueden jugar: el menú y `POST /rooms` solo ofrecen estos. La subasta entra cuando tenga sus pantallas. */
+/** Los que ofrece el menú. La subasta entra cuando tenga el combate: hasta entonces solo se llega escribiendo su dirección. */
 export const PLAYABLE_GAMES: readonly GameKind[] = ["doble_tipo", "silueta"];
 
 /** El trozo de ruta de cada juego (`/jugar/:slug`). */
 export const GAME_SLUGS: Record<GameKind, string> = { doble_tipo: "doble-tipo", silueta: "silueta", subasta: "subasta" };
 
 export function gameFromSlug(slug: string): GameKind | null {
-  return PLAYABLE_GAMES.find((game) => GAME_SLUGS[game] === slug) ?? null;
+  return GAME_KINDS.find((game) => GAME_SLUGS[game] === slug) ?? null;
 }
 
 /** El juego de una configuración. Sin `game` (salas y clientes de antes de que hubiera varios) es «Doble tipo». */

@@ -1,4 +1,4 @@
-import { asDobleTipo, gameOf, isSilhouetteConfig } from "@pokemon-minigames/shared";
+import { asDobleTipo, gameOf, isAuctionConfig, isSilhouetteConfig } from "@pokemon-minigames/shared";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Avatar } from "../../components/Avatar";
@@ -7,7 +7,7 @@ import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { GuestTag } from "../../components/GuestTag";
 import { rise } from "../../components/rise";
-import { describeConfig, describeSilhouetteConfig } from "../../i18n/es";
+import { describeConfig, AUCTION_TEXT, describeSilhouetteConfig } from "../../i18n/es";
 import { lobbyPath } from "../lobby-path";
 import { useRoom } from "./use-room";
 
@@ -68,6 +68,10 @@ export function WaitingView() {
       ) : view.config && isSilhouetteConfig(view.config) ? (
         <div role="group" aria-label="Configuración de la sala" className="mt-4 text-sm text-muted [overflow-wrap:anywhere]">
           {describeSilhouetteConfig(view.config)}
+        </div>
+      ) : view.config && isAuctionConfig(view.config) ? (
+        <div role="group" aria-label="Configuración de la sala" className="mt-4 text-sm text-muted">
+          {view.config.traps ? AUCTION_TEXT.withTraps : AUCTION_TEXT.withoutTraps}
         </div>
       ) : null}
 

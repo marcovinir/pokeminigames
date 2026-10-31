@@ -17,7 +17,7 @@ import { Card } from "../components/Card";
 import { Notice } from "../components/Notice";
 import { rise } from "../components/rise";
 import { TextField } from "../components/TextField";
-import { GAME_CARDS, MENU_TEXT, SILHOUETTE_TEXT, errorMessage, generationLabel } from "../i18n/es";
+import { GAME_CARDS, MENU_TEXT, AUCTION_TEXT, SILHOUETTE_TEXT, errorMessage, generationLabel } from "../i18n/es";
 import { isGuest } from "../api/types";
 import { useServices, useSession } from "../services";
 import {
@@ -341,6 +341,64 @@ const NAME_IN_USE_TEXT = {
   guest: "Ya hay alguien con ese nombre en la sala. Cierra sesión (arriba a la derecha) y entra como invitado con otro nombre.",
 } as const;
 
+/** Crear una sala de subasta: lo único que se elige es si hay siluetas trampa. */
+function CreateAuctionRoomCard() {
+  const { endpoints } = useServices();
+  const navigate = useNavigate();
+  const [traps, setTraps] = useState(true);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const trapsId = useId();
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (submitting) return;
+    setFormError(null);
+    setSubmitting(true);
+    try {
+      const { code } = await endpoints.rooms.create({ game: "subasta", traps });
+      navigate(`/sala/${code}`);
+    } catch (error) {
+      setFormError(shownError(error));
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card as="section" style={rise(1)} className="animate-rise p-6">
+      <CardTitle icon={<PlusIcon />}>Crear sala</CardTitle>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        {formError ? <Notice tone="danger">{formError}</Notice> : null}
+        <label className="block cursor-pointer">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={traps}
+            aria-labelledby={`${trapsId}-label`}
+            aria-describedby={`${trapsId}-hint`}
+            onChange={(event) => setTraps(event.target.checked)}
+            className="peer sr-only"
+          />
+          <span className="framed-field flex items-start gap-3 rounded-ui bg-surface px-4 py-3 transition-shadow duration-(--dur-fast) peer-checked:border-accent peer-checked:shadow-[0_0_0_3px_var(--accent)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-ring peer-checked:[&_[data-check]]:opacity-100">
+            <span className="min-w-0 flex-1">
+              <span id={`${trapsId}-label`} className="font-display font-semibold">
+                {AUCTION_TEXT.traps}
+              </span>
+              <span id={`${trapsId}-hint`} className="block text-sm text-muted">
+                {AUCTION_TEXT.trapsHint}
+              </span>
+            </span>
+            <CheckIcon />
+          </span>
+        </label>
+        <Button type="submit" variant="primary" size="lg" loading={submitting}>
+          Crear sala
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
 function JoinRoomCard() {
   const { endpoints } = useServices();
   const user = useSession((s) => s.user);
@@ -413,7 +471,7 @@ export function LobbyPage({ game = "doble_tipo" }: { game?: GameKind }) {
       </div>
       <ResumeBanner />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {game === "silueta" ? <CreateSilhouetteRoomCard /> : <CreateRoomCard />}
+        {game === "silueta" ? <CreateSilhouetteRoomCard /> : game === "subasta" ? <CreateAuctionRoomCard /> : <CreateRoomCard />}
         <JoinRoomCard />
       </div>
     </div>

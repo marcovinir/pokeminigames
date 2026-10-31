@@ -1,4 +1,4 @@
-import type { ServerEvent, ServerEventName, TypeName } from "@pokemon-minigames/shared";
+import type { BidStep, ServerEvent, ServerEventName, TypeName } from "@pokemon-minigames/shared";
 import type { StoreApi } from "zustand";
 import type { GameStoreState } from "./store";
 
@@ -17,6 +17,11 @@ export interface GameClientApi {
   join(code: string): void;
   chooseType(type: TypeName): void;
   submit(text: string): void;
+  /** Sube la puja del lote abierto; `null` lo abre al precio inicial. */
+  bid(step: BidStep | null, turnId: number): void;
+  pass(turnId: number): void;
+  /** Ya vi la revelación. */
+  ready(): void;
   /** Sale de la sala: cancela la espera o abandona la partida. */
   leave(): void;
   /** Pide la revancha o acepta la que pidió el rival. */
@@ -97,6 +102,18 @@ export class GameClient implements GameClientApi {
 
   submit(text: string): void {
     this.socket?.emit("submit-pokemon", { text });
+  }
+
+  bid(step: BidStep | null, turnId: number): void {
+    this.socket?.emit("auction-bid", { step, turnId });
+  }
+
+  pass(turnId: number): void {
+    this.socket?.emit("auction-pass", { turnId });
+  }
+
+  ready(): void {
+    this.socket?.emit("auction-ready");
   }
 
   leave(): void {

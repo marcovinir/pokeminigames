@@ -7,8 +7,14 @@ const messages = (body: unknown): string[] => {
 };
 
 describe("createRoomSchema", () => {
-  it("todavía no acepta salas de subasta", () => {
-    expect(createRoomSchema.safeParse({ game: "subasta", traps: true }).success).toBe(false);
+  it("la subasta lleva siluetas trampa por defecto", () => {
+    expect(createRoomSchema.parse({ game: "subasta" })).toEqual({ game: "subasta", traps: true });
+    expect(createRoomSchema.parse({ game: "subasta", traps: false })).toEqual({ game: "subasta", traps: false });
+  });
+
+  it("rechaza una subasta con datos que no son suyos", () => {
+    expect(createRoomSchema.safeParse({ game: "subasta", traps: "no" }).success).toBe(false);
+    expect(createRoomSchema.safeParse({ game: "subasta", rounds: 3 }).success).toBe(false);
   });
 
   it("un cuerpo sin juego sigue validando como hoy y sale como «Doble tipo»", () => {

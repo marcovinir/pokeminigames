@@ -144,3 +144,25 @@ describe("música en la Pokédex", () => {
   });
 });
 
+describe("la subasta suena", () => {
+  const view = { ...initialGameView, mySeat: 1 as const };
+  const pokemon = { id: 1 } as never;
+
+  it("con la música de combate durante la puja y la revelación", () => {
+    for (const phase of ["auction", "reveal"] as const) expect(musicCueFor("/sala/ABC", { ...view, phase })).toEqual({ zone: "battle" });
+  });
+
+  it("un aviso al venderse un lote", () => {
+    const event = { name: "auction-sale", payload: { lot: 1, kind: "pokemon", winner: 1, paid: 100 } } as const;
+    expect(effectsForEvent(view, event, view)).toEqual([{ effect: "round", delayMs: 0 }]);
+  });
+
+  it("la revelación, y cada trampa cuando le toca aparecer", () => {
+    const entry = (wasTrap: boolean) => ({ owner: 1 as const, pokemon, wasTrap });
+    const event: ServerEvent = { name: "auction-reveal", payload: { reveal: [entry(false), entry(true), entry(false)] } };
+    expect(effectsForEvent(view, event, view)).toEqual([
+      { effect: "reveal", delayMs: 0 },
+      { effect: "wrong", delayMs: 3000 },
+    ]);
+  });
+});

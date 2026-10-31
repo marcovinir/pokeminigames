@@ -15,3 +15,9 @@ export const CUSTOM_ROUNDS_MIN = 1;
 export const CUSTOM_ROUNDS_MAX = 20;
 export const CUSTOM_STATS_GOAL_MIN = 500;
 export const CUSTOM_STATS_GOAL_MAX = 5000;
+
+/** Los mismos plazos que el servidor (`server/src/game/auction/rules.ts`). */
+export const AUCTION_TURN_MS = 10_000;
+export const AUCTION_REVEAL_MS = 18_000;
+/** En la revelación aparece un Pokémon cada 3 s. */
+export const AUCTION_REVEAL_STEP_MS = 3000;

@@ -19,6 +19,8 @@ export interface AuctionLotView {
   leader: Seat | null;
   turn: Seat;
   deadline: number;
+  /** Identifica este turno: una pulsación tardía lo manda y el servidor sabe que no era para el turno de ahora. */
+  turnId: number;
   /** Lo máximo que puedes pujar tú (reserva lo necesario para completar tu equipo). */
   myLimit: number;
 }

@@ -1,4 +1,6 @@
 import type {
+  AuctionSalePayload,
+  AuctionStateView,
   ErrorCode,
   GameEndedPayload,
   GamePhase,
@@ -81,6 +83,10 @@ export interface GameView {
   nextRoom: string | null;
   /** Solo en las salas de silueta; en «Doble tipo», null. */
   silhouette: SilhouetteView | null;
+  /** Solo en las salas de subasta. */
+  auction: AuctionStateView | null;
+  /** Cómo se cerró el último lote, para anunciarlo. */
+  lastSale: AuctionSalePayload | null;
   /** Hora del servidor menos hora del navegador. */
   clockOffset: number;
   lastError: { code: ErrorCode; message: string } | null;
@@ -104,6 +110,8 @@ export const initialGameView: GameView = {
   isRematchRoom: false,
   nextRoom: null,
   silhouette: null,
+  auction: null,
+  lastSale: null,
   clockOffset: 0,
   lastError: null,
 };
@@ -150,6 +158,7 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
         lastResult: state.lastResult ?? (view.lastResult?.round === state.roundsPlayed ? view.lastResult : null),
         opponentGraceEndsAt: state.opponentGraceEndsAt,
         silhouette: state.silhouette ? silhouetteFrom(state.silhouette, view.silhouette) : null,
+        auction: state.auction ?? null,
         ended: null,
         clockOffset: clockOffset(state.serverNow, receivedAt),
         lastError: null,
@@ -299,8 +308,10 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       };
     }
 
-    // La subasta aún no tiene pantallas: el cliente solo la verá cuando se abra al público.
     case "auction-sale":
+      return { ...view, lastSale: event.payload };
+
+    // Lo que cambian llega en `room-state`; el combate tendrá sus pantallas en la #39.
     case "auction-reveal":
     case "battle-turn":
     case "battle-round-ended":

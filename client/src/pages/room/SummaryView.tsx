@@ -7,7 +7,7 @@ import { GuestTag } from "../../components/GuestTag";
 import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
 import { rivalSeat } from "../../game/seats";
-import { endReasonLabel } from "../../i18n/es";
+import { AUCTION_TEXT, endReasonLabel } from "../../i18n/es";
 import { useSession } from "../../services";
 import { lobbyPath } from "../lobby-path";
 import { RematchLoadingView } from "./RematchLoadingView";
@@ -22,7 +22,7 @@ function bestFirst(team: PokemonView[]): PokemonView[] {
   return [team[best]!, ...team.filter((_, index) => index !== best)];
 }
 
-function TeamColumn({ title, team, total, index, guest = false }: { title: string; team: PokemonView[]; total: number; index: number; guest?: boolean }) {
+function TeamColumn({ title, team, total, index, guest = false }: { title: string; team: PokemonView[]; total: number | null; index: number; guest?: boolean }) {
   return (
     <section aria-label={`Equipo de ${title}`} style={rise(index)} className="animate-rise flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
@@ -30,9 +30,9 @@ function TeamColumn({ title, team, total, index, guest = false }: { title: strin
           <h2 className="min-w-0 truncate font-display text-lg font-semibold">{title}</h2>
           {guest ? <GuestTag /> : null}
         </div>
-        <p className="font-num text-3xl font-semibold tabular-nums">{total}</p>
+        {total === null ? null : <p className="font-num text-3xl font-semibold tabular-nums">{total}</p>}
       </div>
-      {team.length === 0 ? <p className="text-sm text-muted">No ganó ningún Pokémon.</p> : null}
+      {team.length === 0 ? <p className="text-sm text-muted">{total === null ? AUCTION_TEXT.noPurchases : "No ganó ningún Pokémon."}</p> : null}
       {bestFirst(team).map((pokemon, index) => (
         <PokemonCard key={pokemon.id} pokemon={pokemon} showStats size={index === 0 ? "lg" : "sm"} />
       ))}
@@ -42,6 +42,7 @@ function TeamColumn({ title, team, total, index, guest = false }: { title: strin
 
 /** "Ganaste", "Perdiste" o "Empate", según el asiento propio. */
 export function verdictLabel(ended: GameEndedPayload, mySeat: Seat): string {
+  if (ended.winnerSeat === null && ended.auction) return AUCTION_TEXT.noWinner;
   return ended.winnerSeat === null ? "Empate" : ended.winnerSeat === mySeat ? "Ganaste" : "Perdiste";
 }
 
@@ -91,7 +92,8 @@ export function SummaryView() {
         )}
         <h1 className="font-display text-4xl font-semibold">{verdict}</h1>
         <p className="mt-1 text-sm text-muted">{endReasonLabel(ended.reason, ended.silhouette !== undefined)}</p>
-        <p className="mt-3 font-num text-3xl tabular-nums">{scoreLabel(ended, mySeat)}</p>
+        {/* La subasta no se decide por puntos: un «0 – 0» confundiría. */}
+        {ended.auction ? null : <p className="mt-3 font-num text-3xl tabular-nums">{scoreLabel(ended, mySeat)}</p>}
       </Card>
 
       <RematchPanel />
@@ -100,8 +102,8 @@ export function SummaryView() {
         <SilhouetteSummary reveals={ended.silhouette.reveals} mySeat={mySeat} rival={opponent?.username ?? "Tu rival"} />
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.totals[mySeat]} index={1} />
-          <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rival]} total={ended.totals[rival]} index={2} guest={opponent?.guest === true} />
+          <TeamColumn title="Tú" team={ended.teams[mySeat]} total={ended.auction ? null : ended.totals[mySeat]} index={1} />
+          <TeamColumn title={opponent?.username ?? "Tu rival"} team={ended.teams[rival]} total={ended.auction ? null : ended.totals[rival]} index={2} guest={opponent?.guest === true} />
         </div>
       )}
 

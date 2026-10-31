@@ -40,6 +40,16 @@ export function GameArt({ game, example, compact = false }: { game: GameKind; ex
       </div>
     );
   }
+  if (game === "subasta") {
+    return (
+      <div aria-hidden="true" className={`silhouette-rays relative flex items-center justify-center overflow-hidden rounded-card ${box}`}>
+        <img src={artworkUrl(6)} alt="" width={compact ? 64 : 96} height={compact ? 64 : 96} className={`${compact ? "size-16" : "size-24"} object-contain brightness-0`} />
+        <span data-price-tag className="absolute right-2 bottom-2 rounded-pill bg-surface px-2 py-0.5 font-num text-xs font-semibold text-fg shadow-card">
+          ₽
+        </span>
+      </div>
+    );
+  }
   return (
     <div aria-hidden="true" className={`silhouette-rays flex items-center justify-center overflow-hidden rounded-card ${box}`}>
       <img

@@ -1,4 +1,5 @@
 import {
+  type AuctionConfig,
   type DobleTipoConfig,
   GENERATIONS,
   type RoomConfig,
@@ -73,11 +74,16 @@ const silhouetteSchema = z
   })
   .transform((value): SilhouetteConfig => ({ game: "silueta", rounds: value.rounds, generations: [...value.generations].sort((a, b) => a - b) }));
 
+/** Cuerpo de `POST /rooms` para la subasta: las siluetas trampa van encendidas salvo que se apaguen. */
+const auctionSchema = z
+  .strictObject({ game: z.literal("subasta"), traps: z.boolean().default(true) })
+  .transform((value): AuctionConfig => ({ game: "subasta", traps: value.traps }));
+
 /** Cuerpo de `POST /rooms`: el juego lo dice `game` (sin él es «Doble tipo», como antes de que hubiera varios). */
 export const createRoomSchema = z.unknown().pipe(
   z.custom<unknown>().transform((value, ctx): RoomConfig => {
     const game = typeof value === "object" && value !== null ? (value as { game?: unknown }).game : undefined;
-    const schema = game === "silueta" ? silhouetteSchema : dobleTipoSchema;
+    const schema = game === "silueta" ? silhouetteSchema : game === "subasta" ? auctionSchema : dobleTipoSchema;
     const result = schema.safeParse(value);
     if (result.success) return result.data;
     for (const issue of result.error.issues) ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });

@@ -15,7 +15,7 @@ import { useRoom } from "./use-room";
 import { useLastSeconds } from "../../sound/use-last-seconds";
 
 /** La imagen de la silueta (la genera el servidor en negro). Si no carga, un aviso y la ronda sigue. */
-function SilhouetteImage({ src }: { src: string }) {
+export function SilhouetteImage({ src }: { src: string }) {
   const [failed, setFailed] = useState(false);
   return (
     <div className="silhouette-rays mx-auto flex size-56 items-center justify-center overflow-hidden rounded-full sm:size-64">
