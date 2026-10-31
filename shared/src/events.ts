@@ -1,6 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
-import type { BidStep, AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction } from "./auction.js";
+import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction, BidStep } from "./auction.js";
 import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
