@@ -20,7 +20,7 @@ export function LineupView() {
     if (!moved) return;
     const other = moved.dir === "up" ? "down" : "up";
     const target = [moved.dir, other].map((dir) => listRef.current?.querySelector<HTMLButtonElement>(`[data-move="${moved.id}-${dir}"]`)).find((button) => button && !button.disabled);
-    target?.focus();
+    target?.focus({ preventScroll: true });
   }, [moved, order]);
   if (!battle) return null;
 
@@ -51,10 +51,10 @@ export function LineupView() {
           <li key={id} className="framed flex min-w-0 items-center gap-2 rounded-card bg-surface p-3">
             <span className="min-w-0 flex-1 font-display font-semibold [overflow-wrap:anywhere]">{nameOf(id)}</span>
             {index === 0 ? <Badge tone="info">{BATTLE_TEXT.titular}</Badge> : null}
-            <Button variant="ghost" data-move={`${id}-up`} aria-label={BATTLE_TEXT.moveUp(nameOf(id))} disabled={confirmed || index === 0} onClick={() => move(id, "up")}>
+            <Button variant="secondary" data-move={`${id}-up`} aria-label={BATTLE_TEXT.moveUp(nameOf(id))} disabled={confirmed || index === 0} onClick={() => move(id, "up")}>
               ↑
             </Button>
-            <Button variant="ghost" data-move={`${id}-down`} aria-label={BATTLE_TEXT.moveDown(nameOf(id))} disabled={confirmed || index === shown.length - 1} onClick={() => move(id, "down")}>
+            <Button variant="secondary" data-move={`${id}-down`} aria-label={BATTLE_TEXT.moveDown(nameOf(id))} disabled={confirmed || index === shown.length - 1} onClick={() => move(id, "down")}>
               ↓
             </Button>
           </li>

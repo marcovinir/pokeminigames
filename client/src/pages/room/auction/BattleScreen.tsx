@@ -51,7 +51,7 @@ export function BattleScreen() {
   useLastSeconds({ deadline, offset: view.clockOffset, answered: battle?.confirmed ?? true, round: deadline ?? 0 });
   // Un turno nuevo vuelve a poner los botones: si el foco se perdió con ellos, regresa.
   useEffect(() => {
-    if (deadline !== null && focusWasLost()) movesRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    if (deadline !== null && focusWasLost()) movesRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
   }, [deadline]);
   if (!battle || view.mySeat === null) return null;
 
@@ -93,12 +93,12 @@ export function BattleScreen() {
       {deadline === null ? (
         <p className="text-center font-semibold">{BATTLE_TEXT.resolving}</p>
       ) : (
-        <div ref={movesRef} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div ref={movesRef} className="grid grid-cols-2 gap-2">
           {battle.moves.map((one) => {
             const isAttack = one.move !== "forcejeo" && one.move !== "recuperar";
             const label = isAttack ? `${moveLabel(one.move)} ${effectivenessLabel(one.effectiveness)}`.trim() : moveLabel(one.move);
             return (
-              <Button key={one.move} variant={battle.myMove === one.move ? "primary" : "ghost"} size="lg" aria-pressed={battle.myMove === one.move} disabled={one.used} onClick={() => client.move(one.move)}>
+              <Button key={one.move} variant={battle.myMove === one.move ? "primary" : "secondary"} className="px-2 [overflow-wrap:anywhere]" aria-pressed={battle.myMove === one.move} disabled={one.used} onClick={() => client.move(one.move)}>
                 {label}
               </Button>
             );

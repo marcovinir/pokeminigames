@@ -443,6 +443,7 @@ export const BATTLE_TEXT = {
   pauseTitle: "Pausa entre asaltos",
   pauseTimer: "Tiempo de la pausa",
   noUse: "No usar",
+  whoGoesOut: "¿Quién sale a pelear?",
   nobodyLeft: "No te quedan Pokémon.",
   useRevive: "Usa Revivir o perderás al acabar el tiempo.",
   moveUp: (name: string): string => `Subir ${name}`,

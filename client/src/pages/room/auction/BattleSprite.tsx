@@ -14,7 +14,7 @@ export function BattleSprite({ id, name, flipped, effect }: { id: number; name: 
           src={source === "animated" ? battleSpriteUrl(id) : artworkUrl(id)}
           alt={name}
           onError={next}
-          className={`max-h-full max-w-full object-contain [image-rendering:auto] ${source === "still" ? "size-full" : "scale-150 sm:scale-200"} ${flipped ? "-scale-x-100" : ""}`}
+          className={`size-full object-contain ${flipped ? "-scale-x-100" : ""}`}
         />
       )}
     </div>

@@ -101,10 +101,11 @@ export function PauseView() {
         );
       })}
 
+      {eligible.length > 0 ? <h2 className="font-display text-lg font-semibold">{BATTLE_TEXT.whoGoesOut}</h2> : null}
       {eligible.length > 0 ? (
         <div role="group" aria-label={BATTLE_TEXT.titular} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {eligible.map((id) => (
-            <Button key={id} variant={titular === id ? "primary" : "ghost"} aria-pressed={titular === id} aria-label={BATTLE_TEXT.sendOut(nameOf(id))} disabled={confirmed} onClick={() => setChosen(id)}>
+            <Button key={id} variant={titular === id ? "primary" : "secondary"} aria-pressed={titular === id} aria-label={BATTLE_TEXT.sendOut(nameOf(id))} disabled={confirmed} onClick={() => setChosen(id)}>
               <span className="[overflow-wrap:anywhere]">{nameOf(id)}</span>
             </Button>
           ))}
