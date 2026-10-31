@@ -66,14 +66,10 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
         </p>
         <Section title="Música">
           <p>
-            Toda la música es original y de licencia libre, de OpenGameArt; ninguna es de los juegos de Pokémon. Los efectos
-            de sonido se generan con código.
+            El tema del inicio y de las salas lo hizo un amigo de Marco con Gemini. El resto de la música es original y de
+            licencia libre, de OpenGameArt. Ninguna es de los juegos de Pokémon. Los efectos de sonido se generan con código.
           </p>
           <List>
-            <li>
-              <External href="https://opengameart.org/content/town-center">«Town Center»</External>, de Trevor Lentz, con
-              licencia CC-BY-SA 3.0.
-            </li>
             <li>
               <External href="https://opengameart.org/content/6-chiptune-loops">«Menu»</External>, de SuperGamersGames, con
               licencia CC-BY 4.0.
