@@ -435,6 +435,7 @@ export const AUCTION_TEXT = {
   rivalDeciding: (rival: string): string => `${rival} decide: si se retira, será tu turno de abrir o retirarte.`,
   ifRivalRetires: (rival: string): string => `Si ${rival} se retira, es tuyo. Si sube, volverá a tocarte a ti.`,
   waitingFor: (rival: string): string => `Esperando a ${rival}…`,
+  yourCap: (limit: string): string => `Tu tope es ${limit}.`,
   teamSize: (size: number): string => `${size} de 6`,
   teamOf: (name: string): string => `Equipo de ${name}`,
   limitNote: (limit: string): string => `Puedes pujar hasta ${limit}. El resto se guarda para completar tus 6.`,
@@ -467,10 +468,8 @@ export const BATTLE_TEXT = {
   resolving: "Resolviendo…",
   pauseTitle: "Pausa entre asaltos",
   pauseTimer: "Tiempo de la pausa",
-  noUse: "No usar",
   whoGoesOut: "¿Quién sale a pelear?",
   nobodyLeft: "No te quedan Pokémon.",
-  useRevive: "Usa Revivir o perderás al acabar el tiempo.",
   moveUp: (name: string): string => `Subir ${name}`,
   moveDown: (name: string): string => `Bajar ${name}`,
   position: (name: string, position: number): string => `${name}: posición ${position}`,
@@ -489,7 +488,7 @@ export function auctionMoney(amount: number): string {
 
 /** Cómo se cerró un lote. */
 export function auctionSaleText(sale: AuctionSalePayload, winner: string): string {
-  return `Lote ${sale.lot}: ${winner} se lo lleva por ${auctionMoney(sale.paid)}`;
+  return sale.paid === 0 ? `Lote ${sale.lot}: ${winner} se lo lleva gratis` : `Lote ${sale.lot}: ${winner} se lo lleva por ${auctionMoney(sale.paid)}`;
 }
 
 export const SILHOUETTE_TEXT = {

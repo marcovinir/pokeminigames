@@ -28,6 +28,8 @@ export interface AuctionBidding {
   stillHere: number;
   /** Se le acabó el plazo estando caído: al volver tiene un último aviso. */
   expiredAway: boolean;
+  /** Ya tuvo su último aviso al volver: recargar otra vez no da más tiempo. */
+  awayWarningUsed: boolean;
 }
 
 /** El combate. `step` deja obsoletos los temporizadores de pasos anteriores. */

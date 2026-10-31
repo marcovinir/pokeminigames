@@ -24,7 +24,7 @@ function RevealEntry({ entry, shown, animated }: { entry: AuctionRevealEntry; sh
     );
   }
   return (
-    <li data-reveal-entry className={`framed flex min-w-0 items-center gap-3 rounded-card bg-surface p-3 ${animated ? "animate-rise" : ""} ${entry.wasTrap ? "border-danger" : ""}`}>
+    <li data-reveal-entry className={`framed flex min-w-0 items-center gap-3 rounded-card bg-surface p-3 ${animated ? "animate-rise" : ""} ${entry.wasTrap ? `border-danger ${animated ? "auction-trap" : ""}` : ""}`}>
       <ArtImage id={entry.pokemon.id} spriteUrl={entry.pokemon.spriteUrl} size={72} variant="sprite" eager className="auction-pixel size-18 shrink-0 object-contain" />
       <span className="min-w-0">
         <span className="font-display block font-semibold [overflow-wrap:anywhere]">{entry.pokemon.names.es}</span>
@@ -34,7 +34,7 @@ function RevealEntry({ entry, shown, animated }: { entry: AuctionRevealEntry; sh
   );
 }
 
-/** Los 6 Pokémon reales, uno por uno y en el orden de compra, con el momento de la trampa. */
+/** Los Pokémon reales, uno por uno y en el orden de compra, con el momento de la trampa. */
 export function RevealView() {
   const { view, client, me, opponent } = useRoom();
   const auction = view.auction;

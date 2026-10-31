@@ -54,7 +54,7 @@ async function startAuction() {
   const state = await stateWhere(one, (s) => s.phase === "auction");
   await stateWhere(two, (s) => s.phase === "auction");
   const lot = state.auction!.lot!;
-  return { current: lot.turn === 1 ? one : two, other: lot.turn === 1 ? two : one, lot };
+  return { current: lot.turn === 1 ? one : two, other: lot.turn === 1 ? two : one, lot, code, turnUser: lot.turn === 1 ? ash : misty };
 }
 
 describe("subasta por sockets (base real)", () => {
@@ -96,6 +96,29 @@ describe("subasta por sockets (base real)", () => {
     const text = JSON.stringify(other.received);
     expect(text).toMatch(/silhouettes/);
     for (const leak of ["sprites", "official-artwork", "names", "realId", "shownId"]) expect(text, leak).not.toContain(leak);
+  });
+});
+
+describe("el aviso de inactividad por sockets", () => {
+  it("recargar con el aviso abierto lo devuelve, y responder lo cierra", async () => {
+    const { current, other, lot, code, turnUser } = await startAuction();
+    server.time.advance(60_000);
+    const warned = await stateWhere(current, (s) => s.auction?.lot?.warningUntil !== null);
+    const until = warned.auction!.lot!.warningUntil;
+    await stateWhere(other, (s) => s.auction?.lot?.rivalIdle === true);
+    current.close();
+    const back = await connect(turnUser, code);
+    const again = await stateWhere(back, (s) => s.auction?.lot?.warningUntil !== null);
+    expect(again.auction!.lot!.warningUntil).toBe(until);
+    back.emit("auction-still-here", { turnId: lot.turnId });
+    const calm = await stateWhere(back, (s) => s.auction?.lot?.warningUntil === null);
+    expect(calm.auction!.lot!.turnId).toBe(lot.turnId);
+  });
+
+  it("rechaza una respuesta mal formada", async () => {
+    const { current } = await startAuction();
+    current.emit("auction-still-here", { turnId: "x" });
+    expect(await current.next("error")).toMatchObject({ code: "VALIDATION_ERROR" });
   });
 });
 

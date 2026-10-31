@@ -297,6 +297,35 @@ describe("subasta: sin reloj, con aviso de inactividad", () => {
     expect(h.view(turn).auction!.lot!.warningUntil).toBe(h.now + INACTIVITY_WARNING_MS);
   });
 
+  it("recargar una y otra vez no alarga el turno: el último aviso se da una sola vez", () => {
+    const h = started();
+    const { turn } = h.lot();
+    h.advance(INACTIVITY_MS);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: turn });
+    h.advance(INACTIVITY_WARNING_MS);
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: turn });
+    expect(h.view(turn).auction!.lot!.warningUntil).toBe(h.now + INACTIVITY_WARNING_MS);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: turn });
+    h.advance(INACTIVITY_WARNING_MS);
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: turn });
+    expect(h.lot()).toMatchObject({ retired: turn, turn: rivalOf(turn) });
+  });
+
+  it("gastar «Sigo aquí» y recargar tampoco saca más tiempo que el máximo", () => {
+    const h = started();
+    const { turn, turnId, number } = h.lot();
+    const begin = h.now;
+    for (let tick = 0; tick < 100 && h.lot().number === number && h.lot().turn === turn; tick++) {
+      h.advance(INACTIVITY_MS - 1);
+      h.dispatch({ type: "PLAYER_DISCONNECTED", seat: turn });
+      h.advance(INACTIVITY_WARNING_MS + 1);
+      h.dispatch({ type: "PLAYER_CONNECTED", seat: turn });
+      h.dispatch({ type: "STILL_HERE", seat: turn, turnId });
+    }
+    expect(h.lot().turn).toBe(rivalOf(turn));
+    expect(h.now - begin).toBeLessThan(6 * INACTIVITY_MS);
+  });
+
   it("recargar con el aviso abierto lo conserva", () => {
     const h = started();
     const { turn } = h.lot();

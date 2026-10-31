@@ -4,6 +4,7 @@ import { bidOptions } from "../../../game/auction-bids";
 import { secondsLeft, useCountdown } from "../../../game/clock";
 import { rivalSeat } from "../../../game/seats";
 import { AUCTION_TEXT, SILHOUETTE_SCREEN, auctionMoney, auctionSaleText } from "../../../i18n/es";
+import { useGame } from "../../../services";
 import { useLastSeconds } from "../../../sound/use-last-seconds";
 import { LeaveButton } from "../LeaveButton";
 import { focusWasLost } from "../RematchPanel";
@@ -34,10 +35,14 @@ function SoldStamp() {
 function InactivityWarning({ until, offset, onStillHere }: { until: number; offset: number; onStillHere(): void }) {
   const remaining = useCountdown(until, offset);
   return (
-    <div role="alert" className="absolute inset-x-2 top-2 z-20 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#ffcb05] p-3 text-[#141033] shadow-[0_4px_0_#b38c00]">
-      <p className="font-pixel text-xl font-bold">
-        {AUCTION_TEXT.stillThere} <span className="font-num tabular-nums">{secondsLeft(remaining)} s</span>
+    <div className="absolute inset-x-2 top-2 z-20 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#ffcb05] p-3 text-[#141033] shadow-[0_4px_0_#b38c00]">
+      {/* La cuenta atrás va aparte: dentro del aviso, el lector de pantalla lo repetiría cada segundo. */}
+      <p role="alert" className="font-pixel text-xl font-bold">
+        {AUCTION_TEXT.stillThere}
       </p>
+      <span aria-hidden="true" className="font-num text-xl font-bold tabular-nums">
+        {secondsLeft(remaining)} s
+      </span>
       <button type="button" onClick={onStillHere} className="auction-bid auction-bid-green min-h-11 px-4 text-base">
         {AUCTION_TEXT.stillHere}
       </button>
@@ -64,6 +69,7 @@ function Bids({ lot, nameOf }: { lot: AuctionLotView; nameOf(seat: Seat): string
 /** La puja de un lote: sin reloj a la vista, se turnan hasta que uno se retira. */
 export function AuctionView() {
   const { view, client, me, opponent } = useRoom();
+  const connection = useGame((s) => s.connection);
   // El turno en el que ya decidí: un segundo toque no debe salir hacia el servidor.
   const [sentTurn, setSentTurn] = useState<number | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -74,10 +80,14 @@ export function AuctionView() {
   // Solo hay urgencia con el aviso abierto: suena a los últimos segundos, una vez por aviso.
   useLastSeconds({ deadline: warningUntil, offset: view.clockOffset, answered: warningUntil === null, round: warningUntil ?? 0 });
   const turnId = lot?.turnId ?? null;
+  // Lo enviado pudo perderse con la conexión: al volver se puede decidir otra vez.
+  useEffect(() => {
+    if (connection === "connected") setSentTurn(null);
+  }, [connection]);
   // Al pujar, los botones desaparecen y el foco se pierde: vuelve a ellos cuando me toca otra vez.
   useEffect(() => {
     if (myTurn && focusWasLost()) actionsRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
-  }, [myTurn, turnId]);
+  }, [myTurn, turnId, warningUntil]);
   if (!auction || !lot || !me || !opponent || view.mySeat === null) return null;
 
   const rival = opponent.username;
@@ -97,14 +107,14 @@ export function AuctionView() {
 
   return (
     <section className="auction-screen grid grid-cols-2 gap-3 p-3 lg:grid-cols-[230px_minmax(0,1fr)_230px]">
-      <AuctionPlayer player={me} auction={auction} isMe active={myTurn} note={AUCTION_TEXT.limitNote(auctionMoney(lot.myLimit))} />
+      <AuctionPlayer player={me} auction={auction} isMe active={myTurn} note={lot.auto ? undefined : AUCTION_TEXT.limitNote(auctionMoney(lot.myLimit))} />
       <div className="order-last col-span-2 flex min-w-0 flex-col gap-3 lg:order-none lg:col-span-1">
         <div className={`flex flex-wrap items-center justify-between gap-x-3 rounded-xl px-4 py-2 text-[#141033] shadow-[0_5px_0_rgb(0_0_0/0.35)] ${bannerClass} ${myTurn ? "auction-pulse" : ""}`}>
           <h1 className="font-pixel text-2xl font-bold [overflow-wrap:anywhere] lg:text-4xl">{title}</h1>
           <span className="font-extrabold">{AUCTION_TEXT.lotOf(lot.number)}</span>
         </div>
 
-        <div className="relative h-72 overflow-hidden rounded-xl lg:h-96">
+        <div className="relative h-44 overflow-hidden rounded-xl lg:h-96">
           <img data-scene src={`/auction/lote-${lot.scene}.png`} alt="" className="auction-pixel absolute inset-0 size-full object-cover" />
           <StageSilhouette key={lot.silhouetteUrl} src={lot.silhouetteUrl} />
           <div className="absolute top-2 right-2 rounded-lg bg-[#141033] px-3 py-1 text-right text-white shadow-[0_4px_0_rgb(0_0_0/0.4)]">
@@ -121,7 +131,11 @@ export function AuctionView() {
         {lot.auto ? null : myTurn ? (
           <div ref={actionsRef} className="flex flex-col gap-2">
             {lot.retired !== null ? <p className="rounded-lg bg-white p-2 text-center font-bold text-[#141033]">{AUCTION_TEXT.rivalRetired(rival)}</p> : null}
-            {canBid ? null : <p className="rounded-lg bg-white p-2 text-center font-bold text-[#141033]">{AUCTION_TEXT.cannotBid}</p>}
+            {canBid ? null : (
+              <p className="rounded-lg bg-white p-2 text-center font-bold text-[#141033]">
+                {AUCTION_TEXT.cannotBid} <span className="font-semibold">{AUCTION_TEXT.yourCap(auctionMoney(lot.myLimit))}</span>
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2 sm:grid-flow-col sm:auto-cols-fr">
               {options.map((option, index) => (
                 <button key={option.amount} type="button" disabled={!option.affordable || locked} onClick={() => decide((id) => client.bid(option.step, id))} className={`auction-bid min-h-18 px-2 ${BID_COLORS[index]}`}>

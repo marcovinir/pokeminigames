@@ -51,7 +51,7 @@ Se mantiene todo lo de la spec original que no se nombra aquí, en particular la
 - **Retirarse:** si hay puja, el otro se lleva el Pokémon por esa puja. Si no la hay, el otro decide: abre al precio inicial y se lo lleva en ese momento, o también se retira (entonces se aplica «si los dos se retiran»). Si no le alcanza para abrir, solo puede retirarse.
 - Sigue la protección `turnId` contra toques tardíos.
 - **Inactividad:** a los 60 s de turno sin decidir, el servidor abre el aviso; quien tiene el turno lo ve con 15 s de cuenta atrás y el rival ve «Esperando a X…». Responder «Sigo aquí» reinicia los 60 s, **como mucho 2 veces por turno**; a la tercera vez que se abriría el aviso, se retira. Pujar o retirarse también lo cierra. Si vencen los 15 s, se retira.
-- **Desconexión:** el tiempo de inactividad sigue corriendo, pero nadie se retira mientras está caído: eso lo deciden los 30 s de gracia. Si vuelve con el plazo vencido, tiene un último aviso de 15 s, que no cuenta para el máximo de 2.
+- **Desconexión:** el tiempo de inactividad sigue corriendo, pero nadie se retira mientras está caído: eso lo deciden los 30 s de gracia. Si vuelve con el plazo vencido, tiene un último aviso de 15 s, que no cuenta para el máximo de 2; se da una sola vez por turno, para que recargar no dé más tiempo.
 - **Lotes que se reparten solos** (alguien ya tiene 6): se muestran uno a uno, unos 2 s cada uno, con su silueta, su fondo y el sello de venta, sin turno ni botones. Las trampas también cuentan en ellos y salen en la revelación.
 
 ### Revelación y alineación
@@ -97,6 +97,10 @@ Referencia: boceto aprobado.
 - El orden de los lotes por tercios y el ajuste de números con el simulador.
 
 **Decisiones de Claude, revisables:** dinero inicial; alineación de 30 s; que el turno no pase por desconexión; máximo de 2 «Sigo aquí»; lotes automáticos a 2 s cada uno; explicación de 3 pasos; sello de venta.
+
+**Simulador (2026-10-31):** con 2.000.000 y 300 por punto de stats, en 500 partidas por duelo: experta 77 %, derrochadora 50 %, tacaña 38 %, equilibrada 35 %. El dinero aprieta poco: una estrategia que solo paga por los fuertes gana entre el 72 % y el 88 % y le sobra dinero. Queda así hasta probarlo con personas.
+
+**Recarga con el aviso:** se prueba con sockets y reloj simulado, porque en la E2E exigiría esperar 60 s reales.
 
 ## 7. Criterios de aceptación
 

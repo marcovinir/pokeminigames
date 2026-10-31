@@ -2,7 +2,7 @@ import type { AuctionSummary as Summary, Seat } from "@pokemon-minigames/shared"
 import { Card } from "../../../components/Card";
 import { AUCTION_SUMMARY_TEXT, auctionMoney } from "../../../i18n/es";
 
-/** Lo que dejó la partida: daño hecho por cada uno y dinero gastado en Pokémon y en objetos. */
+/** Lo que dejó la partida: daño hecho por cada uno y dinero gastado. */
 export function AuctionSummary({ summary, names, mySeat }: { summary: Summary; names: Record<Seat, string>; mySeat: Seat }) {
   const seats: Seat[] = mySeat === 1 ? [1, 2] : [2, 1];
   return (

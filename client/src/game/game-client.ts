@@ -20,8 +20,9 @@ export interface GameClientApi {
   /** Sube la puja del lote abierto; `null` lo abre al precio inicial. */
   bid(step: BidStep | null, turnId: number): void;
   pass(turnId: number): void;
-  /** Ya vi la revelación. */
+  /** Respuesta a «¿Sigues ahí?». */
   stillHere(turnId: number): void;
+  /** Ya vi la revelación. */
   ready(): void;
   lineup(order: number[]): void;
   move(move: BattleMove): void;

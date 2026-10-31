@@ -1,5 +1,5 @@
 import type { AuctionLotView, AuctionStateView } from "@pokemon-minigames/shared";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SERVER_NOW, event } from "../helpers/events";
 import { ash, misty, renderRoom, serverSends } from "../helpers/room";
@@ -150,6 +150,17 @@ describe("la pantalla de puja", () => {
     expect(screen.getByRole("button", { name: /Retirarme/ })).toBeEnabled();
   });
 
+  it("si la conexión se cortó tras decidir, al volver se puede decidir otra vez", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([state(lotView())], services);
+    services.game.store.getState().setConnection("connected");
+    await user.click(screen.getByRole("button", { name: /Retirarme/ }));
+    expect(screen.getByRole("button", { name: /Retirarme/ })).toBeDisabled();
+    act(() => services.game.store.getState().setConnection("disconnected"));
+    act(() => services.game.store.getState().setConnection("connected"));
+    expect(screen.getByRole("button", { name: /Retirarme/ })).toBeEnabled();
+  });
+
   it("si la silueta no carga, se avisa y se puede seguir; la del lote siguiente sí sale", () => {
     const services = fakeServices();
     renderRoom([state(lotView())], services);
@@ -158,6 +169,21 @@ describe("la pantalla de puja", () => {
     expect(screen.getByRole("button", { name: /Retirarme/ })).toBeEnabled();
     serverSends(services, state(lotView({ number: 4, silhouetteUrl: "/silhouettes/otra", turnId: 78 })));
     expect(screen.getByRole("img", { name: "Silueta de un Pokémon" })).toHaveAttribute("src", "/silhouettes/otra");
+  });
+
+  it("en un lote que se reparte solo no dice «Te toca», y uno gratis se anuncia así", () => {
+    const services = fakeServices();
+    renderRoom([state(lotView({ auto: true, turn: 1, currentBid: null, leader: null, bids: [], myLimit: 0 }))], services);
+    const log = screen.getByRole("log", { name: "Anuncios de la partida" });
+    expect(log).not.toHaveTextContent("Te toca");
+    serverSends(services, { name: "auction-sale", payload: { lot: 2, winner: 1, paid: 0 } });
+    expect(log).toHaveTextContent("Lote 2: ash se lo lleva gratis");
+  });
+
+  it("en el móvil también se explica el tope cuando bloquea algo", () => {
+    renderRoom([state(lotView({ myLimit: 100_000 }))]);
+    expect(screen.getByText("No te alcanza: solo puedes retirarte.").textContent).toBeTruthy();
+    expect(screen.getByText(/Tu tope es ₽ 100\.000/)).toBeInTheDocument();
   });
 
   it("anuncia cada turno y cómo se cerró el lote, también a la vista", () => {
@@ -194,9 +220,19 @@ describe("el aviso de inactividad", () => {
     const { user } = renderRoom([state(lotView({ warningUntil: SERVER_NOW + 15_000 }))], services);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("¿Sigues ahí?");
-    expect(alert).toHaveTextContent("15 s");
-    await user.click(within(alert).getByRole("button", { name: "Sigo aquí" }));
+    // La cuenta atrás va fuera del aviso: si no, el lector de pantalla lo repetiría cada segundo.
+    expect(alert).not.toHaveTextContent("15 s");
+    expect(screen.getByText("15 s")).toHaveAttribute("aria-hidden", "true");
+    await user.click(screen.getByRole("button", { name: "Sigo aquí" }));
     expect(services.game.client.stillHere).toHaveBeenCalledWith(77);
+  });
+
+  it("al responder, el foco no se pierde", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([state(lotView({ warningUntil: SERVER_NOW + 15_000 }))], services);
+    await user.click(screen.getByRole("button", { name: "Sigo aquí" }));
+    serverSends(services, state(lotView()));
+    expect((document.activeElement as HTMLElement).textContent).toMatch(/\+10\.000/);
   });
 
   it("al rival le dice que está esperando", () => {
@@ -211,6 +247,7 @@ describe("un lote que se reparte solo", () => {
     renderRoom([state(lotView({ auto: true, turn: 2, currentBid: null, leader: null, bids: [], myLimit: 0 }))]);
     expect(screen.getByRole("img", { name: "Silueta de un Pokémon" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Este va para misty" })).toBeInTheDocument();
+    expect(screen.queryByText(/Puedes pujar hasta/)).toBeNull();
     expect(screen.queryByRole("button", { name: /Retirarme/ })).toBeNull();
   });
 });

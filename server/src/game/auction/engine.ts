@@ -21,9 +21,6 @@ import { auctionLimit, buildAuctionGameEnded } from "./view.js";
  * combate por turnos con elección secreta.
  */
 
-/** Un objeto tras cada 2 Pokémon. */
-const ITEM_EVERY = 2;
-
 interface Ctx {
   s: AuctionState;
   fx: Effect[];
@@ -307,7 +304,7 @@ function openLot(c: Ctx): void {
   }
   const starter = s.nextStarter;
   s.nextStarter = otherSeat(starter);
-  s.bidding = { starter, turn: starter, currentBid: null, leader: null, bids: [], retired: null, turnId: 0, idleAt: 0, warningUntil: null, stillHere: 0, expiredAway: false };
+  s.bidding = { starter, turn: starter, currentBid: null, leader: null, bids: [], retired: null, turnId: 0, idleAt: 0, warningUntil: null, stillHere: 0, expiredAway: false, awayWarningUsed: false };
   startTurn(c);
   sendStates(c);
 }
@@ -318,6 +315,7 @@ function startTurn(c: Ctx): void {
   bidding.warningUntil = null;
   bidding.stillHere = 0;
   bidding.expiredAway = false;
+  bidding.awayWarningUsed = false;
   waitForDecision(c);
 }
 
@@ -347,11 +345,13 @@ function onIdle(c: Ctx): void {
   openWarning(c);
 }
 
-/** Volvió con el plazo vencido: un último aviso, que no cuenta para el máximo. */
+/** Volvió con el plazo vencido: un último aviso, que no cuenta para el máximo. Solo uno: recargar no da más tiempo. */
 function lastWarningOnReturn(c: Ctx, seat: Seat): void {
   const bidding = c.s.bidding;
   if (c.s.phase !== "auction" || !bidding || bidding.turn !== seat || !bidding.expiredAway) return;
   bidding.expiredAway = false;
+  if (bidding.awayWarningUsed) return passTurn(c);
+  bidding.awayWarningUsed = true;
   openWarning(c);
 }
 

@@ -289,6 +289,9 @@ body::before {
     transform: translate(-50%, -50%) rotate(-12deg) scale(1);
   }
 }
+.auction-trap {
+  animation: battle-shake 200ms ease-in-out 2;
+}
 .auction-float {
   animation: auction-float 2.6s ease-in-out infinite;
 }

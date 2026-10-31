@@ -71,6 +71,11 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
     if (money !== null && moneyAsh !== null && !(money.includes("2.000.000") && moneyAsh.includes("2.000.000"))) moneyWentDown = true;
     const inTurn = await pageInTurn(pages, revealTitle);
     if (!inTurn) break;
+    // A 360 × 760 los botones se alcanzan sin desplazar la página.
+    if (inTurn === ash.page) {
+      const box = await passButton(ash.page).boundingBox();
+      if (box) expect.soft(box.y + box.height + (await ash.page.evaluate(() => window.scrollY)), "Retirarme sin desplazar").toBeLessThanOrEqual(760);
+    }
     const bid = inTurn.getByRole("button", { name: /^(\+|Abrir)/ }).first();
     // Se alterna entre pujar y retirarse; hacer clic puede llegar tarde, y no pasa nada.
     if (turn % 3 === 0 && (await bid.isEnabled())) await bid.click({ timeout: 2000 }).catch(() => undefined);
