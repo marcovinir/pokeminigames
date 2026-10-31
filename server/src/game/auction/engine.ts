@@ -444,6 +444,7 @@ function onReady(c: Ctx, seat: Seat): void {
   if (s.phase !== "reveal") return reject(c, seat, "WRONG_PHASE", "Ahora no hay nada que confirmar");
   if (!s.readyForBattle.includes(seat)) s.readyForBattle.push(seat);
   if (s.readyForBattle.length === 2) beginLineup(c);
+  else c.fx.push({ kind: "send_state", to: seat });
 }
 
 function beginLineup(c: Ctx): void {

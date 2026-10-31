@@ -151,7 +151,7 @@ describe("turnos", () => {
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(battle(h, 1).deadline).toBeNull();
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
     expect(h.errorCodes(1)).toEqual(["WRONG_PHASE"]);
     h.advance(3000);
     expect(battle(h, 1)).toMatchObject({ turn: 2, confirmed: false, deadline: h.now + 8000 });
@@ -431,6 +431,52 @@ describe("nada se adelanta en el combate", () => {
     const loser = loserOf(pause);
     const next = pause.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
     onlyTo(pause.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice: { items: [], titular: next } }), loser);
+  });
+});
+
+describe("recargar tras decidir", () => {
+  it("quien confirmó la alineación la recupera; el rival no", () => {
+    const h = toLineup();
+    const order = [...h.state.teams[1]].reverse();
+    h.dispatch({ type: "CHOOSE_LINEUP", seat: 1, order });
+    expect(battle(h, 1).myLineup).toEqual(order);
+    expect(battle(h, 2).myLineup).toBeNull();
+  });
+
+  it("quien eligió movimiento lo recupera; el rival no, y se olvida al resolver", () => {
+    const h = toBattle();
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    expect(battle(h, 1).myMove).toBe("forcejeo");
+    expect(battle(h, 2).myMove).toBeNull();
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(battle(h, 1).myMove).toBeNull();
+  });
+
+  it("quien confirmó la pausa recupera objetos y titular; el rival no", () => {
+    const h = toPause();
+    const loser = loserOf(h);
+    const rival: Seat = loser === 1 ? 2 : 1;
+    const next = h.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
+    const choice = { items: [], titular: next };
+    h.dispatch({ type: "PAUSE_CONFIRM", seat: loser, choice });
+    expect(battle(h, loser).myPause).toEqual(choice);
+    expect(battle(h, rival).myPause).toBeNull();
+  });
+
+  it("la revelación dice si ya confirmé, solo a mí", () => {
+    const h = toReveal();
+    const effects = h.dispatch({ type: "READY", seat: 1 });
+    expect(effects.filter((one) => one.kind === "send_state" || one.kind === "emit")).toEqual([{ kind: "send_state", to: 1 }]);
+    expect(battle(h, 1).confirmed).toBe(true);
+    expect(battle(h, 2).confirmed).toBe(false);
+  });
+
+  it("mientras se anima no se ofrecen movimientos", () => {
+    const h = toBattle();
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(battle(h, 1).deadline).toBeNull();
+    expect(battle(h, 1).moves).toEqual([]);
   });
 });
 

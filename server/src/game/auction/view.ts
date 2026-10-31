@@ -27,18 +27,21 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
   const mineId = battle.titular[seat];
   const mine = battle.fighters[seat].find((fighter) => fighter.pokemon.id === mineId);
   const rivalFighter = inFight ? battle.fighters[rival].find((fighter) => fighter.pokemon.id === battle.titular[rival]) : undefined;
-  const confirmed = state.phase === "lineup" ? battle.lineups[seat] !== undefined : state.phase === "battle_pause" ? battle.pauses[seat] !== undefined : battle.moves[seat] !== undefined;
+  const confirmed = state.phase === "reveal" ? state.readyForBattle.includes(seat) : state.phase === "lineup" ? battle.lineups[seat] !== undefined : state.phase === "battle_pause" ? battle.pauses[seat] !== undefined : battle.moves[seat] !== undefined;
   return {
     round: battle.round,
     turn: battle.turn,
     deadline: battle.deadline,
     confirmed,
+    myLineup: state.phase === "lineup" ? structuredClone(battle.lineups[seat] ?? null) : null,
+    myMove: battle.moves[seat] ?? null,
+    myPause: state.phase === "battle_pause" ? structuredClone(battle.pauses[seat] ?? null) : null,
     myTeam: battle.fighters[seat].map((fighter) => fighterView(fighter, catalog)),
     rivalTeam: battle.fighters[rival].map((fighter) => fighterView(fighter, catalog)),
     myTitular: mineId,
     rivalTitular: rivalFighter?.pokemon.id ?? null,
     moves:
-      mine && inFight
+      mine && inFight && battle.deadline !== null
         ? movesOf(mine).map((move) => ({
             move,
             effectiveness: rivalFighter ? moveEffectiveness(move, rivalFighter) : null,

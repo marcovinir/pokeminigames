@@ -38,7 +38,7 @@ export interface AuctionStateView {
   items: Record<Seat, AuctionItem[]>;
   lot: AuctionLotView | null;
   reveal: AuctionRevealEntry[];
-  /** Desde la alineación hasta el final. */
+  /** Desde la revelación hasta el final. */
   battle?: BattleView;
 }
 
@@ -90,8 +90,12 @@ export interface BattleView {
   turn: number;
   /** Hasta cuándo se puede decidir; nula mientras se anima un turno. */
   deadline: number | null;
-  /** Ya confirmé en este paso (alineación, movimiento o pausa). */
+  /** Ya confirmé en este paso (revelación, alineación, movimiento o pausa). */
   confirmed: boolean;
+  /** Lo que yo decidí en este paso, para recuperarlo al recargar. Lo del rival nunca va. */
+  myLineup: number[] | null;
+  myMove: BattleMove | null;
+  myPause: PauseChoice | null;
   myTeam: BattleFighterView[];
   rivalTeam: BattleFighterView[];
   myTitular: number | null;
