@@ -70,6 +70,11 @@ export function effectsForEvent(before: GameView, event: ServerEvent, after: Gam
     case "silhouette-round-result":
       if (seat === null) return [];
       return [now("reveal"), { effect: event.payload.reveal.answers[seat].correct ? "correct" : "wrong", delayMs: AFTER_REVEAL_MS }];
+    case "battle-turn":
+      if (event.payload.actions.length === 0) return [];
+      return [now(event.payload.actions[0]!.actor === seat ? "round" : "rival")];
+    case "battle-round-ended":
+      return [now(event.payload.loser === seat ? "wrong" : "correct")];
     case "auction-sale":
       return [now("round")];
     case "auction-reveal":

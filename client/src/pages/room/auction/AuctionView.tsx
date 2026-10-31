@@ -28,7 +28,7 @@ export function AuctionView() {
   const turnId = lot?.turnId ?? null;
   // Al pujar, los botones desaparecen y el foco se pierde: vuelve a ellos cuando me toca otra vez.
   useEffect(() => {
-    if (myTurn && focusWasLost()) actionsRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    if (myTurn && focusWasLost()) actionsRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
   }, [myTurn, turnId]);
   if (!auction || !lot) return null;
 
@@ -79,7 +79,7 @@ export function AuctionView() {
                 </Button>
               ))}
             </div>
-            <Button variant="ghost" size="lg" disabled={locked} onClick={() => decide((id) => client.pass(id))}>
+            <Button variant="secondary" size="lg" disabled={locked} onClick={() => decide((id) => client.pass(id))}>
               {AUCTION_TEXT.pass}
             </Button>
           </div>

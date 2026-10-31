@@ -10,7 +10,8 @@ let clients: TestClient[] = [];
 
 beforeEach(async () => {
   await resetDatabase();
-  server = await startServer({}, { generateCode: () => "SUBAS2" });
+  let codes = 0;
+  server = await startServer({}, { generateCode: () => (codes++ === 0 ? "SUBAS2" : "SUBAS3") });
 });
 afterEach(async () => {
   for (const client of clients) client.close();
@@ -94,5 +95,62 @@ describe("subasta por sockets (base real)", () => {
     const text = JSON.stringify(other.received);
     expect(text).toMatch(/silhouettes/);
     for (const leak of ["sprites", "official-artwork", "names", "realId", "shownId"]) expect(text, leak).not.toContain(leak);
+  });
+});
+
+describe("el combate por sockets", () => {
+  /** Avanza el reloj hasta que la sala llegue a esa fase. */
+  function advanceUntil(phase: string): void {
+    const room = server.store.get("SUBAS2")!;
+    for (let tick = 0; tick < 5000 && room.phase !== phase; tick++) server.time.advance(1000);
+    expect(room.phase).toBe(phase);
+  }
+
+  it("alineación y turnos llegan a los dos", async () => {
+    const { current, other } = await startAuction();
+    advanceUntil("lineup");
+    const state = await stateWhere(current, (s) => s.phase === "lineup");
+    current.emit("auction-lineup", { order: state.auction!.battle!.myTeam.map((one) => one.pokemon.id).reverse() });
+    const rivalState = await stateWhere(other, (s) => s.phase === "lineup");
+    other.emit("auction-lineup", { order: rivalState.auction!.battle!.myTeam.map((one) => one.pokemon.id) });
+    await stateWhere(current, (s) => s.phase === "battle");
+    await stateWhere(other, (s) => s.phase === "battle");
+    current.emit("auction-move", { move: "forcejeo" });
+    other.emit("auction-move", { move: "forcejeo" });
+    for (const client of [current, other]) expect(await client.next("battle-turn")).toMatchObject({ round: 1, turn: 1 });
+  });
+
+  it("rechaza mensajes mal formados", async () => {
+    const { current } = await startAuction();
+    const bad: [string, unknown][] = [
+      ["auction-move", { move: 7 }],
+      ["auction-pause", { choice: { items: "x", titular: 1 } }],
+      ["auction-pause", { choice: { items: [], titular: 1, extra: true } }],
+      ["auction-lineup", { order: "x" }],
+    ];
+    for (const [name, payload] of bad) {
+      current.emit(name as never, payload as never);
+      expect(await current.next("error")).toMatchObject({ code: "VALIDATION_ERROR" });
+    }
+  });
+
+  it("la revancha empieza de cero y conserva las siluetas trampa", async () => {
+    const { current, other } = await startAuction();
+    advanceUntil("finished");
+    for (const client of [current, other]) {
+      for (;;) {
+        const offer = await client.next<{ status: string }>("rematch-state");
+        if (offer.status === "open") break;
+      }
+    }
+    current.emit("rematch-request");
+    await other.next("rematch-state");
+    other.emit("rematch-request");
+    const { code } = await current.next<{ code: string }>("rematch-room");
+    current.emit("join-room", { code });
+    const state = await stateWhere(current, (s) => s.code === code);
+    expect(state.config).toEqual({ game: "subasta", traps: false });
+    expect(state.auction!.money).toEqual({ 1: 1_000_000, 2: 1_000_000 });
+    expect(state.auction!.teamSizes).toEqual({ 1: 0, 2: 0 });
   });
 });

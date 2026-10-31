@@ -18,6 +18,7 @@
 | | |
 |---|---|
 | **Doble tipo** | En cada ronda aparece un par de tipos. Los dos jugadores tienen 15 segundos para nombrar un Pokémon que tenga ambos; gana quien sume más stats base. |
+| **Subasta Pokémon** | Pujen por Pokémon que solo se ven como silueta (algunas son trampa) y combatan con lo que compren, por turnos y eligiendo en secreto. |
 | **¿Quién es ese Pokémon?** | Los dos ven la misma silueta y tienen un solo intento. Cuanto antes aciertes, más puntos. Se eligen las generaciones con las que jugar. |
 
 Crea una sala, pásale el código a un amigo y a jugar. Sin cuenta (modo invitado), o con una cuenta para tener perfil, estadísticas, historial y un Pokémon de avatar. Al terminar, pide la **revancha** con la misma configuración.
