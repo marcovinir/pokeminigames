@@ -1,3 +1,5 @@
+import type { PokedexDetail } from "@pokemon-minigames/shared";
+import { createPokedexStore } from "../../src/catalog/pokedex-store.js";
 import type { Express } from "express";
 import { createApp } from "../../src/app.js";
 import type { RateLimitConfig } from "../../src/http/limits.js";
@@ -49,9 +51,24 @@ export function buildTestContext(overrides: Record<string, string> = {}, options
     persistRetryDelayMs: 0,
     silhouettes,
   });
-  const app = createApp({ env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off", silhouettes });
+  const app = createApp({ pokedex: createPokedexStore(TEST_POKEDEX), env, prisma, tokens, roomManager, catalog, rateLimits: options.rateLimits ?? "off", silhouettes });
   return { app, env, tokens, time, broadcaster, store, roomManager, catalog, silhouettes };
 }
+
+const TEST_POKEDEX: PokedexDetail[] = [
+  {
+    id: 6,
+    names: { es: "Charizard", en: "Charizard" },
+    types: ["fire", "flying"],
+    total: 534,
+    generation: 1,
+    spriteUrl: "https://sprite/6.png",
+    stats: { hp: 78, attack: 84, defense: 78, spAttack: 109, spDefense: 85, speed: 100 },
+    abilities: [{ name: "Mar Llamas", hidden: false, description: { text: "Potencia el fuego.", language: "es" } }],
+    lore: { text: "Escupe fuego.", language: "es", game: "Espada" },
+    evolution: { id: 6, name: "Charizard", condition: null, next: [] },
+  },
+];
 
 export function buildTestApp(overrides: Record<string, string> = {}): Express {
   return buildTestContext(overrides).app;

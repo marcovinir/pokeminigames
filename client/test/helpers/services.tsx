@@ -92,7 +92,7 @@ export function fakeServices(): FakeServices {
       get: vi.fn(),
       current: vi.fn(async () => null),
     },
-    catalog: { names: vi.fn(async () => NAMES), facts: vi.fn(async () => FACTS) },
+    catalog: { names: vi.fn(async () => NAMES), facts: vi.fn(async () => FACTS), dex: vi.fn(async () => []), dexEntry: vi.fn() },
     stats: {
       mine: vi.fn(async () => ({ username: "ash", avatarId: null, stats: NO_STATS })),
       forUser: vi.fn(async (username: string) => ({ username, avatarId: null, stats: NO_STATS })),

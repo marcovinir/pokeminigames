@@ -157,3 +157,25 @@ describe("los accesos del encabezado", () => {
     expect(within(header).getByText("Invitado")).toBeInTheDocument();
   });
 });
+
+describe("el acceso a la Pokédex", () => {
+  it("está en la barra, como rectángulo con su mini logo, antes de la Matriz de Tipos", () => {
+    renderWithServices(<Header />);
+    const links = within(screen.getByRole("navigation", { name: "Secciones" })).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(["Pokédex", "Matriz de Tipos"]);
+    expect(links[0]).toHaveAttribute("href", "/pokedex");
+    expect(links[0]!.querySelector("svg[data-pokedex-logo]")).not.toBeNull();
+    expect(links[0]!.className).toContain("rounded-ui");
+  });
+
+  it("también en el menú, y no durante una partida", async () => {
+    await open();
+    expect(within(panel()).getByRole("link", { name: "Pokédex" })).toHaveAttribute("href", "/pokedex");
+  });
+
+  it("en una sala no aparece", async () => {
+    await open(fakeServices(), "/sala/ABC234");
+    expect(screen.queryByRole("link", { name: "Pokédex" })).toBeNull();
+  });
+});
+

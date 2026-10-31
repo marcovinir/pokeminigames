@@ -137,6 +137,12 @@ Al terminar una partida con normalidad, el resumen ofrece **«Revancha»**. Si l
 - **Mientras se espera.** Arriba, el **récord** entre las dos cuentas (todas las partidas completadas entre ellas, con las últimas 5 como G/P/E; en la primera, «Es su primera partida juntos»); debajo, el plazo y un **dato curioso** de Pokémon que cambia cada 6 s, calculado del catálogo (nunca hay cifras escritas a mano).
 - **Invitados.** La revancha funciona igual con invitados, pero sin récord, y la sala nueva tampoco se guarda (una partida con un invitado no deja filas). Entre dos cuentas cada revancha es una partida más en las estadísticas.
 
+## Pokédex
+
+`/pokedex` lista los 1025 Pokémon en tarjetas, de 60 en 60, con buscador por nombre (español o inglés) o número, filtro por dos tipos y por generación, y orden por número, nombre o total de stats. `/pokedex/:id` es la ficha: stats, daño recibido, cadena de evolución con sus ramas, habilidades y una descripción. Las dos son públicas, se abren desde el encabezado (en la barra en el escritorio, en el botón «Menú» en pantallas estrechas) y el acceso se oculta durante una partida. Los filtros viven en la dirección (`/pokedex?tipo1=fire&tipo2=flying&gen=1&orden=total`).
+
+Los datos están en `server/data/pokedex.snapshot.json`, generado desde PokeAPI con `npm run pokedex:fetch -w server`, y el servidor los lee al arrancar: no usa la base de datos ni depende de PokeAPI en vivo (las imágenes sí se cargan de allí). Las descripciones son textos oficiales, con su crédito. Donde PokeAPI no tiene texto en español (toda la generación 9 y parte de las habilidades recientes) se muestra el inglés con «(en inglés)». Las evoluciones que no se pueden decir en pocas palabras salen como «condición especial».
+
 ## Matriz de Tipos
 
 `/tipos` es una página pública (con cuenta, como invitado o sin sesión) a la que se llega desde el encabezado (en la barra en el escritorio; en el botón «Menú» en pantallas estrechas); el acceso se oculta durante una partida, porque salir de la página cierra la conexión. Arriba, un selector de uno o dos tipos muestra el daño que recibe esa combinación; debajo está la tabla completa de 18 × 18, que en el teléfono se desplaza dentro de su caja. La selección vive en la dirección (`/tipos?tipo1=fire&tipo2=flying`), así que se puede compartir, y los valores desconocidos se ignoran.
@@ -197,6 +203,8 @@ Para regenerar las capturas de arriba: `E2E_SCREENSHOTS=1 npm run e2e -w e2e -- 
 | `GET /rooms/:code` | Información pública de la sala |
 | `POST /rooms/:code/join` | Reserva el asiento 2 |
 | `GET /silhouettes/:token` | Pública. La silueta (PNG negro sobre transparente) de la ronda de ese token; `404 SILHOUETTE_NOT_FOUND` si no existe, `502 SILHOUETTE_UNAVAILABLE` si no se pudo obtener el arte. El servidor saca el arte de `SILHOUETTE_ART_URL` (plantilla con `{id}`; por defecto, el arte oficial de PokeAPI) |
+| `GET /pokemon/dex` | Público. Lo ligero de todos los Pokémon, para la lista: `{ pokemon }` con id, nombres, tipos, total, generación y sprite |
+| `GET /pokemon/dex/:id` | Público. La ficha completa de un Pokémon; si no existe, `404 POKEMON_NOT_FOUND` |
 | `GET /pokemon/facts` | Público. Los datos curiosos de la pantalla de espera de la revancha: `{ facts }`, cada uno estructurado (`kind` y sus datos, p. ej. el Pokémon con más defensa base o cuántos Pokémon hay de un tipo); el cliente los redacta en español |
 | `GET /pokemon/names` | Público. Lista de `{ id, es, en }` de todos los Pokémon, para el autocompletado; con `?types=1` cada elemento lleva además `types` (el cliente solo lo pide en salas con «Pistas de tipos») |
 | `GET /stats` | Tus estadísticas: `{ username, avatarId, stats }` |

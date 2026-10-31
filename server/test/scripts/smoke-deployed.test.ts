@@ -1,3 +1,4 @@
+import { createPokedexStore } from "../../src/catalog/pokedex-store.js";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
@@ -24,7 +25,7 @@ beforeAll(async () => {
   writeFileSync(join(workdir, "assets", "app.abc123.js"), "console.log('cliente');");
 
   const { env, tokens, roomManager, catalog } = buildTestContext({ NODE_ENV: "production", COOKIE_SECURE: "true", TRUST_PROXY: "1" });
-  const app = createApp({ env, prisma, tokens, roomManager, catalog, clientDist: workdir, silhouettes: createSilhouetteRegistry() });
+  const app = createApp({ pokedex: createPokedexStore([]), env, prisma, tokens, roomManager, catalog, clientDist: workdir, silhouettes: createSilhouetteRegistry() });
   // Anota todo lo que llega, para comprobar que la prueba de humo no escribe nada.
   const logged = (await import("express")).default();
   logged.use((req, _res, next) => {

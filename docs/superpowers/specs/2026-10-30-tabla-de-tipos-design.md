@@ -44,7 +44,7 @@ Funciona bien si alguien entra a la página, elige «fuego» y «volador» y ent
 
 **Datos.** En `shared`, `typeEffectiveness(attacker, defender)` y `damageTaken(types)`, con la tabla vigente de 18 tipos (generación 6 en adelante). No hace falta servidor ni base de datos.
 
-**Sonido.** Suena la música de sala, como en el menú.
+**Sonido.** Con sesión suena la música de sala, como en el menú; sin sesión, silencio, como en el resto de la página.
 
 ## 5. Decisiones del implementador (de Claude, revisables por Marco)
 

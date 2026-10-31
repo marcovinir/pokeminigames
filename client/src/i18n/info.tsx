@@ -62,6 +62,7 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
         <p>
           Es un proyecto de fans, no oficial: Pokémon y sus personajes son de Nintendo, Game Freak y The Pokémon Company, sin
           relación con ellos.
+          Las descripciones y habilidades de la Pokédex son textos oficiales de los juegos, © Nintendo / Game Freak / Creatures, obtenidos de PokeAPI.
         </p>
         <Section title="Música">
           <p>
@@ -219,7 +220,7 @@ export const INFO_PAGES: Record<InfoSlug, InfoPageContent> = {
           y The Pokémon Company; no hay relación con ellos ni respaldo suyo.
         </p>
         <p>
-          El arte y los datos de los Pokémon salen de <External href="https://pokeapi.co">PokeAPI</External>.
+          El arte y los datos de los Pokémon salen de <External href="https://pokeapi.co">PokeAPI</External>. Las descripciones y habilidades de la Pokédex son textos oficiales de los juegos, © Nintendo / Game Freak / Creatures, obtenidos de PokeAPI.
         </p>
         <p>
           Si tienes derechos sobre algo que aparece aquí y quieres que se retire, escribe por la vía de Contacto y se

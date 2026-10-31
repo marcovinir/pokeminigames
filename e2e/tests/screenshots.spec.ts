@@ -114,7 +114,7 @@ test("captura las pantallas principales para el README", async ({ browser }) => 
     await ash.page.goto("/jugar/doble-tipo");
     await expect(ash.page.getByRole("heading", { level: 1, name: "Doble tipo" })).toBeVisible();
     await ash.page.getByRole("button", { name: "Menú", exact: true }).click();
-    await ash.page.getByText("Pokédex", { exact: true }).click();
+    await ash.page.getByRole("group", { name: "Tema" }).getByText("Pokédex", { exact: true }).click();
     await ash.page.getByText("Claro", { exact: true }).click();
     await ash.page.keyboard.press("Escape");
     // Escape devuelve el foco al botón del menú y su aro (ahora visible en Pokédex) saldría en la captura.

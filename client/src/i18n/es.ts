@@ -10,6 +10,7 @@ import {
   type RematchClosedReason,
   type RematchRecord,
   type SilhouetteConfig,
+  type EvolutionCondition,
   type TypeName,
 } from "@pokemon-minigames/shared";
 
@@ -48,6 +49,7 @@ const ERROR_MESSAGES: Record<ErrorCode | typeof NETWORK_ERROR, string> = {
   INVALID_REFRESH_TOKEN: "Tu sesión expiró. Inicia sesión de nuevo.",
   NOT_FOUND: "No encontramos lo que buscas.",
   USER_NOT_FOUND: "No encontramos a ese jugador.",
+  POKEMON_NOT_FOUND: "Ese Pokémon no existe.",
   INTERNAL_ERROR: "Algo falló en el servidor. Inténtalo de nuevo.",
   ALREADY_IN_GAME: "Ya estás en una partida. Vuelve a ella desde el lobby.",
   ROOM_NOT_FOUND: "Esa sala no existe o ya terminó.",
@@ -140,6 +142,63 @@ export const LOAD_ERROR_TEXT = {
   reload: "Recargar",
 } as const;
 
+export const POKEDEX_TEXT = {
+  title: "Pokédex",
+  filters: "Filtros",
+  search: "Buscar",
+  searchHint: "Nombre o número",
+  firstType: "Tipo 1",
+  secondType: "Tipo 2",
+  generation: "Generación",
+  allGenerations: "Todas",
+  generationName: (generation: number) => `${generation}.ª generación`,
+  sort: "Ordenar por",
+  sorts: { numero: "Número", nombre: "Nombre", total: "Total de stats" },
+  listLabel: "Pokémon",
+  showMore: "Ver más",
+  noMatches: "No hay Pokémon con esos filtros.",
+  clearFilters: "Limpiar filtros",
+  loading: "Cargando la Pokédex…",
+  loadError: "No se pudo cargar la Pokédex. Revisa tu conexión.",
+  retry: "Reintentar",
+  stats: "Estadísticas base",
+  total: "Total",
+  evolutions: "Evoluciones",
+  noEvolution: "No evoluciona.",
+  abilities: "Habilidades",
+  hiddenAbility: "(oculta)",
+  lore: "Descripción",
+  loreSource: (game: string) => `Pokédex de ${game}`,
+  inEnglish: "(en inglés)",
+  credit: "Textos oficiales de los juegos de Pokémon, © Nintendo / Game Freak / Creatures. Datos vía PokeAPI.",
+  notFound: "Ese Pokémon no existe.",
+  backToList: "Volver a la Pokédex",
+  navigation: "Navegación de la Pokédex",
+  previous: "Anterior",
+  next: "Siguiente",
+  loadingDetail: "Cargando…",
+  loadDetailError: "No se pudo cargar este Pokémon. Revisa tu conexión.",
+} as const;
+
+const TIME_OF_DAY = { day: "de día", night: "de noche" } as const;
+
+/** Cómo se evoluciona, en pocas palabras. */
+export function evolutionConditionText(condition: EvolutionCondition): string {
+  const when = "timeOfDay" in condition && condition.timeOfDay ? `, ${TIME_OF_DAY[condition.timeOfDay]}` : "";
+  switch (condition.kind) {
+    case "level":
+      return `nivel ${condition.level}${when}`;
+    case "item":
+      return `con ${condition.item}`;
+    case "trade":
+      return "por intercambio";
+    case "friendship":
+      return `por amistad${when}`;
+    case "other":
+      return "condición especial";
+  }
+}
+
 export const HEADER_MENU_TEXT = {
   button: "Menú",
   sections: "Secciones",
@@ -164,6 +223,7 @@ export const TYPES_TEXT = {
   selectedColumn: "(elegido)",
   playPrompt: "¿Quieres jugar? Entra con tu cuenta o como invitado.",
   playLink: "Entrar a jugar",
+  seeInPokedex: "Ver estos Pokémon en la Pokédex",
 } as const;
 
 export const RESULT_LABELS: Record<GameResult, string> = { won: "Ganaste", drawn: "Empate", lost: "Perdiste" };

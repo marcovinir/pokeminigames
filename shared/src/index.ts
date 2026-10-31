@@ -5,6 +5,7 @@ export * from "./games.js";
 export * from "./silhouette.js";
 export * from "./events.js";
 export * from "./normalize.js";
+export * from "./pokedex.js";
 export * from "./preferences.js";
 export * from "./rematch.js";
 export * from "./rooms.js";

@@ -45,7 +45,7 @@ async function expectThemeMenuReachable(page: Page, where: string): Promise<void
   await expect(panel).toBeVisible();
   await expectInsideViewport(page, panel, `${where}: el menú de apariencia`);
   for (const option of ["Clásico", "Pokédex", "Automático", "Claro", "Oscuro"]) {
-    await expectInsideViewport(page, panel.getByText(option, { exact: true }), `${where}: la opción «${option}»`);
+    await expectInsideViewport(page, panel.locator("label").getByText(option, { exact: true }), `${where}: la opción «${option}»`);
   }
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);

@@ -9,7 +9,7 @@ test("el tema guardado en el perfil se aplica en un navegador nuevo tras iniciar
     // El tema y el modo se eligen desde el menú de apariencia del encabezado (botones segmentados).
     await first.page.getByRole("button", { name: "Menú", exact: true }).click();
     const saved = first.page.waitForResponse((r) => r.url().endsWith("/auth/me/preferences") && r.request().method() === "PUT");
-    await first.page.getByText("Pokédex", { exact: true }).click();
+    await first.page.getByRole("group", { name: "Tema" }).getByText("Pokédex", { exact: true }).click();
     await saved;
     const savedMode = first.page.waitForResponse((r) => r.url().endsWith("/auth/me/preferences") && r.request().method() === "PUT");
     await first.page.getByText("Oscuro", { exact: true }).click();

@@ -15,6 +15,10 @@ import { RoomPage } from "./pages/room/RoomPage";
 // Se carga aparte: no engorda el arranque de quien solo viene a jugar.
 const TypesPage = lazy(() => import("./pages/types/TypesPage").then((module) => ({ default: module.TypesPage })));
 
+const PokedexPage = lazy(() => import("./pages/pokedex/PokedexPage").then((module) => ({ default: module.PokedexPage })));
+
+const PokemonPage = lazy(() => import("./pages/pokedex/PokemonPage").then((module) => ({ default: module.PokemonPage })));
+
 /** Rutas que exigen sesión: sin ella llevan a /login y, tras entrar, vuelven a donde se iba. */
 function RequireAuth() {
   const status = useSession((s) => s.status);
@@ -69,6 +73,26 @@ export function AppRoutes() {
           <LoadBoundary>
             <Suspense fallback={<LoadingScreen />}>
               <TypesPage />
+            </Suspense>
+          </LoadBoundary>
+        }
+      />
+      <Route
+        path="/pokedex"
+        element={
+          <LoadBoundary>
+            <Suspense fallback={<LoadingScreen />}>
+              <PokedexPage />
+            </Suspense>
+          </LoadBoundary>
+        }
+      />
+      <Route
+        path="/pokedex/:id"
+        element={
+          <LoadBoundary>
+            <Suspense fallback={<LoadingScreen />}>
+              <PokemonPage />
             </Suspense>
           </LoadBoundary>
         }

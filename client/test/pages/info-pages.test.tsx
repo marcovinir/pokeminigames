@@ -128,6 +128,14 @@ describe("las páginas de información", () => {
     expect(text).toContain("Última actualización: 27 de octubre de 2026");
   });
 
+  it("Aviso legal y Acerca de dicen que los textos de la Pokédex son oficiales y de sus dueños", () => {
+    for (const path of ["/aviso-legal", "/acerca"]) {
+      const { text, unmount } = pageText(path);
+      expect(text).toContain("Las descripciones y habilidades de la Pokédex son textos oficiales de los juegos, © Nintendo / Game Freak / Creatures, obtenidos de PokeAPI.");
+      unmount();
+    }
+  });
+
   it("Aviso legal nombra a los dueños de Pokémon y dice que no es asesoría legal", () => {
     const { text } = pageText("/aviso-legal");
     expect(text).toContain("Nintendo");

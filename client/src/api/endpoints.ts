@@ -1,3 +1,4 @@
+import type { PokedexDetail, PokedexEntry } from "@pokemon-minigames/shared";
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
@@ -54,6 +55,10 @@ export interface Endpoints {
     names(options?: { withTypes?: boolean }): Promise<PokemonName[]>;
     /** Los datos curiosos que se ven mientras se espera la respuesta a una revancha. */
     facts(): Promise<PokemonFact[]>;
+    /** Lo ligero de todos los Pokémon, para la lista de la Pokédex. */
+    dex(): Promise<PokedexEntry[]>;
+    /** La ficha de un Pokémon. */
+    dexEntry(id: number): Promise<PokedexDetail>;
   };
   stats: {
     /** Tus estadísticas. */
@@ -114,6 +119,8 @@ export function createEndpoints(api: ApiClient): Endpoints {
       },
       names: ({ withTypes = false } = {}) =>
         api.request<PokemonName[]>("GET", withTypes ? "/pokemon/names?types=1" : "/pokemon/names", { auth: false }),
+      dex: () => api.request<{ pokemon: PokedexEntry[] }>("GET", "/pokemon/dex", { auth: false }).then((result) => result.pokemon),
+      dexEntry: (id) => api.request<PokedexDetail>("GET", `/pokemon/dex/${id}`, { auth: false }),
     },
     stats: {
       mine: () => api.request<StatsResponse>("GET", "/stats"),
