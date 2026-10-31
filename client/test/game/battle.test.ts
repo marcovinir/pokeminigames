@@ -78,5 +78,6 @@ describe("pauseTitulars", () => {
     expect(pauseTitulars(team, [])).toEqual([1]);
     expect(pauseTitulars(team, [{ item: "revivir", target: 3 }])).toEqual([1, 3]);
     expect(pauseTitulars(team, [{ item: "pocion", target: 1 }])).toEqual([1]);
+    expect(pauseTitulars(team, [{ item: "pocion", target: 2 }])).toEqual([1]);
   });
 });
