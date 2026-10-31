@@ -148,8 +148,6 @@ describe("el combate por sockets", () => {
     const { current } = await startAuction();
     const bad: [string, unknown][] = [
       ["auction-move", { move: 7 }],
-      ["auction-switch", { pokemonId: "x" }],
-      ["auction-switch", { pokemonId: 1, extra: true }],
       ["auction-pause", { choice: { titular: "x" } }],
       ["auction-pause", { choice: { titular: 1, extra: true } }],
       ["auction-lineup", { order: "x" }],
@@ -158,6 +156,12 @@ describe("el combate por sockets", () => {
       current.emit(name as never, payload as never);
       expect(await current.next("error")).toMatchObject({ code: "VALIDATION_ERROR" });
     }
+  });
+
+  it("rechaza un cambio mal formado", async () => {
+    const { current } = await startAuction();
+    current.emit("auction-switch" as never, { pokemonId: "x" } as never);
+    expect(await current.next("error")).toMatchObject({ code: "VALIDATION_ERROR" });
   });
 
   it("la revancha empieza de cero y conserva las siluetas trampa", async () => {

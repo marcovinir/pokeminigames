@@ -14,6 +14,12 @@ const entry = (id: number, name: string, owner: 1 | 2, wasTrap = false): Auction
 const REVEAL = [entry(1, "Uno", 1), entry(2, "Dos", 2, true), entry(3, "Tres", 1), entry(4, "Cuatro", 2), entry(5, "Cinco", 1), entry(6, "Seis", 2)];
 
 const battleView = (over: Partial<BattleView> = {}): BattleView => ({
+  scene: "bosque",
+  choosing: false,
+  stepId: 1,
+  warningUntil: null,
+  rivalIdle: false,
+  mySwitch: null,
   round: 0,
   turn: 0,
   deadline: SERVER_NOW + 36_000,
