@@ -1,4 +1,4 @@
-import type { AuctionItem, BattleFighterView, BattleView, Seat } from "@pokemon-minigames/shared";
+import type { BattleFighterView, BattleView, Seat } from "@pokemon-minigames/shared";
 import { SERVER_NOW, event, pokemon } from "./events";
 import { ash, misty } from "./room";
 
@@ -23,16 +23,15 @@ export const battleView = (over: Partial<BattleView> = {}): BattleView => ({
     { move: "forcejeo", effectiveness: 1, used: false },
     { move: "recuperar", effectiveness: null, used: false },
   ],
-  cinta: { 1: false, 2: false },
   ...over,
 });
 
 /** El `room-state` de un combate, visto desde el asiento 1. */
-export const battleState = (phase: "lineup" | "battle" | "battle_pause", over: Partial<BattleView> = {}, items: AuctionItem[] = [], mySeat: Seat = 1) =>
+export const battleState = (phase: "lineup" | "battle" | "battle_pause", over: Partial<BattleView> = {}, mySeat: Seat = 1) =>
   event.roomState({
     phase,
     mySeat,
     config: { game: "subasta", traps: true },
     players: [ash(), misty()],
-    auction: { money: { 1: 10, 2: 10 }, teamSizes: { 1: 3, 2: 3 }, items: { 1: items, 2: [] }, lot: null, reveal: [], battle: battleView(over) },
+    auction: { money: { 1: 10, 2: 10 }, teamSizes: { 1: 3, 2: 3 }, purchases: { 1: [], 2: [] }, lot: null, reveal: [], battle: battleView(over) },
   });

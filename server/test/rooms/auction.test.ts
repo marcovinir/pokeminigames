@@ -1,6 +1,7 @@
 import type { RoomStateView } from "@pokemon-minigames/shared";
 import request from "supertest";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { STARTING_MONEY } from "../../src/game/auction/rules.js";
 import { prisma, resetDatabase } from "../helpers/db.js";
 import { type TestUser, registerUser } from "../helpers/users.js";
 import { type RunningServer, TestClient, startServer } from "../realtime/client.js";
@@ -53,7 +54,7 @@ async function startAuction() {
   const state = await stateWhere(one, (s) => s.phase === "auction");
   await stateWhere(two, (s) => s.phase === "auction");
   const lot = state.auction!.lot!;
-  return { current: lot.turn === 1 ? one : two, other: lot.turn === 1 ? two : one, lot };
+  return { current: lot.turn === 1 ? one : two, other: lot.turn === 1 ? two : one, lot, code, turnUser: lot.turn === 1 ? ash : misty };
 }
 
 describe("subasta por sockets (base real)", () => {
@@ -71,7 +72,7 @@ describe("subasta por sockets (base real)", () => {
     current.emit("auction-pass", { turnId: lot.turnId });
     const state = await other.next<RoomStateView>("room-state");
     other.emit("auction-pass", { turnId: state.auction!.lot!.turnId });
-    expect(await current.next("auction-sale")).toMatchObject({ lot: 1, kind: "pokemon" });
+    expect(await current.next("auction-sale")).toMatchObject({ lot: 1 });
   });
 
   it("rechaza pujas mal formadas sin cambiar nada", async () => {
@@ -95,6 +96,29 @@ describe("subasta por sockets (base real)", () => {
     const text = JSON.stringify(other.received);
     expect(text).toMatch(/silhouettes/);
     for (const leak of ["sprites", "official-artwork", "names", "realId", "shownId"]) expect(text, leak).not.toContain(leak);
+  });
+});
+
+describe("el aviso de inactividad por sockets", () => {
+  it("recargar con el aviso abierto lo devuelve, y responder lo cierra", async () => {
+    const { current, other, lot, code, turnUser } = await startAuction();
+    server.time.advance(60_000);
+    const warned = await stateWhere(current, (s) => s.auction?.lot?.warningUntil !== null);
+    const until = warned.auction!.lot!.warningUntil;
+    await stateWhere(other, (s) => s.auction?.lot?.rivalIdle === true);
+    current.close();
+    const back = await connect(turnUser, code);
+    const again = await stateWhere(back, (s) => s.auction?.lot?.warningUntil !== null);
+    expect(again.auction!.lot!.warningUntil).toBe(until);
+    back.emit("auction-still-here", { turnId: lot.turnId });
+    const calm = await stateWhere(back, (s) => s.auction?.lot?.warningUntil === null);
+    expect(calm.auction!.lot!.turnId).toBe(lot.turnId);
+  });
+
+  it("rechaza una respuesta mal formada", async () => {
+    const { current } = await startAuction();
+    current.emit("auction-still-here", { turnId: "x" });
+    expect(await current.next("error")).toMatchObject({ code: "VALIDATION_ERROR" });
   });
 });
 
@@ -124,8 +148,8 @@ describe("el combate por sockets", () => {
     const { current } = await startAuction();
     const bad: [string, unknown][] = [
       ["auction-move", { move: 7 }],
-      ["auction-pause", { choice: { items: "x", titular: 1 } }],
-      ["auction-pause", { choice: { items: [], titular: 1, extra: true } }],
+      ["auction-pause", { choice: { titular: "x" } }],
+      ["auction-pause", { choice: { titular: 1, extra: true } }],
       ["auction-lineup", { order: "x" }],
     ];
     for (const [name, payload] of bad) {
@@ -150,7 +174,7 @@ describe("el combate por sockets", () => {
     current.emit("join-room", { code });
     const state = await stateWhere(current, (s) => s.code === code);
     expect(state.config).toEqual({ game: "subasta", traps: false });
-    expect(state.auction!.money).toEqual({ 1: 1_000_000, 2: 1_000_000 });
+    expect(state.auction!.money).toEqual({ 1: STARTING_MONEY, 2: STARTING_MONEY });
     expect(state.auction!.teamSizes).toEqual({ 1: 0, 2: 0 });
   });
 });

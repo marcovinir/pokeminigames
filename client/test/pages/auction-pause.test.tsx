@@ -5,31 +5,13 @@ import { renderRoom } from "../helpers/room";
 import { fakeServices } from "../helpers/services";
 
 const team = [fighter(1, "Uno", 40), fighter(2, "Dos", 0), fighter(3, "Tres", 100)];
-const pause = (over = {}, items: ("pocion" | "revivir" | "cinta")[] = []) => battleState("battle_pause", { myTeam: team, myTitular: null, rivalTitular: null, moves: [], deadline: Date.now() + 15_000, ...over }, items);
-const options = (name: string) => within(screen.getByRole("combobox", { name })).getAllByRole("option").map((one) => one.textContent);
+const pause = (over = {}) => battleState("battle_pause", { myTeam: team, myTitular: null, rivalTitular: null, moves: [], deadline: Date.now() + 15_000, ...over });
 
 describe("la pausa", () => {
-  it("cada objeto ofrece solo sus objetivos válidos", () => {
-    renderRoom([pause({}, ["pocion", "revivir"])]);
-    expect(options("Poción Máxima")).toEqual(["No usar", "Uno"]);
-    expect(options("Revivir")).toEqual(["No usar", "Dos"]);
-  });
-
-  it("dos Revivir no pueden ir al mismo", async () => {
-    const down = [fighter(1, "Uno", 0), fighter(2, "Dos", 0), fighter(3, "Tres", 50)];
-    const { user } = renderRoom([pause({ myTeam: down }, ["revivir", "revivir"])]);
-    const [first, second] = screen.getAllByRole("combobox", { name: "Revivir" }) as [HTMLSelectElement, HTMLSelectElement];
-    await user.selectOptions(first, "Uno");
-    expect(within(second).getAllByRole("option").map((one) => one.textContent)).toEqual(["No usar", "Dos"]);
-  });
-
-  it("revivir lo ofrece como titular; al quitarlo se deselecciona", async () => {
-    const { user } = renderRoom([pause({}, ["revivir"])]);
-    expect(screen.queryByRole("button", { name: "Sacar a Dos" })).toBeNull();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Revivir" }), "Dos");
-    await user.click(screen.getByRole("button", { name: "Sacar a Dos" }));
-    expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
-    await user.selectOptions(screen.getByRole("combobox", { name: "Revivir" }), "No usar");
+  it("solo se puede sacar a quien sigue vivo", () => {
+    renderRoom([pause()]);
+    expect(screen.getByRole("button", { name: "Sacar a Uno" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sacar a Tres" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sacar a Dos" })).toBeNull();
     expect(screen.getByRole("button", { name: "Confirmar" })).toBeDisabled();
   });
@@ -40,42 +22,30 @@ describe("la pausa", () => {
     expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
   });
 
-  it("sin nadie vivo y con Revivir, lo explica", () => {
-    const down = [fighter(1, "Uno", 0), fighter(2, "Dos", 0), fighter(3, "Tres", 0)];
-    renderRoom([pause({ myTeam: down }, ["revivir"])]);
-    expect(screen.getByText("Usa Revivir o perderás al acabar el tiempo.")).toBeInTheDocument();
-  });
-
-  it("si solo hay uno posible, ya está elegido: nadie pierde por no pulsar", async () => {
-    const down = [fighter(1, "Uno", 0), fighter(2, "Dos", 0), fighter(3, "Tres", 0)];
-    const { user } = renderRoom([pause({ myTeam: down }, ["revivir"])]);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Revivir" }), "Dos");
+  it("si solo hay uno posible, ya está elegido", () => {
+    renderRoom([pause({ myTeam: [fighter(1, "Uno", 0), fighter(2, "Dos", 30)] })]);
     expect(screen.getByRole("button", { name: "Sacar a Dos" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled();
   });
 
-  it("sin nadie vivo ni objetos, lo dice y no hay nada que pulsar", () => {
-    const down = [fighter(1, "Uno", 0), fighter(2, "Dos", 0), fighter(3, "Tres", 0)];
-    renderRoom([pause({ myTeam: down })]);
+  it("sin nadie vivo, lo dice y no hay nada que pulsar", () => {
+    renderRoom([pause({ myTeam: [fighter(1, "Uno", 0), fighter(2, "Dos", 0)] })]);
     expect(screen.getByText("No te quedan Pokémon.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirmar" })).toBeNull();
   });
 
-  it("confirmar envía objetos y titular", async () => {
+  it("confirmar envía el titular", async () => {
     const services = fakeServices();
-    const { user } = renderRoom([pause({}, ["pocion", "cinta"])], services);
-    await user.selectOptions(screen.getByRole("combobox", { name: "Poción Máxima" }), "Uno");
-    await user.click(screen.getByRole("switch", { name: "Cinta" }));
+    const { user } = renderRoom([pause()], services);
     await user.click(screen.getByRole("button", { name: "Sacar a Uno" }));
     await user.click(screen.getByRole("button", { name: "Confirmar" }));
-    expect(services.game.client.pauseConfirm).toHaveBeenCalledWith({ items: [{ item: "pocion", target: 1 }, { item: "cinta", target: null }], titular: 1 });
+    expect(services.game.client.pauseConfirm).toHaveBeenCalledWith({ titular: 1 });
   });
 
   it("ya confirmada se recupera al recargar, sin poder cambiarla", () => {
-    renderRoom([pause({ confirmed: true, myPause: { items: [{ item: "pocion", target: 1 }], titular: 3 } }, ["pocion"])]);
-    expect(screen.getByRole("combobox", { name: "Poción Máxima" })).toHaveValue("1");
-    expect(screen.getByRole("combobox", { name: "Poción Máxima" })).toBeDisabled();
+    renderRoom([pause({ confirmed: true, myPause: { titular: 3 } })]);
     expect(screen.getByRole("button", { name: "Sacar a Tres" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Sacar a Uno" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Esperando al rival…" })).toBeDisabled();
   });
 

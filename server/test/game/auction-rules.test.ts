@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { bidCap, combatHp, damage, drawLots, moveCategory, movesFor, startingPrice } from "../../src/game/auction/rules.js";
-import { type AuctionPokemon, STRATEGIES, seededRng, simulateGame } from "../../src/game/auction/simulation.js";
+import { type AuctionPokemon, STRATEGIES, openingBid, seededRng, simulateGame } from "../../src/game/auction/simulation.js";
 
 const { pokemon: raw } = JSON.parse(readFileSync(new URL("../../data/pokedex.snapshot.json", import.meta.url), "utf8")) as { pokemon: AuctionPokemon[] };
 const fixedRng = (value: number) => ({ int: (max: number) => Math.min(value, max - 1) });
@@ -47,30 +47,51 @@ describe("fórmulas", () => {
   });
 
   it("el tope de puja reserva 50.000 por cada hueco que quede después de este lote", () => {
-    expect(bidCap(1_000_000, 0)).toBe(900_000);
-    expect(bidCap(1_000_000, 2)).toBe(1_000_000);
-    expect(bidCap(60_000, 0)).toBe(0);
+    expect(bidCap(1_000_000, 0)).toBe(750_000);
+    expect(bidCap(1_000_000, 5)).toBe(1_000_000);
+    expect(bidCap(200_000, 0)).toBe(0);
   });
 
-  it("los lotes son 2 débiles, 2 medios y 2 fuertes, sin repetir", () => {
+  it("los lotes son 4 débiles, 4 medios y 4 fuertes, sin repetir", () => {
     const lots = drawLots(raw, seededRng(7));
-    expect(new Set(lots.map((lot) => lot.id)).size).toBe(6);
+    expect(new Set(lots.map((lot) => lot.id)).size).toBe(12);
     const sorted = [...raw].sort((a, b) => a.total - b.total || a.id - b.id);
     const rank = (one: AuctionPokemon) => Math.floor((sorted.findIndex((other) => other.id === one.id) * 3) / sorted.length);
-    expect(lots.map(rank).sort()).toEqual([0, 0, 1, 1, 2, 2]);
+    expect(lots.map(rank).sort()).toEqual([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2]);
+  });
+});
+
+describe("retirarse es definitivo", () => {
+  const options = { traps: false };
+
+  it("si el primero se retira sin pujas y el otro abre, se lo lleva al precio inicial: no hay más pujas", () => {
+    expect(openingBid(100_000, { first: 0, second: 500_000 }, [10_000])).toEqual({ winner: 1, paid: 100_000 });
+  });
+
+  it("si nadie abre, no hay venta", () => {
+    expect(openingBid(100_000, { first: 0, second: 0 }, [10_000])).toBeNull();
+  });
+
+  it("si los dos pueden, suben hasta que uno no llega", () => {
+    expect(openingBid(100_000, { first: 125_000, second: 125_000 }, [10_000])).toEqual({ winner: 0, paid: 120_000 });
+  });
+
+  it("los números permiten completar los 6 pagando, sin regalar por falta de dinero en partidas normales", () => {
+    const result = simulateGame(raw, [STRATEGIES.equilibrada, STRATEGIES.equilibrada], options, seededRng(3));
+    expect(Math.min(...result.spent)).toBeGreaterThan(0);
   });
 });
 
 describe("simulación de una partida", () => {
   const names = Object.keys(STRATEGIES) as (keyof typeof STRATEGIES)[];
 
-  it("siempre termina, con 3 y 3 Pokémon, sin dinero negativo y con ganador, sea cual sea la estrategia", () => {
+  it("siempre termina, con 6 y 6 Pokémon, sin dinero negativo y con ganador, sea cual sea la estrategia", () => {
     let seed = 1;
     for (const a of names) {
       for (const b of names) {
         for (let game = 0; game < 40; game++) {
           const result = simulateGame(raw, [STRATEGIES[a], STRATEGIES[b]], { traps: game % 2 === 0 }, seededRng(seed++));
-          expect(result.teamSizes).toEqual([3, 3]);
+          expect(result.teamSizes).toEqual([6, 6]);
           expect(Math.min(...result.moneyLeft)).toBeGreaterThanOrEqual(0);
           expect([0, 1]).toContain(result.winner);
           expect(result.rounds).toBeGreaterThan(0);

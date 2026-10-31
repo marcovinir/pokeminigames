@@ -4,14 +4,18 @@ import { bidOptions } from "../../src/game/auction-bids";
 
 const lot = (over: Partial<AuctionLotView>): AuctionLotView => ({
   number: 1,
-  kind: "pokemon",
   silhouetteUrl: "/silhouettes/x",
+  scene: "bosque",
   price: 150_000,
   currentBid: null,
   leader: null,
   turn: 1,
-  deadline: 0,
   turnId: 1,
+  bids: [],
+  retired: null,
+  warningUntil: null,
+  rivalIdle: false,
+  auto: false,
   myLimit: 800_000,
   ...over,
 });

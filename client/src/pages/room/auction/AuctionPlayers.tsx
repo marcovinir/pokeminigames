@@ -1,34 +1,36 @@
-import type { AuctionStateView } from "@pokemon-minigames/shared";
-import { Avatar } from "../../../components/Avatar";
+import type { AuctionStateView, RoomPlayerView } from "@pokemon-minigames/shared";
 import { GuestTag } from "../../../components/GuestTag";
-import { AUCTION_ITEM_LABELS, AUCTION_TEXT, auctionMoney } from "../../../i18n/es";
-import { useRoom } from "../use-room";
+import { AUCTION_TEXT, auctionMoney } from "../../../i18n/es";
 
-/** Lo que se sabe de los dos: la subasta es abierta, así que dinero, cuántos Pokémon llevan y objetos están a la vista. */
-export function AuctionPlayers({ auction }: { auction: AuctionStateView }) {
-  const { me, opponent } = useRoom();
+const SLOTS = 6;
+
+/** Lo que se sabe de un jugador: la subasta es abierta, así que su dinero y sus compras están a la vista, como siluetas. */
+export function AuctionPlayer({ player, auction, isMe, active, note }: { player: RoomPlayerView; auction: AuctionStateView; isMe: boolean; active: boolean; note?: string }) {
+  const purchases = auction.purchases[player.seat];
   return (
-    <div role="group" aria-label={AUCTION_TEXT.players} className="grid grid-cols-2 gap-3">
-      {[me, opponent].map((player) =>
-        player ? (
-          <div key={player.seat} className="framed flex min-w-0 flex-col items-center gap-1 rounded-card bg-surface p-3 text-center shadow-card">
-            <Avatar name={player.username} avatarId={player.avatarId} size="sm" />
-            <span className="max-w-full text-sm font-semibold [overflow-wrap:anywhere]">{player.username}</span>
-            {player.guest ? <GuestTag /> : null}
-            <span className="font-num text-lg font-semibold tabular-nums">{auctionMoney(auction.money[player.seat])}</span>
-            <span className="text-xs text-muted">{AUCTION_TEXT.teamSize(auction.teamSizes[player.seat])}</span>
-            {auction.items[player.seat].length > 0 ? (
-              <ul className="flex flex-wrap justify-center gap-1 text-xs">
-                {auction.items[player.seat].map((item, index) => (
-                  <li key={`${item}-${index}`} className="rounded-pill bg-surface-2 px-2 py-0.5">
-                    {AUCTION_ITEM_LABELS[item].name}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null,
-      )}
-    </div>
+    <section role="group" aria-label={player.username} data-active={active} className={`auction-panel flex min-w-0 flex-col gap-2 p-3 lg:gap-3 ${active ? (isMe ? "auction-panel-me" : "auction-panel-rival") : ""}`}>
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
+        <span className="font-display min-w-0 text-base font-semibold [overflow-wrap:anywhere] lg:text-xl">{player.username}</span>
+        {player.guest ? <GuestTag /> : null}
+      </div>
+      <div className={`rounded-lg p-2 ${isMe ? "auction-money-me" : "auction-money-rival"}`}>
+        <div className="text-xs font-extrabold">{isMe ? AUCTION_TEXT.yourMoney : AUCTION_TEXT.theirMoney}</div>
+        <div className="font-num text-base font-bold tabular-nums lg:text-2xl">{auctionMoney(auction.money[player.seat])}</div>
+      </div>
+      <div className="text-sm font-extrabold">{AUCTION_TEXT.teamSize(purchases.length)}</div>
+      <div className="grid grid-cols-6 gap-1 lg:grid-cols-3 lg:gap-1.5">
+        {Array.from({ length: SLOTS }, (_, index) => {
+          const url = purchases[index];
+          return url ? (
+            <div key={index} data-slot className={`aspect-square overflow-hidden rounded-md ${isMe ? "auction-money-me" : "auction-money-rival"}`}>
+              <img src={url} alt={AUCTION_TEXT.boughtSilhouette} className="size-full object-contain" />
+            </div>
+          ) : (
+            <div key={index} data-slot className="auction-slot-empty aspect-square rounded-md" />
+          );
+        })}
+      </div>
+      {note ? <p className="hidden text-xs leading-snug lg:block">{note}</p> : null}
+    </section>
   );
 }

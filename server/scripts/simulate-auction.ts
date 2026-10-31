@@ -50,7 +50,7 @@ function report(title: string, options: SimulationOptions): void {
         traps += result.traps;
         turns.push(...result.turnsPerRound);
         const combatTurns = result.turnsPerRound.reduce((sum, count) => sum + count, 0);
-        minutes.push((result.bidTurns * SECONDS.bidTurn + 6 * SECONDS.reveal + SECONDS.lineup + combatTurns * SECONDS.combatTurn + (result.rounds - 1) * SECONDS.pause) / 60);
+        minutes.push((result.bidTurns * SECONDS.bidTurn + 12 * SECONDS.reveal + SECONDS.lineup + combatTurns * SECONDS.combatTurn + (result.rounds - 1) * SECONDS.pause) / 60);
       }
       cells.push(percent(won, GAMES).padEnd(14));
     }

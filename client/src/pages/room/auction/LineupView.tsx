@@ -40,7 +40,7 @@ export function LineupView() {
   return (
     <section className="mx-auto flex w-full max-w-xl flex-col gap-4">
       <Card tone="raised" className="flex flex-col items-center gap-3 p-6 text-center">
-        <h1 className="font-display text-2xl font-semibold">{BATTLE_TEXT.lineupTitle}</h1>
+        <h1 className="font-pixel text-3xl font-bold">{BATTLE_TEXT.lineupTitle}</h1>
         <Timer deadline={battle.deadline} offset={view.clockOffset} totalMs={BATTLE_LINEUP_MS} label={BATTLE_TEXT.lineupTimer} />
       </Card>
       <p role="status" className="sr-only">

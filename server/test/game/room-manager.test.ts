@@ -591,6 +591,7 @@ describe("una sala de subasta en el RoomManager", () => {
     // Nadie responde: los turnos se agotan solos y la partida llega al final.
     for (let tick = 0; tick < 2000 && room.view(1).phase !== "finished"; tick++) time.advance(10_000);
     expect(room.view(1).phase).toBe("finished");
-    expect(room.view(1).auction!.reveal).toHaveLength(6);
+    // El catálogo de pruebas solo tiene 10 Pokémon: no llega a los 12 lotes.
+    expect(room.view(1).auction!.reveal).toHaveLength(10);
   });
 });

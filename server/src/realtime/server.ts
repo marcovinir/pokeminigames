@@ -1,5 +1,5 @@
 import type { Server as HttpServer } from "node:http";
-import { AUCTION_ITEMS, BID_STEPS, type BattleMove, type BidStep, type ClientToServerEvents, TYPE_NAMES, type ErrorCode, type Seat, type ServerToClientEvents } from "@pokemon-minigames/shared";
+import { BID_STEPS, type BattleMove, type BidStep, type ClientToServerEvents, TYPE_NAMES, type ErrorCode, type Seat, type ServerToClientEvents } from "@pokemon-minigames/shared";
 import { Server } from "socket.io";
 import { z } from "zod";
 import type { TokenService } from "../auth/tokens.js";
@@ -25,14 +25,10 @@ const chooseSchema = z.object({ type: z.string().min(1).max(30) });
 const submitSchema = z.object({ text: z.string().max(MAX_ANSWER_LENGTH) });
 const bidSchema = z.object({ step: z.custom<BidStep | null>((value) => value === null || BID_STEPS.includes(value as BidStep)), turnId: z.number().int() });
 const passSchema = z.object({ turnId: z.number().int() });
-const lineupSchema = z.strictObject({ order: z.array(z.number().int()).max(3) });
+const lineupSchema = z.strictObject({ order: z.array(z.number().int()).max(6) });
 const moveSchema = z.strictObject({ move: z.custom<BattleMove>((value) => value === "forcejeo" || value === "recuperar" || (TYPE_NAMES as readonly unknown[]).includes(value)) });
-const pauseSchema = z.strictObject({
-  choice: z.strictObject({
-    items: z.array(z.strictObject({ item: z.enum(AUCTION_ITEMS), target: z.number().int().nullable() })).max(3),
-    titular: z.number().int(),
-  }),
-});
+const pauseSchema = z.strictObject({ choice: z.strictObject({ titular: z.number().int() }) });
+const stillHereSchema = z.strictObject({ turnId: z.number().int() });
 
 export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 
@@ -159,6 +155,14 @@ function registerHandlers(socket: GameSocket, deps: RealtimeDeps): void {
     handle(passSchema, ({ turnId }) => {
       const { room, seat } = requireBinding();
       room.dispatch({ type: "PASS", seat, turnId });
+    }),
+  );
+
+  socket.on(
+    "auction-still-here",
+    handle(stillHereSchema, ({ turnId }) => {
+      const { room, seat } = requireBinding();
+      room.dispatch({ type: "STILL_HERE", seat, turnId });
     }),
   );
 

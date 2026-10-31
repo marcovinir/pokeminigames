@@ -75,7 +75,7 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 | `npm run dev:client` | Cliente web con recarga en caliente |
 | `npm run build` | Construye el cliente (`client/dist`) y empaqueta el servidor (`server/dist/index.js`) |
 | `npm start` | Arranca la construcción de producción (necesita las variables de `NODE_ENV=production`, ver la guía de despliegue) |
-| `npm run auction:simulate -w server` | Simula miles de partidas de Subasta Pokémon entre estrategias e informa del balance (juego aún en desarrollo) |
+| `npm run auction:simulate -w server` | Simula miles de partidas de Subasta Pokémon entre estrategias e informa del balance |
 | `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el modo invitado, la revancha, el límite de login, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
 | `npm test` | Todas las pruebas: servidor (usan la base `pokemon_minigames_test`) y cliente |
 | `npm run typecheck` | Verifica los tipos con `tsc` en todos los paquetes |
@@ -226,11 +226,12 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `submit-pokemon` | `{ text }` (un intento por ronda, máximo 100 caracteres) |
 | `leave-room` | — (también cuenta como salir de una oferta de revancha: el rival ve «se fue») |
 | `auction-bid` | Subasta: `{ step, turnId }`: sube la puja 10.000, 50.000 o 100.000; `null` abre el lote al precio inicial. Puja inválida: `INVALID_BID`; de otro turno: `NOT_YOUR_TURN` |
-| `auction-pass` | Subasta: `{ turnId }`: pasar en el lote abierto |
+| `auction-pass` | Subasta: `{ turnId }`: retirarse del lote abierto; es definitivo |
+| `auction-still-here` | Subasta: `{ turnId }`: responder al aviso «¿Sigues ahí?» |
 | `auction-ready` | Subasta: ya vi la revelación; si confirman los dos, se salta |
 | `auction-lineup` | Subasta: `{ order }`: titular y orden |
 | `auction-move` | Subasta: `{ move }`: el tipo del ataque, `forcejeo` o `recuperar` |
-| `auction-pause` | Subasta: `{ choice: { items, titular } }`: objetos y titular entre asaltos |
+| `auction-pause` | Subasta: `{ choice: { titular } }`: titular entre asaltos |
 | `rematch-request` | — (pedir la revancha o aceptar la del rival) |
 | `rematch-cancel` | — (cancelar la propia o rechazar la del rival) |
 
@@ -247,8 +248,8 @@ Se conecta a `http://localhost:3000` con `auth: { token: <accessToken> }`. Un to
 | `silhouette-round-started` | Silueta: empieza una ronda: `{ round, totalRounds, deadline, silhouetteUrl, serverNow }` (nunca dice qué Pokémon es) |
 | `silhouette-answer-received` | Silueta: solo a quien respondió, `{ ms }` |
 | `silhouette-round-result` | Silueta: la revelación (`reveal` con el Pokémon y la respuesta, el acierto, los ms y los puntos de cada uno), `totals` y `nextRoundAt` |
-| `auction-sale` | Subasta: se cerró un lote: `{ lot, kind, winner, paid, item? }`, sin decir qué Pokémon era |
-| `auction-reveal` | Subasta: los 6 Pokémon reales, con quién los compró y si eran trampa |
+| `auction-sale` | Subasta: se cerró un lote: `{ lot, winner, paid }`, sin decir qué Pokémon era |
+| `auction-reveal` | Subasta: los 12 Pokémon reales, con quién los compró y si eran trampa |
 | `battle-turn` | Subasta: se resolvió un turno: `{ round, turn, actions }` |
 | `battle-round-ended` | Subasta: cayó un Pokémon: `{ round, loser, atLimit }` |
 | `rematch-room` | Los dos aceptaron: `{ code }` de la sala nueva (que trae `rematch: true` en su `room-state`) |

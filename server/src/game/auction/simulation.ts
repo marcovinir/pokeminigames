@@ -1,9 +1,8 @@
-import { AUCTION_ITEMS, type AuctionItem, BID_STEPS, type BaseStats, type BattleMove, type TypeName } from "@pokemon-minigames/shared";
+import { BID_STEPS, type BaseStats, type BattleMove, type TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 import { pickOne } from "../rng.js";
-import { type Fighter, applyItem, bestMove, hpShare, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
+import { type Fighter, bestMove, hpShare, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
 import {
-  ITEM_PRICES,
   MAX_TURNS_PER_ROUND,
   STARTING_MONEY,
   TRAP_ODDS,
@@ -24,25 +23,20 @@ export interface AuctionPokemon {
   stats: BaseStats;
 }
 
-type ItemName = AuctionItem;
-
-const ITEMS = AUCTION_ITEMS;
-const POTION_BELOW = 0.4;
 const HEAL_BELOW = 0.35;
 
 export interface Strategy {
   name: string;
   /** Cuánto paga como máximo por un Pokémon, sobre su precio inicial. Solo ve el total de la silueta mostrada. */
   pokemonFactor: (shownTotal: number) => number;
-  itemFactor: number;
 }
 
 export const STRATEGIES = {
-  tacaña: { name: "tacaña", pokemonFactor: () => 0.95, itemFactor: 0.9 },
-  equilibrada: { name: "equilibrada", pokemonFactor: () => 1.3, itemFactor: 1.1 },
-  derrochadora: { name: "derrochadora", pokemonFactor: () => 2.5, itemFactor: 1.5 },
+  tacaña: { name: "tacaña", pokemonFactor: () => 0.95 },
+  equilibrada: { name: "equilibrada", pokemonFactor: () => 1.3 },
+  derrochadora: { name: "derrochadora", pokemonFactor: () => 2.5 },
   // Reconoce las siluetas: paga mucho por las fuertes y poco por las débiles.
-  experta: { name: "experta", pokemonFactor: (total: number) => (total >= 500 ? 2 : total >= 380 ? 1.2 : 0.9), itemFactor: 1.2 },
+  experta: { name: "experta", pokemonFactor: (total: number) => (total >= 500 ? 2 : total >= 380 ? 1.2 : 0.9) },
 } satisfies Record<string, Strategy>;
 
 export interface SimulationOptions {
@@ -85,29 +79,40 @@ interface Player {
   strategy: Strategy;
   money: number;
   team: AuctionPokemon[];
-  items: ItemName[];
 }
 
-/** Una puja abierta por turnos: gana quien no pasa. `null` si los dos pasan sin pujar. */
+/**
+ * Una puja abierta por turnos. Retirarse es definitivo: si hay puja, el otro se la lleva; si no, el otro la abre y se la
+ * lleva a ese precio, o también se retira y no hay venta (`null`).
+ */
 function runBidding(starter: Seat, price: number, limitOf: (seat: Seat) => number, rng: Rng, count: () => void): { winner: Seat; paid: number } | null {
   let current: number | null = null;
   let leader: Seat | null = null;
   let turn = starter;
-  let firstPassed = false;
+  let firstRetired = false;
   for (;;) {
     count();
     const next: number = current === null ? price : current + pickOne(rng, BID_STEPS);
     if (next <= limitOf(turn)) {
       current = next;
       leader = turn;
+      if (firstRetired) return { winner: leader, paid: current };
       turn = other(turn);
       continue;
     }
     if (leader !== null) return { winner: leader, paid: current! };
-    if (firstPassed) return null;
-    firstPassed = true;
+    if (firstRetired) return null;
+    firstRetired = true;
     turn = other(turn);
   }
+}
+
+/** La misma puja con límites fijos y saltos dados, para probar sus reglas. */
+export function openingBid(price: number, limits: { first: number; second: number }, steps: readonly number[]): { winner: Seat; paid: number } | null {
+  let index = 0;
+  const rng: Rng = { int: () => index++ % steps.length };
+  const stepAware: Rng = { int: (max) => (max === BID_STEPS.length ? BID_STEPS.indexOf(steps[rng.int(steps.length)] as never) : 0) };
+  return runBidding(0, price, (seat) => (seat === 0 ? limits.first : limits.second), stepAware, () => undefined);
 }
 
 function runAuction(pool: readonly AuctionPokemon[], players: [Player, Player], options: SimulationOptions, rng: Rng, result: SimulationResult): void {
@@ -159,42 +164,21 @@ function runAuction(pool: readonly AuctionPokemon[], players: [Player, Player], 
       // Solo se turnan en los lotes con puja, como en el motor.
       starter = other(starter);
     }
-
-    if ((index + 1) % 2 === 0) {
-      const item = pickOne(rng, ITEMS);
-      const itemPrice = ITEM_PRICES[item];
-      const limitOf = (seat: Seat) => Math.min(players[seat].money, itemPrice * players[seat].strategy.itemFactor);
-      const sale = runBidding(starter, itemPrice, limitOf, rng, countBid);
-      if (sale) {
-        pay(sale.winner, sale.paid);
-        players[sale.winner].items.push(item);
-      }
-      starter = other(starter);
-    }
   });
 }
 
 interface Side {
   fighters: Fighter[];
-  items: ItemName[];
   titular: Fighter | null;
   healed: boolean;
-  cinta: boolean;
 }
 
 const alive = (side: Side) => side.fighters.filter((fighter) => fighter.hp > 0);
 const strongest = (fighters: Fighter[]) => [...fighters].sort((a, b) => totalOf(b) - totalOf(a))[0] ?? null;
 const totalOf = (fighter: Fighter) => (fighter.pokemon as AuctionPokemon).total;
-const take = (side: Side, item: ItemName) => side.items.splice(side.items.indexOf(item), 1);
 
-/** Lo que haría alguien razonable en la pausa: revivir si tiene con qué, curar a quien va mal y sacar a su mejor Pokémon. */
+/** Lo que haría alguien razonable en la pausa: sacar a su mejor Pokémon si cayó el titular. */
 function prepare(side: Side): void {
-  const fainted = strongest(side.fighters.filter((fighter) => fighter.hp <= 0));
-  if (fainted && side.items.includes("revivir") && applyItem("revivir", fainted)) take(side, "revivir");
-  const hurt = alive(side).sort((a, b) => hpShare(a) - hpShare(b))[0];
-  if (hurt && hpShare(hurt) < POTION_BELOW && side.items.includes("pocion") && applyItem("pocion", hurt)) take(side, "pocion");
-  side.cinta = side.items.includes("cinta");
-  if (side.cinta) take(side, "cinta");
   if (!side.titular || side.titular.hp <= 0) side.titular = strongest(alive(side));
   side.healed = false;
 }
@@ -207,12 +191,9 @@ function choose(me: Side, rival: Side): BattleMove {
 function runBattle(players: [Player, Player], options: SimulationOptions, rng: Rng, result: SimulationResult): Seat {
   const sides = players.map((player) => ({
     fighters: player.team.map(newFighter),
-    items: [...player.items],
     titular: null,
     healed: false,
-    cinta: false,
   })) as [Side, Side];
-  // La alineación del principio no gasta objetos: aún no hay nada que curar.
   for (const side of sides) side.titular = strongest(alive(side));
 
   for (;;) {
@@ -220,7 +201,7 @@ function runBattle(players: [Player, Player], options: SimulationOptions, rng: R
     let turns = 0;
     while (a.hp > 0 && b.hp > 0 && turns < MAX_TURNS_PER_ROUND) {
       turns++;
-      const combat = { 1: { fighter: a, healed: sides[0].healed, cinta: sides[0].cinta }, 2: { fighter: b, healed: sides[1].healed, cinta: sides[1].cinta } };
+      const combat = { 1: { fighter: a, healed: sides[0].healed }, 2: { fighter: b, healed: sides[1].healed } };
       const actions = resolveTurn(combat, { 1: choose(sides[0], sides[1]), 2: choose(sides[1], sides[0]) }, rng, { criticals: options.criticals !== false });
       result.criticals += actions.filter((action) => action.critical).length;
       sides[0].healed = combat[1].healed;
@@ -240,7 +221,7 @@ function runBattle(players: [Player, Player], options: SimulationOptions, rng: R
 
 /** Juega una partida completa, de la subasta al último Pokémon. */
 export function simulateGame(pool: readonly AuctionPokemon[], strategies: [Strategy, Strategy], options: SimulationOptions, rng: Rng): SimulationResult {
-  const newPlayer = (strategy: Strategy): Player => ({ strategy, money: STARTING_MONEY, team: [], items: [] });
+  const newPlayer = (strategy: Strategy): Player => ({ strategy, money: STARTING_MONEY, team: [] });
   const players: [Player, Player] = [newPlayer(strategies[0]), newPlayer(strategies[1])];
   const result: SimulationResult = {
     winner: 0,

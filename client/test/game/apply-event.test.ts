@@ -448,7 +448,7 @@ describe("el rival ya respondió", () => {
 });
 
 describe("la subasta", () => {
-  const auction = { money: { 1: 900, 2: 800 }, teamSizes: { 1: 1, 2: 0 }, items: { 1: [], 2: [] }, lot: null, reveal: [] };
+  const auction = { money: { 1: 900, 2: 800 }, teamSizes: { 1: 1, 2: 0 }, purchases: { 1: [], 2: [] }, lot: null, reveal: [] };
   const roomState = (extra: object) =>
     ({
       name: "room-state",
@@ -461,10 +461,10 @@ describe("la subasta", () => {
   });
 
   it("guarda la última venta y la olvida al llegar otra", () => {
-    const sale = { lot: 2, kind: "item", winner: null, paid: 0, item: "cinta" } as const;
+    const sale = { lot: 2, winner: 1, paid: 5 } as const;
     const after = applyServerEvent(initialGameView, { name: "auction-sale", payload: sale }, 0);
     expect(after.lastSale).toEqual(sale);
-    expect(applyServerEvent(after, { name: "auction-sale", payload: { lot: 3, kind: "pokemon", winner: 1, paid: 5 } }, 0).lastSale?.lot).toBe(3);
+    expect(applyServerEvent(after, { name: "auction-sale", payload: { lot: 3, winner: 1, paid: 5 } }, 0).lastSale?.lot).toBe(3);
   });
 
   it("la revelación no cambia la fase: la trae room-state", () => {
@@ -476,8 +476,8 @@ describe("la subasta", () => {
 describe("el registro del combate", () => {
   const action = { actor: 1, move: "fire", damage: 5, critical: false, effectiveness: 1, healed: 0, actorHp: 9, targetHp: 9 } as const;
   const fighter = (id: number, name: string) => ({ pokemon: pokemon(id, 400, { names: { es: name, en: name } }), hp: 9, maxHp: 9 });
-  const battle = { round: 1, turn: 1, deadline: 1, confirmed: false, myLineup: null, myMove: null, myPause: null, myTeam: [fighter(1, "Uno")], rivalTeam: [fighter(2, "Dos")], myTitular: 1, rivalTitular: 2, moves: [], cinta: { 1: false, 2: false } };
-  const start: GameView = { ...initialGameView, code: "ABC", mySeat: 1, auction: { money: { 1: 0, 2: 0 }, teamSizes: { 1: 3, 2: 3 }, items: { 1: [], 2: [] }, lot: null, reveal: [], battle } };
+  const battle = { round: 1, turn: 1, deadline: 1, confirmed: false, myLineup: null, myMove: null, myPause: null, myTeam: [fighter(1, "Uno")], rivalTeam: [fighter(2, "Dos")], myTitular: 1, rivalTitular: 2, moves: [] };
+  const start: GameView = { ...initialGameView, code: "ABC", mySeat: 1, auction: { money: { 1: 0, 2: 0 }, teamSizes: { 1: 3, 2: 3 }, purchases: { 1: [], 2: [] }, lot: null, reveal: [], battle } };
   const turn = (n: number): ServerEvent => ({ name: "battle-turn", payload: { round: 1, turn: n, actions: [action] } });
 
   it("guarda cada turno con los nombres de quienes pelearon entonces", () => {

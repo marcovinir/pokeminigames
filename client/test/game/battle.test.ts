@@ -1,7 +1,7 @@
 import type { BattleAction, BattleFighterView } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
 import { battleSpriteUrl } from "../../src/catalog/artwork";
-import { effectivenessLabel, hpTone, moveLabel, pauseTitulars, turnLines, turnSummary, validTargets } from "../../src/game/battle";
+import { aliveIds, effectivenessLabel, hpTone, moveLabel, turnLines, turnSummary } from "../../src/game/battle";
 
 const fighter = (id: number, hp: number, maxHp = 100): BattleFighterView => ({ pokemon: { id } as never, hp, maxHp });
 const action = (over: Partial<BattleAction> = {}): BattleAction => ({ actor: 1, move: "fire", damage: 42, critical: false, effectiveness: 1, healed: 0, actorHp: 100, targetHp: 58, ...over });
@@ -61,23 +61,8 @@ describe("turnLines", () => {
   });
 });
 
-describe("validTargets", () => {
-  const team = [fighter(1, 100), fighter(2, 40), fighter(3, 0)];
-
-  it("la Poción, a vivos heridos; el Revivir, a debilitados; la Cinta, a nadie", () => {
-    expect(validTargets("pocion", team)).toEqual([2]);
-    expect(validTargets("revivir", team)).toEqual([3]);
-    expect(validTargets("cinta", team)).toEqual([]);
-  });
-});
-
-describe("pauseTitulars", () => {
-  const team = [fighter(1, 50), fighter(2, 0), fighter(3, 0)];
-
-  it("los vivos, más quien se revive en esta misma elección", () => {
-    expect(pauseTitulars(team, [])).toEqual([1]);
-    expect(pauseTitulars(team, [{ item: "revivir", target: 3 }])).toEqual([1, 3]);
-    expect(pauseTitulars(team, [{ item: "pocion", target: 1 }])).toEqual([1]);
-    expect(pauseTitulars(team, [{ item: "pocion", target: 2 }])).toEqual([1]);
+describe("aliveIds", () => {
+  it("solo los vivos", () => {
+    expect(aliveIds([fighter(1, 50), fighter(2, 0), fighter(3, 1)])).toEqual([1, 3]);
   });
 });

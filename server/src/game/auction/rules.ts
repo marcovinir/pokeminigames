@@ -1,20 +1,26 @@
-import type { AuctionItem, TypeName } from "@pokemon-minigames/shared";
+import type { TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 
 /** Valores de Subasta Pokémon. Son de partida: los ajusta lo que diga el simulador (`npm run auction:simulate -w server`). */
-export const STARTING_MONEY = 1_000_000;
-export const ITEM_PRICES: Record<AuctionItem, number> = { pocion: 100_000, revivir: 150_000, cinta: 100_000 };
+export const STARTING_MONEY = 2_000_000;
 /** Una silueta trampa de cada tantos lotes. */
 export const TRAP_ODDS = 6;
-export const BID_TURN_MS = 10_000;
+/** Tiempo de turno sin decidir antes del aviso «¿Sigues ahí?»: no hay reloj a la vista. */
+export const INACTIVITY_MS = 60_000;
+export const INACTIVITY_WARNING_MS = 15_000;
+/** Cuántas veces por turno vale «Sigo aquí»: nadie puede hacer esperar al otro para siempre. */
+export const MAX_STILL_HERE = 2;
+/** Lo que se muestra un lote que se reparte solo porque alguien ya completó su equipo. */
+export const AUTO_LOT_MS = 2_000;
 /** La revelación: 3 s por Pokémon, y se salta si los dos confirman. */
-export const REVEAL_MS = 18_000;
-export const LINEUP_MS = 20_000;
+export const REVEAL_MS = 36_000;
+export const LINEUP_MS = 30_000;
 export const MOVE_MS = 8_000;
 /** Lo que espera el servidor tras resolver un turno, para que la pantalla lo anime. */
 export const TURN_ANIMATION_MS = 3_000;
 export const PAUSE_MS = 15_000;
-export const TEAM_SIZE = 3;
+export const TEAM_SIZE = 6;
+export const LOTS_PER_THIRD = 4;
 /** Lo que se reserva por cada hueco del equipo, para poder completarlo. */
 export const SLOT_RESERVE = 50_000;
 export const PRICE_PER_STAT = 300;
@@ -95,7 +101,7 @@ function shuffled<T>(items: readonly T[], rng: Rng): T[] {
   return result;
 }
 
-/** Seis lotes en orden al azar: dos de cada tercio del catálogo por total de stats. */
+/** Doce lotes en orden al azar: cuatro de cada tercio del catálogo por total de stats. */
 export function drawLots<T extends { id: number; total: number }>(pokemon: readonly T[], rng: Rng): T[] {
   const sorted = [...pokemon].sort((a, b) => a.total - b.total || a.id - b.id);
   const lots: T[] = [];
@@ -103,7 +109,7 @@ export function drawLots<T extends { id: number; total: number }>(pokemon: reado
     const from = Math.floor((sorted.length * third) / 3);
     const to = Math.floor((sorted.length * (third + 1)) / 3);
     const group = sorted.slice(from, to);
-    lots.push(...shuffled(group, rng).slice(0, 2));
+    lots.push(...shuffled(group, rng).slice(0, LOTS_PER_THIRD));
   }
   return shuffled(lots, rng);
 }

@@ -1,4 +1,4 @@
-import type { AuctionItem, BattleAction, BattleFighterView, BattleMove, PauseChoice, Seat, TypeName } from "@pokemon-minigames/shared";
+import type { BattleAction, BattleFighterView, BattleMove, Seat, TypeName } from "@pokemon-minigames/shared";
 import { TYPE_LABELS } from "../i18n/es";
 
 type Names = Record<Seat, string>;
@@ -44,18 +44,7 @@ export function turnSummary(actions: BattleAction[], names: Names): string {
     .join(" ");
 }
 
-/** A quién se le puede aplicar un objeto. Las mismas reglas que el servidor. La Cinta no tiene objetivo. */
-export function validTargets(item: AuctionItem, team: BattleFighterView[]): number[] {
-  const ok = (fighter: BattleFighterView): boolean => {
-    if (item === "pocion") return fighter.hp > 0 && fighter.hp < fighter.maxHp;
-    if (item === "revivir") return fighter.hp <= 0;
-    return false;
-  };
-  return team.filter(ok).map((fighter) => fighter.pokemon.id);
-}
-
-/** Quién puede salir a pelear: los vivos y quien se revive en esta misma elección. */
-export function pauseTitulars(team: BattleFighterView[], items: PauseChoice["items"]): number[] {
-  const revived = new Set(items.filter((used) => used.item === "revivir").map((used) => used.target));
-  return team.filter((fighter) => fighter.hp > 0 || revived.has(fighter.pokemon.id)).map((fighter) => fighter.pokemon.id);
+/** Quién puede salir a pelear. */
+export function aliveIds(team: BattleFighterView[]): number[] {
+  return team.filter((fighter) => fighter.hp > 0).map((fighter) => fighter.pokemon.id);
 }

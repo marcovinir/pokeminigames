@@ -1,25 +1,17 @@
-import type { AuctionConfig, AuctionItem, AuctionRevealEntry, BattleMove, GamePhase, PauseChoice, Seat } from "@pokemon-minigames/shared";
+import type { AuctionConfig, AuctionRevealEntry, AuctionScene, BattleMove, GamePhase, PauseChoice, Seat } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../../catalog/pokemon-catalog.js";
 import type { GameOutcome, PlayerState } from "../engine/types.js";
 import type { Rng } from "../rng.js";
 import type { Fighter } from "./combat.js";
 
 /** `realId` y `token` nunca salen hacia los jugadores antes de la revelación. `shownId` tampoco: solo su silueta. */
-export interface AuctionPokemonLot {
-  kind: "pokemon";
+export interface AuctionLot {
   realId: number;
   shownId: number;
   price: number;
   token: string | null;
+  scene: AuctionScene;
 }
-
-export interface AuctionItemLot {
-  kind: "item";
-  item: AuctionItem;
-  price: number;
-}
-
-export type AuctionLot = AuctionPokemonLot | AuctionItemLot;
 
 /** La puja del lote abierto. `turnId` deja obsoletos los temporizadores de turnos anteriores. */
 export interface AuctionBidding {
@@ -27,9 +19,17 @@ export interface AuctionBidding {
   turn: Seat;
   currentBid: number | null;
   leader: Seat | null;
-  firstPassed: boolean;
-  deadline: number;
+  bids: { seat: Seat; amount: number }[];
+  retired: Seat | null;
   turnId: number;
+  /** Cuándo se abre el aviso de inactividad. */
+  idleAt: number;
+  warningUntil: number | null;
+  stillHere: number;
+  /** Se le acabó el plazo estando caído: al volver tiene un último aviso. */
+  expiredAway: boolean;
+  /** Ya tuvo su último aviso al volver: recargar otra vez no da más tiempo. */
+  awayWarningUsed: boolean;
 }
 
 /** El combate. `step` deja obsoletos los temporizadores de pasos anteriores. */
@@ -43,7 +43,6 @@ export interface AuctionBattle {
   moves: Partial<Record<Seat, BattleMove>>;
   pauses: Partial<Record<Seat, PauseChoice>>;
   healed: Record<Seat, boolean>;
-  cinta: Record<Seat, boolean>;
   deadline: number | null;
   step: number;
   /** El asalto ya terminó: al acabar la animación se abre la pausa. */
@@ -60,15 +59,18 @@ export interface AuctionState {
   /** Quién empieza el próximo lote: se van turnando. */
   nextStarter: Seat;
   bidding: AuctionBidding | null;
+  /** El lote abierto se reparte solo, a este asiento. */
+  autoWinner: Seat | null;
   money: Record<Seat, number>;
   /** Los números reales de cada equipo. */
   teams: Record<Seat, number[]>;
-  items: Record<Seat, AuctionItem[]>;
+  /** Las URL de silueta de lo comprado por cada uno. */
+  purchases: Record<Seat, string[]>;
   reveal: AuctionRevealEntry[];
   /** Quién ya confirmó que vio la revelación. */
   readyForBattle: Seat[];
   battle: AuctionBattle | null;
-  spent: Record<Seat, { pokemon: number; items: number }>;
+  spent: Record<Seat, number>;
   nextTurnId: number;
   expiresAt: number;
   rematch?: true;

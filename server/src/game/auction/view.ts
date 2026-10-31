@@ -1,4 +1,4 @@
-import type { BattleFighterView, BattleView, GameEndedPayload, PokemonView, RoomPlayerView, RoomStateView, Seat } from "@pokemon-minigames/shared";
+import type { AuctionLotView, BattleFighterView, BattleView, GameEndedPayload, PokemonView, RoomPlayerView, RoomStateView, Seat } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../../catalog/pokemon-catalog.js";
 import { SEATS, otherSeat } from "../engine/types.js";
 import { toPokemonView } from "../engine/view.js";
@@ -7,8 +7,7 @@ import { bidCap } from "./rules.js";
 import type { AuctionState } from "./types.js";
 
 function limitOf(state: AuctionState, seat: Seat): number {
-  const lot = state.lots[state.lotIndex]!;
-  return lot.kind === "pokemon" ? Math.min(state.money[seat], bidCap(state.money[seat], state.teams[seat].length)) : state.money[seat];
+  return Math.min(state.money[seat], bidCap(state.money[seat], state.teams[seat].length));
 }
 
 /** Lo máximo que puede pujar un jugador por el lote abierto. */
@@ -49,7 +48,30 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
             used: move === "recuperar" && battle.healed[seat],
           }))
         : [],
-    cinta: { ...battle.cinta },
+  };
+}
+
+/** El lote abierto para un jugador. El aviso de inactividad solo lo recibe quien tiene que responder. */
+function lotView(state: AuctionState, seat: Seat): AuctionLotView {
+  const lot = state.lots[state.lotIndex]!;
+  const base = { number: state.lotIndex + 1, silhouetteUrl: `/silhouettes/${lot.token}`, scene: lot.scene, price: lot.price };
+  const bidding = state.bidding;
+  if (!bidding) {
+    return { ...base, currentBid: null, leader: null, turn: state.autoWinner!, turnId: 0, bids: [], retired: null, warningUntil: null, rivalIdle: false, auto: true, myLimit: 0 };
+  }
+  const waiting = bidding.warningUntil !== null;
+  return {
+    ...base,
+    currentBid: bidding.currentBid,
+    leader: bidding.leader,
+    turn: bidding.turn,
+    turnId: bidding.turnId,
+    bids: structuredClone(bidding.bids),
+    retired: bidding.retired,
+    warningUntil: bidding.turn === seat ? bidding.warningUntil : null,
+    rivalIdle: bidding.turn !== seat && waiting,
+    auto: false,
+    myLimit: limitOf(state, seat),
   };
 }
 
@@ -94,22 +116,8 @@ export function buildAuctionRoomState(state: AuctionState, seat: Seat, code: str
     auction: {
       money: { ...state.money },
       teamSizes: { 1: state.teams[1].length, 2: state.teams[2].length },
-      items: { 1: [...state.items[1]], 2: [...state.items[2]] },
-      lot:
-        lot && bidding
-          ? {
-              number: state.lotIndex + 1,
-              kind: lot.kind,
-              ...(lot.kind === "pokemon" ? { silhouetteUrl: `/silhouettes/${lot.token}` } : { item: lot.item }),
-              price: lot.price,
-              currentBid: bidding.currentBid,
-              leader: bidding.leader,
-              turn: bidding.turn,
-              turnId: bidding.turnId,
-              deadline: bidding.deadline,
-              myLimit: limitOf(state, seat),
-            }
-          : null,
+      purchases: structuredClone(state.purchases),
+      lot: lot && (bidding || state.autoWinner) ? lotView(state, seat) : null,
       reveal: structuredClone(state.reveal),
       ...(state.battle ? { battle: battleView(state, seat, catalog) } : {}),
     },
