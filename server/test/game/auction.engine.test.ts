@@ -57,9 +57,9 @@ describe("subasta: sala y comienzo", () => {
   });
 });
 
-describe("subasta: aún no se puede jugar", () => {
-  it("/jugar/subasta no es un lobby, y el juego no está entre los que se ofrecen", () => {
-    expect(gameFromSlug("subasta")).toBeNull();
+describe("subasta: oculta hasta que tenga combate", () => {
+  it("/jugar/subasta es un lobby, pero el juego no está entre los que ofrece el menú", () => {
+    expect(gameFromSlug("subasta")).toBe("subasta");
     expect(gameFromSlug("silueta")).toBe("silueta");
     expect(PLAYABLE_GAMES).not.toContain("subasta");
   });

@@ -396,6 +396,13 @@ export const GAME_CARDS: Record<GameKind, { name: string; description: string; i
   subasta: { name: "Subasta Pokémon", description: "Puja por siluetas y combate con lo que compres.", isNew: true },
 };
 
+export const AUCTION_TEXT = {
+  traps: "Siluetas trampa",
+  trapsHint: "A veces la silueta no es el Pokémon que compras.",
+  withTraps: "Con siluetas trampa",
+  withoutTraps: "Sin siluetas trampa",
+} as const;
+
 export const SILHOUETTE_TEXT = {
   rounds: "Rondas",
   generations: "Generaciones",

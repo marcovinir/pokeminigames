@@ -11,7 +11,7 @@ export const PLAYABLE_GAMES: readonly GameKind[] = ["doble_tipo", "silueta"];
 export const GAME_SLUGS: Record<GameKind, string> = { doble_tipo: "doble-tipo", silueta: "silueta", subasta: "subasta" };
 
 export function gameFromSlug(slug: string): GameKind | null {
-  return PLAYABLE_GAMES.find((game) => GAME_SLUGS[game] === slug) ?? null;
+  return GAME_KINDS.find((game) => GAME_SLUGS[game] === slug) ?? null;
 }
 
 /** El juego de una configuración. Sin `game` (salas y clientes de antes de que hubiera varios) es «Doble tipo». */
