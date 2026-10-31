@@ -75,6 +75,7 @@ En desarrollo el servidor de Vite hace de proxy de `/auth`, `/rooms`, `/pokemon`
 | `npm run dev:client` | Cliente web con recarga en caliente |
 | `npm run build` | Construye el cliente (`client/dist`) y empaqueta el servidor (`server/dist/index.js`) |
 | `npm start` | Arranca la construcción de producción (necesita las variables de `NODE_ENV=production`, ver la guía de despliegue) |
+| `npm run auction:simulate -w server` | Simula miles de partidas de Subasta Pokémon entre estrategias e informa del balance (juego aún en desarrollo) |
 | `npm run e2e` | Construye y ejecuta las pruebas E2E (una partida completa, recargar en plena ronda, el modo invitado, la revancha, el límite de login, el tema y, en un navegador real, el diseño en móvil, el foco del teclado, el movimiento, las tipografías y el pulido de la partida: iconos de tipo, sugerencias con y sin pistas, el ejemplo tras la ronda y el equipo del rival): crea su propia base de datos, la borra al terminar |
 | `npm test` | Todas las pruebas: servidor (usan la base `pokemon_minigames_test`) y cliente |
 | `npm run typecheck` | Verifica los tipos con `tsc` en todos los paquetes |

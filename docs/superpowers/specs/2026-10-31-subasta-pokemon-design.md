@@ -41,6 +41,7 @@ Funciona bien si dos personas juegan una partida completa en unos 5 a 8 minutos,
 - **Cada 2 Pokémon se subasta un objeto,** y por eso no hay tienda.
 - **Tres movimientos:** uno por cada tipo y uno de soporte. Según el movimiento se usa Ataque o Ataque Especial.
 - **Cada jugador elige su movimiento en secreto en cada turno** (opción A).
+- **Críticos sí, con baja probabilidad, y esquivar no.**
 - Aceptó las demás propuestas de Claude en su conjunto («todo lo demás lo veo muy bien»): las de la sección 4 que llevan número.
 
 ## 4. Reglas
@@ -75,6 +76,7 @@ Todos los números son **valores de partida**: el simulador puede corregirlos.
   - **Forcejeo:** sin tipo, siempre ×1, potencia 20 y físico. Evita la inmunidad total.
   - **Soporte:** «Recuperar» cura el 25 % de los PS, una vez por asalto.
 - **Daño:** `potencia × √(A / D) × efectividad`, con potencia 30 en los ataques de tipo, `A / D` limitado entre 0,25 y 4, y un mínimo de 5 salvo con ×0.
+- **Críticos:** cada ataque que hace daño tiene 1 probabilidad entre 16 de hacer ×1,5, calculada en el servidor. **No hay esquivar** (decisión de Marco, 2026-10-31).
 - **Turno:** los dos eligen en secreto, 8 s; sin respuesta, se usa el ataque más efectivo. Se pasa en cuanto los dos eligen. Ataca primero quien tiene más Velocidad; si empatan, al azar del servidor. Un Pokémon debilitado ya no ataca.
 - **Límite de 20 turnos por asalto:** cae el Pokémon con menos porcentaje de PS; si empatan, el más lento; si siguen iguales, al azar.
 - **Entre asaltos:** pausa de 15 s para los dos. Cada uno puede usar sus objetos, y quien perdió su titular elige el siguiente. El rival no ve la elección hasta que los dos confirman.
@@ -85,6 +87,10 @@ Ganador, los dos equipos, daño hecho por cada uno y dinero gastado en Pokémon 
 
 ### Reconexión
 Como en los otros juegos: 30 s para volver. Mientras tanto, pasa en la subasta y se usa el movimiento por defecto. Recargar devuelve al estado exacto.
+
+### Lo que dijo el simulador (2026-10-31)
+
+`npm run auction:simulate -w server`, con estrategias automáticas simples. Con los valores de arriba no hizo falta ajustar nada: reconocer siluetas gana el 72 % contra las otras estrategias, guardar dinero solo el 27 %, ninguna gana siempre, y ningún asalto llegó al límite de 20 turnos. Mediana de 3 turnos por asalto y 1,3 críticos por partida. Hay que volver a mirarlo con personas: los bots no eligen movimientos para engañar.
 
 ## 5. Protección contra trampas
 
