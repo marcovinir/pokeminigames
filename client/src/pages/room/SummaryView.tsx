@@ -8,6 +8,7 @@ import { PokemonCard } from "../../components/PokemonCard";
 import { rise } from "../../components/rise";
 import { rivalSeat } from "../../game/seats";
 import { AUCTION_TEXT, endReasonLabel } from "../../i18n/es";
+import { AuctionSummary } from "./auction/AuctionSummary";
 import { useSession } from "../../services";
 import { lobbyPath } from "../lobby-path";
 import { RematchLoadingView } from "./RematchLoadingView";
@@ -97,6 +98,10 @@ export function SummaryView() {
       </Card>
 
       <RematchPanel />
+
+      {ended.auction ? (
+        <AuctionSummary summary={ended.auction} names={{ 1: view.players.find((p) => p.seat === 1)?.username ?? "Jugador 1", 2: view.players.find((p) => p.seat === 2)?.username ?? "Jugador 2" }} mySeat={mySeat} />
+      ) : null}
 
       {ended.silhouette ? (
         <SilhouetteSummary reveals={ended.silhouette.reveals} mySeat={mySeat} rival={opponent?.username ?? "Tu rival"} />

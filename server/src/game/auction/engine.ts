@@ -151,7 +151,11 @@ function onConnected(c: Ctx, seat: Seat): void {
     emit(c, otherSeat(seat), { name: "opponent-reconnected", payload: undefined });
     // El rival se cayó y se le acabó su tiempo mientras este tampoco estaba: ahora que volvió uno, gana.
     const rivalGrace = c.s.graceEndsAt[otherSeat(seat)];
-    if (rivalGrace !== undefined && c.now >= rivalGrace) return finish(c, "disconnect", seat);
+    if (rivalGrace !== undefined && c.now >= rivalGrace) {
+      // Puede venir de recargar: sin su estado, su pantalla no sabría ni qué asiento es.
+      c.fx.push({ kind: "send_state", to: seat });
+      return finish(c, "disconnect", seat);
+    }
   }
   tryStart(c);
   c.fx.push({ kind: "send_state", to: seat });

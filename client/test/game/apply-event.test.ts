@@ -472,3 +472,28 @@ describe("la subasta", () => {
     expect(applyServerEvent(before, { name: "auction-reveal", payload: { reveal: [] } }, 0).phase).toBe("auction");
   });
 });
+
+describe("el registro del combate", () => {
+  const action = { actor: 1, move: "fire", damage: 5, critical: false, effectiveness: 1, healed: 0, actorHp: 9, targetHp: 9 } as const;
+  const fighter = (id: number, name: string) => ({ pokemon: pokemon(id, 400, { names: { es: name, en: name } }), hp: 9, maxHp: 9 });
+  const battle = { round: 1, turn: 1, deadline: 1, confirmed: false, myLineup: null, myMove: null, myPause: null, myTeam: [fighter(1, "Uno")], rivalTeam: [fighter(2, "Dos")], myTitular: 1, rivalTitular: 2, moves: [], cinta: { 1: false, 2: false } };
+  const start: GameView = { ...initialGameView, code: "ABC", mySeat: 1, auction: { money: { 1: 0, 2: 0 }, teamSizes: { 1: 3, 2: 3 }, items: { 1: [], 2: [] }, lot: null, reveal: [], battle } };
+  const turn = (n: number): ServerEvent => ({ name: "battle-turn", payload: { round: 1, turn: n, actions: [action] } });
+
+  it("guarda cada turno con los nombres de quienes pelearon entonces", () => {
+    const view = applyServerEvent(start, turn(1), 0);
+    expect(view.battleLog).toEqual([{ round: 1, turn: 1, actions: [action], names: { 1: "Uno", 2: "Dos" } }]);
+  });
+
+  it("guarda como mucho los últimos 30", () => {
+    let view = start;
+    for (let n = 1; n <= 35; n++) view = applyServerEvent(view, turn(n), 0);
+    expect(view.battleLog).toHaveLength(30);
+    expect(view.battleLog[0]!.turn).toBe(6);
+  });
+
+  it("recuerda cómo acabó el asalto", () => {
+    const view = applyServerEvent(start, { name: "battle-round-ended", payload: { round: 1, loser: 2, atLimit: false } }, 0);
+    expect(view.lastRoundEnd).toEqual({ round: 1, loser: 2, atLimit: false });
+  });
+});

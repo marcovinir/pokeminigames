@@ -79,7 +79,7 @@ Todos los números son **valores de partida**: el simulador puede corregirlos.
 - **Críticos:** cada ataque que hace daño tiene 1 probabilidad entre 16 de hacer ×1,5, calculada en el servidor. **No hay esquivar** (decisión de Marco, 2026-10-31).
 - **Turno:** los dos eligen en secreto, 8 s; sin respuesta, se usa el ataque más efectivo. Se pasa en cuanto los dos eligen. Ataca primero quien tiene más Velocidad; si empatan, al azar del servidor. Un Pokémon debilitado ya no ataca.
 - **Límite de 20 turnos por asalto:** cae el Pokémon con menos porcentaje de PS; si empatan, el más lento; si siguen iguales, al azar.
-- **Entre asaltos:** pausa de 15 s para los dos. Cada uno puede usar sus objetos, y quien perdió su titular elige el siguiente. El rival no ve la elección hasta que los dos confirman.
+- **Entre asaltos:** pausa de 15 s para los dos. Cada uno puede usar sus objetos y elegir titular: quien perdió el suyo elige el siguiente, y quien ganó puede seguir o cambiar. El rival no ve la elección hasta que los dos confirman.
 - **Fin:** pierde quien, al acabar la pausa, no tenga ningún Pokémon vivo. Si se va de la sala, también.
 
 ### Resumen
@@ -87,6 +87,8 @@ Ganador, los dos equipos, daño hecho por cada uno y dinero gastado en Pokémon 
 
 ### Reconexión
 Como en los otros juegos: 30 s para volver. Mientras tanto, pasa en la subasta y se usa el movimiento por defecto. Recargar devuelve al estado exacto.
+
+La pausa dura lo mismo aunque alguien esté caído: si se cae con su último Pokémon debilitado y un Revivir en la mano, al acabar los 15 s pierde, aunque le quede tiempo de gracia (Marco, 2026-10-31).
 
 ### Lo que dijo el simulador (2026-10-31)
 
@@ -96,7 +98,7 @@ Como en los otros juegos: 30 s para volver. Mientras tanto, pasa en la subasta y
 
 Vista lateral de juego de pelea, tipo Street Fighter, aunque se juega por turnos y no en tiempo real:
 
-- Los dos frente a frente: tú a la izquierda y el rival a la derecha, volteado para que se miren.
+- Los dos frente a frente: tú a la izquierda y el rival a la derecha, y se miran (los sprites de Showdown miran a la izquierda, así que se voltea el tuyo).
 - Arriba, las barras de vida con el reloj en el centro, bajando hacia el centro. Verde por encima del 50 %, amarilla hasta el 20 % y roja por debajo.
 - **Sprites animados de PokeAPI** (`sprites/pokemon/other/showdown/{id}.gif`). Existen 1011 de 1025; los otros 14 (990–995, 1006, 1008, 1010, 1017 y 1022–1025) usan la imagen fija. No se dibujan modelos propios.
 - Embestida del atacante (ida y vuelta en 200 ms) y vibración del defensor con un destello rojo que tiñe solo al Pokémon.

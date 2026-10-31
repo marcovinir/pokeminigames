@@ -21,13 +21,15 @@ function renderApp(route: string, services = fakeServices()) {
 const location = () => screen.getByTestId("location");
 
 describe("el menú principal", () => {
-  it("muestra los dos juegos en orden, con sus textos, y «Jugar» lleva a su lobby", () => {
+  it("muestra los juegos en orden, con sus textos, y «Jugar» lleva a su lobby", () => {
     renderApp("/");
     expect(screen.getByRole("heading", { level: 1, name: "¿A qué jugamos?" })).toBeInTheDocument();
     expect(screen.getByText("Elige un minijuego para dos.")).toBeInTheDocument();
     const cards = screen.getAllByRole("article");
-    expect(cards).toHaveLength(2);
-    const [dobleTipo, silueta] = cards as [HTMLElement, HTMLElement];
+    expect(cards).toHaveLength(3);
+    const [dobleTipo, silueta, subasta] = cards as [HTMLElement, HTMLElement, HTMLElement];
+    expect(within(subasta).getByRole("heading", { name: /Subasta Pokémon/ })).toBeInTheDocument();
+    expect(within(subasta).getByRole("link", { name: /Jugar/ })).toHaveAttribute("href", "/jugar/subasta");
     expect(within(dobleTipo).getByRole("heading", { name: "Doble tipo" })).toBeInTheDocument();
     expect(within(dobleTipo).getByText("Nombra un Pokémon con los dos tipos. Gana quien sume más stats.")).toBeInTheDocument();
     expect(within(dobleTipo).queryByText("NUEVO")).not.toBeInTheDocument();

@@ -95,10 +95,10 @@ describe("la revelación", () => {
 });
 
 describe("después de la revelación", () => {
-  it("el combate aún no está: se dice y se puede salir", () => {
+  it("sigue la alineación", () => {
     renderRoom([state("lineup")]);
-    expect(screen.getByRole("heading", { name: "El combate llega pronto" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Salir|Abandonar/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Elige tu alineación" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Abandonar/ })).toBeInTheDocument();
   });
 });
 
@@ -126,6 +126,18 @@ describe("el resumen de una subasta", () => {
     renderRoom([base, ended(1, "forfeit")]);
     expect(screen.queryByText("No ganó ningún Pokémon.")).toBeNull();
     expect(screen.getByText("No llegó a comprar ninguno.")).toBeInTheDocument();
+  });
+
+  it("cuenta el daño y el dinero gastado de cada uno", () => {
+    const summary = { damage: { 1: 321, 2: 123 }, spent: { 1: { pokemon: 400_000, items: 100_000 }, 2: { pokemon: 900_000, items: 0 } }, reveal: [] };
+    renderRoom([base, { name: "game-ended", payload: { winnerSeat: 1, reason: "completed", teams: { 1: [], 2: [] }, totals: { 1: 0, 2: 0 }, auction: summary } } as never]);
+    const section = screen.getByRole("region", { name: "Resumen del combate" });
+    const mine = section.querySelector("[data-summary-seat='1']")!;
+    expect(mine).toHaveTextContent("ash");
+    expect(mine).toHaveTextContent("321");
+    expect(mine).toHaveTextContent("400.000");
+    expect(mine).toHaveTextContent("100.000");
+    expect(section.querySelector("[data-summary-seat='2']")).toHaveTextContent("900.000");
   });
 
   it("sin ganador no dice «Empate»", () => {
