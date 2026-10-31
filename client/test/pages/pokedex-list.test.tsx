@@ -292,6 +292,9 @@ describe("las pestañas de generación", () => {
     renderList();
     await screen.findByRole("link", { name: /Charizard/ });
     expect(tabs().className).toContain("flex-wrap");
+  });
+});
+
 describe("cambios de filtro muy seguidos", () => {
   const search = () => screen.getByRole("searchbox", { name: "Buscar" });
 
