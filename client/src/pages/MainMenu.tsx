@@ -8,7 +8,7 @@ import { GameArt } from "../components/GameArt";
 import { GAME_CARDS, MENU_TEXT } from "../i18n/es";
 import { useServices, useSession } from "../services";
 import { lobbyPath } from "./lobby-path";
-import { DOBLE_TIPO_EXAMPLES, MENU_BACKGROUNDS, type MenuBackground, pickRandom } from "./menu-art";
+import { DOBLE_TIPO_EXAMPLES, MENU_BACKGROUNDS, type MenuBackground, pickCovers, pickRandom } from "./menu-art";
 
 /** En qué pantallas se ve cada forma de dibujo: los verticales en el teléfono y los horizontales en las anchas. */
 const SHAPE_VISIBILITY: Record<MenuBackground["shape"], string> = {
@@ -76,6 +76,7 @@ export function MainMenu({
   const { sound } = useServices();
   // Se eligen una vez al abrir el menú: no cambian mientras se está en él.
   const [example] = useState(() => pickRandom(DOBLE_TIPO_EXAMPLES, random)!);
+  const [covers] = useState(() => pickCovers(random));
   const [portrait] = useState(() => pickRandom(backgrounds.filter((b) => b.shape === "portrait"), random));
   const [landscape] = useState(() => pickRandom(backgrounds.filter((b) => b.shape === "landscape"), random));
   const background = portrait ?? landscape;
@@ -92,7 +93,7 @@ export function MainMenu({
         const card = GAME_CARDS[game];
         return (
           <Card as="article" key={game} style={rise(index + 1)} className="animate-rise p-5">
-            <GameArt game={game} example={example} />
+            <GameArt game={game} example={example} covers={covers} />
             <h2 className="mt-4 flex flex-wrap items-center gap-2 font-display text-xl font-semibold">
               {card.name}
               {card.isNew ? <Badge tone="gold">{MENU_TEXT.newBadge}</Badge> : null}
