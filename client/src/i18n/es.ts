@@ -152,6 +152,7 @@ export const POKEDEX_TEXT = {
   generation: "Generación",
   allGenerations: "Todas",
   generationName: (generation: number) => `${generation}.ª generación`,
+  generationTab: (generation: number) => `${generation}.ª`,
   sort: "Ordenar por",
   sorts: { numero: "Número", nombre: "Nombre", total: "Total de stats" },
   listLabel: "Pokémon",
