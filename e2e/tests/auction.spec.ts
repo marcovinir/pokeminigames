@@ -3,9 +3,9 @@ import { joinRoom, newPlayer, register } from "../support/app";
 
 /** La subasta en dos navegadores reales, sin trampas: el servidor sortea de verdad, así que se comprueba la estructura. */
 
-test.setTimeout(420_000);
+test.setTimeout(600_000);
 
-const passButton = (page: Page) => page.getByRole("button", { name: "Pasar" });
+const passButton = (page: Page) => page.getByRole("button", { name: /^Retirarme/ });
 
 async function createAuctionRoom(page: Page): Promise<string> {
   await page.goto("/jugar/subasta");
@@ -17,7 +17,7 @@ async function createAuctionRoom(page: Page): Promise<string> {
   return ((await code.textContent()) ?? "").trim();
 }
 
-/** Quién tiene el turno: espera hasta que uno vea «Pasar»; `null` si ya llegó la revelación. */
+/** Quién tiene el turno: espera hasta que uno vea «Retirarme»; `null` si ya llegó la revelación. */
 async function pageInTurn(pages: [Page, Page], revealTitle: (page: Page) => ReturnType<Page["getByRole"]>): Promise<Page | null> {
   let found: Page | null = null;
   await expect(async () => {
@@ -46,13 +46,13 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
   await joinRoom(misty.page, code);
   const pages: [Page, Page] = [ash.page, misty.page];
 
-  for (const page of pages) await expect(page.getByText("Lote 1 de 9", { exact: true })).toBeVisible({ timeout: 30_000 });
+  for (const page of pages) await expect(page.getByText("Lote 1 de 12", { exact: true })).toBeVisible({ timeout: 30_000 });
 
   // A 360 px, con un nombre largo, nada se sale de la pantalla.
   const { scroll, client } = await ash.page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(scroll).toBeLessThanOrEqual(client);
-  for (const name of ["Jugadores", "Tiempo del turno"]) {
-    const box = await ash.page.getByLabel(name).first().boundingBox();
+  for (const name of [ash.name, misty.name]) {
+    const box = await ash.page.getByRole("group", { name }).boundingBox();
     expect(box, name).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(-0.5);
     expect(box!.x + box!.width).toBeLessThanOrEqual(360.5);
@@ -60,18 +60,19 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
 
   // Recargar a mitad de un lote vuelve a ese lote.
   await misty.page.reload();
-  await expect(misty.page.getByText("Lote 1 de 9", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(misty.page.getByText("Lote 1 de 12", { exact: true })).toBeVisible({ timeout: 30_000 });
 
-  // No siempre se ven los 9: quien ya tiene 3 no puja más, y los lotes que quedan van solos al otro. Se juega hasta la revelación.
+  // Quien ya tiene 6 no puja más, y los lotes que quedan van solos al otro. Se juega hasta la revelación.
   const revealTitle = (page: Page) => page.getByRole("heading", { name: "¿Qué compró cada uno?" });
   let moneyWentDown = false;
-  for (let turn = 1; turn <= 40 && !(await revealTitle(ash.page).isVisible()); turn++) {
-    const players = await misty.page.getByLabel("Jugadores").textContent({ timeout: 1000 }).catch(() => null);
-    if (players !== null && (players.match(/1\.000\.000/g) ?? []).length < 2) moneyWentDown = true;
+  for (let turn = 1; turn <= 80 && !(await revealTitle(ash.page).isVisible()); turn++) {
+    const money = await misty.page.getByRole("group", { name: misty.name }).textContent({ timeout: 1000 }).catch(() => null);
+    const moneyAsh = await misty.page.getByRole("group", { name: ash.name }).textContent({ timeout: 1000 }).catch(() => null);
+    if (money !== null && moneyAsh !== null && !(money.includes("2.000.000") && moneyAsh.includes("2.000.000"))) moneyWentDown = true;
     const inTurn = await pageInTurn(pages, revealTitle);
     if (!inTurn) break;
-    const bid = inTurn.getByRole("button", { name: /^Pujar/ }).first();
-    // Se alterna entre comprar y pasar; hacer clic puede llegar tarde si venció el turno, y no pasa nada.
+    const bid = inTurn.getByRole("button", { name: /^(\+|Abrir)/ }).first();
+    // Se alterna entre pujar y retirarse; hacer clic puede llegar tarde, y no pasa nada.
     if (turn % 3 === 0 && (await bid.isEnabled())) await bid.click({ timeout: 2000 }).catch(() => undefined);
     else await passButton(inTurn).click({ timeout: 2000 }).catch(() => undefined);
     await inTurn.waitForTimeout(100);
@@ -125,8 +126,8 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
   // Revancha: empieza de cero.
   await ash.page.getByRole("button", { name: "Revancha" }).click();
   await misty.page.getByRole("button", { name: "Aceptar" }).click();
-  for (const page of pages) await expect(page.getByText("Lote 1 de 9", { exact: true })).toBeVisible({ timeout: 45_000 });
-  await expect(misty.page.getByLabel("Jugadores").getByText("1.000.000")).toHaveCount(2);
+  for (const page of pages) await expect(page.getByText("Lote 1 de 12", { exact: true })).toBeVisible({ timeout: 45_000 });
+  for (const name of [ash.name, misty.name]) await expect(misty.page.getByRole("group", { name })).toContainText("2.000.000");
 });
 
 test("con «reducir movimiento», el destello del golpe sí dura", async ({ browser }) => {

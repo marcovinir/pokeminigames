@@ -20,12 +20,23 @@ function StageSilhouette({ src }: { src: string }) {
   return <img src={src} alt={SILHOUETTE_SCREEN.imageAlt} onError={() => setFailed(true)} className="auction-float auction-silhouette absolute bottom-[7%] left-1/2 h-[78%] max-w-[80%] -translate-x-1/2 object-contain" />;
 }
 
+/** El sello de venta: aparece un momento sobre el lote siguiente y se va. */
+function SoldStamp() {
+  const [done, setDone] = useState(false);
+  if (done) return null;
+  return (
+    <div aria-hidden="true" onAnimationEnd={() => setDone(true)} className="auction-stamp font-pixel absolute top-1/2 left-1/2 z-10 rounded-lg border-4 border-[#b3261e] bg-white px-4 py-1 text-3xl font-bold text-[#b3261e]">
+      {AUCTION_TEXT.sold}
+    </div>
+  );
+}
+
 function InactivityWarning({ until, offset, onStillHere }: { until: number; offset: number; onStillHere(): void }) {
   const remaining = useCountdown(until, offset);
   return (
     <div role="alert" className="absolute inset-x-2 top-2 z-20 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#ffcb05] p-3 text-[#141033] shadow-[0_4px_0_#b38c00]">
       <p className="font-pixel text-xl font-bold">
-        {AUCTION_TEXT.stillThere} <span className="tabular-nums">{secondsLeft(remaining)} s</span>
+        {AUCTION_TEXT.stillThere} <span className="font-num tabular-nums">{secondsLeft(remaining)} s</span>
       </p>
       <button type="button" onClick={onStillHere} className="auction-bid auction-bid-green min-h-11 px-4 text-base">
         {AUCTION_TEXT.stillHere}
@@ -98,15 +109,11 @@ export function AuctionView() {
           <StageSilhouette key={lot.silhouetteUrl} src={lot.silhouetteUrl} />
           <div className="absolute top-2 right-2 rounded-lg bg-[#141033] px-3 py-1 text-right text-white shadow-[0_4px_0_rgb(0_0_0/0.4)]">
             <div className="text-xs font-extrabold">{lot.leader !== null ? AUCTION_TEXT.leading(nameOf(lot.leader)) : AUCTION_TEXT.startingPrice}</div>
-            <div key={lot.currentBid ?? lot.price} data-testid="current-bid" className="auction-bump font-pixel text-3xl font-bold text-[#ffcb05] tabular-nums">
+            <div key={lot.currentBid ?? lot.price} data-testid="current-bid" className="auction-bump font-num text-3xl font-bold text-[#ffcb05] tabular-nums">
               {auctionMoney(lot.currentBid ?? lot.price)}
             </div>
           </div>
-          {view.lastSale?.lot === lot.number - 1 ? (
-            <div key={view.lastSale.lot} aria-hidden="true" className="auction-stamp font-pixel absolute top-1/2 left-1/2 z-10 rounded-lg border-4 border-[#b3261e] bg-white px-4 py-1 text-3xl font-bold text-[#b3261e]">
-              {AUCTION_TEXT.sold}
-            </div>
-          ) : null}
+          {view.lastSale?.lot === lot.number - 1 ? <SoldStamp key={view.lastSale.lot} /> : null}
           {warningUntil !== null ? <InactivityWarning until={warningUntil} offset={view.clockOffset} onStillHere={() => client.stillHere(lot.turnId)} /> : null}
           <AuctionHelp />
         </div>

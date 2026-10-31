@@ -224,9 +224,19 @@ body::before {
   border-radius: 12px;
   color: #141033;
   cursor: pointer;
-  font-family: "Pixelify Sans Variable", var(--font-display, sans-serif);
-  font-size: 1.4rem;
+  font-family: var(--font-num, sans-serif);
+  font-size: 1.25rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.auction-leave button {
+  color: #ffffff;
+}
+.auction-leave button:hover {
+  color: #141033;
+}
+.auction-leave span {
+  color: #ffffff;
 }
 .auction-bid:disabled {
   opacity: 0.45;
