@@ -254,7 +254,7 @@ describe("detalles de la ficha", () => {
   it("el título de la pestaña lleva el nombre", async () => {
     renderAt("/pokedex/6");
     await screen.findByRole("heading", { level: 1, name: "Charizard" });
-    expect(document.title).toBe("Charizard · PokeMiniGames");
+    await waitFor(() => expect(document.title).toBe("Charizard · PokeMiniGames"));
   });
 
   it("al seguir un enlace de evolución el foco va al nombre del Pokémon nuevo", async () => {
