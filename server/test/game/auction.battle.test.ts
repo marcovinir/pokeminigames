@@ -516,3 +516,45 @@ describe("«Listo» tardío", () => {
     expect(h.state.phase).toBe("lineup");
   });
 });
+
+describe("el orden del rival", () => {
+  it("no se ve: su equipo va en orden de compra, y el mío en mi orden", () => {
+    const h = toLineup();
+    const bought = [...h.state.teams[1]];
+    const order = [...bought].reverse();
+    h.dispatch({ type: "CHOOSE_LINEUP", seat: 1, order });
+    h.dispatch({ type: "CHOOSE_LINEUP", seat: 2, order: [...h.state.teams[2]] });
+    expect(battle(h, 2).rivalTeam.map((one) => one.pokemon.id)).toEqual(bought);
+    expect(battle(h, 1).myTeam.map((one) => one.pokemon.id)).toEqual(order);
+  });
+});
+
+describe("partidas al azar, con basura y desconexiones", () => {
+  it("siempre terminan, sin excepciones", () => {
+    const garbage: unknown[] = [null, undefined, 7, "x", {}, { items: null, titular: 1 }, { items: [null], titular: 1 }, { items: [{ item: "cinta", target: { a: 1 } }], titular: "1" }];
+    for (let seed = 1; seed <= 60; seed++) {
+      const rng = seededRng(seed * 13);
+      const h = new AuctionHarness({ seed, catalog, config: AUCTION_TRAPS });
+      h.startGame();
+      for (let step = 0; step < 1500 && h.state.phase !== "finished"; step++) {
+        const seat = (rng.int(2) + 1) as Seat;
+        const junk = garbage[rng.int(garbage.length)] as never;
+        const down = h.state.battle?.fighters[seat].find((one) => one.hp <= 0)?.pokemon.id ?? 0;
+        const events = [
+          () => h.advance(1000 + rng.int(20_000)),
+          () => h.dispatch({ type: "PLAYER_DISCONNECTED", seat }),
+          () => h.dispatch({ type: "PLAYER_CONNECTED", seat }),
+          () => h.dispatch({ type: "CHOOSE_LINEUP", seat, order: junk }),
+          () => h.dispatch({ type: "CHOOSE_MOVE", seat, move: junk }),
+          () => h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: junk }),
+          () => h.dispatch({ type: "PAUSE_CONFIRM", seat, choice: { items: [{ item: "revivir", target: down }], titular: down } }),
+          () => h.dispatch({ type: "BID", seat, step: null }),
+        ];
+        events[rng.int(events.length)]!();
+      }
+      for (let tick = 0; tick < 600 && h.state.phase !== "finished"; tick++) h.advance(20_000);
+      expect(h.state.phase).toBe("finished");
+      expect(h.state.outcome).not.toBeNull();
+    }
+  }, 120_000);
+});

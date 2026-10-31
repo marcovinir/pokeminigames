@@ -1,6 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
-import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction, BidStep } from "./auction.js";
+import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction, BattleMove, BidStep, PauseChoice } from "./auction.js";
 import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
@@ -118,6 +118,9 @@ export interface ClientToServerEvents {
   "auction-pass": (payload: { turnId: number }) => void;
   /** Ya vi la revelación: si confirman los dos, se salta. */
   "auction-ready": () => void;
+  "auction-lineup": (payload: { order: number[] }) => void;
+  "auction-move": (payload: { move: BattleMove }) => void;
+  "auction-pause": (payload: { choice: PauseChoice }) => void;
   /** Pedir la revancha o aceptar la que pidió el rival. */
   "rematch-request": () => void;
   /** Cancelar la revancha que pedí o rechazar la que pidió el rival. */

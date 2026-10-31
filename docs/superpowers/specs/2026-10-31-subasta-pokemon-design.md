@@ -88,6 +88,8 @@ Ganador, los dos equipos, daño hecho por cada uno y dinero gastado en Pokémon 
 ### Reconexión
 Como en los otros juegos: 30 s para volver. Mientras tanto, pasa en la subasta y se usa el movimiento por defecto. Recargar devuelve al estado exacto.
 
+La pausa dura lo mismo aunque alguien esté caído: si se cae con su último Pokémon debilitado y un Revivir en la mano, al acabar los 15 s pierde, aunque le quede tiempo de gracia (Marco, 2026-10-31).
+
 ### Lo que dijo el simulador (2026-10-31)
 
 `npm run auction:simulate -w server`, con estrategias automáticas simples. Con los valores de arriba no hizo falta ajustar nada: reconocer siluetas gana el 72 % contra las otras estrategias, guardar dinero solo el 27 %, ninguna gana siempre, y ningún asalto llegó al límite de 20 turnos. Mediana de 3 turnos por asalto y 1,3 críticos por partida. Hay que volver a mirarlo con personas: los bots no eligen movimientos para engañar.

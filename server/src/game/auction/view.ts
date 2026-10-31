@@ -37,7 +37,8 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
     myMove: battle.moves[seat] ?? null,
     myPause: state.phase === "battle_pause" ? structuredClone(battle.pauses[seat] ?? null) : null,
     myTeam: battle.fighters[seat].map((fighter) => fighterView(fighter, catalog)),
-    rivalTeam: battle.fighters[rival].map((fighter) => fighterView(fighter, catalog)),
+    // En orden de compra: su alineación diría quién es su reserva.
+    rivalTeam: state.teams[rival].map((id) => fighterView(battle.fighters[rival].find((fighter) => fighter.pokemon.id === id)!, catalog)),
     myTitular: mineId,
     rivalTitular: rivalFighter?.pokemon.id ?? null,
     moves:
