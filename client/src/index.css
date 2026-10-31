@@ -169,6 +169,54 @@ body::before {
   outline-color: var(--header-fg);
 }
 
+/* La barra de vida del combate: verde, amarilla o roja. */
+.hp-good {
+  background: #2fb344;
+}
+.hp-warn {
+  background: #e8b100;
+}
+.hp-danger {
+  background: #d63b2f;
+}
+
+/* El combate: embestida del atacante, y vibración con destello rojo que tiñe solo al Pokémon. */
+@keyframes battle-lunge {
+  50% {
+    transform: translateX(var(--lunge, 24px));
+  }
+}
+@keyframes battle-shake {
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+@keyframes battle-tint {
+  50% {
+    filter: drop-shadow(0 0 0 #f00) sepia(1) saturate(8) hue-rotate(-50deg);
+  }
+}
+@keyframes battle-blink {
+  50% {
+    filter: brightness(1.8);
+  }
+}
+.battle-lunge {
+  animation: battle-lunge 200ms ease-in-out;
+}
+.battle-lunge-left {
+  --lunge: -24px;
+}
+.battle-hit {
+  animation: battle-shake 200ms ease-in-out 200ms, battle-tint 400ms ease-in-out 200ms;
+}
+.battle-flash {
+  animation: battle-blink 300ms linear;
+}
+
 /* Animaciones comunes. Las usan los componentes con las clases `animate-*` de más abajo. */
 @keyframes rise {
   from {

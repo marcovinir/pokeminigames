@@ -5,9 +5,11 @@ import { Button } from "../../components/Button";
 import { Notice } from "../../components/Notice";
 import { secondsLeft, useCountdown } from "../../game/clock";
 import type { GameView } from "../../game/apply-event";
+import { turnSummary } from "../../game/battle";
 import {
   MENU_TEXT,
   AUCTION_TEXT,
+  BATTLE_TEXT,
   auctionMoney,
   auctionSaleText,
   REMATCH_TEXT,
@@ -23,7 +25,9 @@ import {
 } from "../../i18n/es";
 import { useGame, useServices } from "../../services";
 import { AuctionView } from "./auction/AuctionView";
-import { BattleSoonView } from "./auction/BattleSoonView";
+import { BattleScreen } from "./auction/BattleScreen";
+import { LineupView } from "./auction/LineupView";
+import { PauseView } from "./auction/PauseView";
 import { RevealView } from "./auction/RevealView";
 import { CountdownView } from "./CountdownView";
 import { RematchLoadingView, RematchNoShow } from "./RematchLoadingView";
@@ -72,6 +76,15 @@ function announcement(view: GameView): string {
   if (view.silhouette && view.phase === "round_active") return `Ronda ${view.silhouette.round?.number ?? ""}: ${SILHOUETTE_SCREEN.question}`;
   if (view.silhouette && view.phase === "round_result") return view.silhouette.lastReveal ? silhouetteReveal(view.silhouette.lastReveal.pokemon.names.es) : "";
   switch (view.phase) {
+    case "lineup":
+      return BATTLE_TEXT.lineupTitle;
+    case "battle_pause":
+      return BATTLE_TEXT.pauseTitle;
+    case "battle": {
+      // Una sola frase por turno: el registro completo saturaría a los lectores de pantalla.
+      const last = view.battleLog[view.battleLog.length - 1];
+      return last ? turnSummary(last.actions, last.names) : BATTLE_TEXT.roundTurn(view.auction?.battle?.round ?? 1, view.auction?.battle?.turn ?? 1);
+    }
     case "auction": {
       const nameOf = (seat: number | null) => view.players.find((player) => player.seat === seat)?.username ?? "Tu rival";
       const sale = view.lastSale;
@@ -125,9 +138,11 @@ function RoomView() {
     case "reveal":
       return <RevealView />;
     case "lineup":
+      return <LineupView />;
     case "battle":
+      return <BattleScreen />;
     case "battle_pause":
-      return <BattleSoonView />;
+      return <PauseView />;
     case "finished":
       // Si la sala de la revancha caducó porque el rival no entró, no hubo partida: no hay veredicto.
       return view.isRematchRoom && view.ended?.reason === "expired" ? <RematchNoShow /> : <SummaryView />;
@@ -177,7 +192,7 @@ export function RoomPage() {
   // Con la partida terminada el resumen se queda: el servidor ya cerró la sala y es lo esperable.
   const gone = error !== null && ROOM_GONE_CODES.includes(error.code);
   // Pulsar justo cuando el turno cambió no es un fallo: la pantalla ya muestra de quién es.
-  const lateBid = (phase === "auction" || phase === "reveal") && (error?.code === "NOT_YOUR_TURN" || error?.code === "WRONG_PHASE");
+  const lateBid = (phase === "auction" || phase === "reveal" || phase === "battle") && (error?.code === "NOT_YOUR_TURN" || error?.code === "WRONG_PHASE");
   if (error && gone && !ended) {
     return (
       <section className="mx-auto max-w-md text-center">

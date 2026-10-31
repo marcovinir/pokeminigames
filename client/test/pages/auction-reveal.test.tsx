@@ -95,10 +95,10 @@ describe("la revelación", () => {
 });
 
 describe("después de la revelación", () => {
-  it("el combate aún no está: se dice y se puede salir", () => {
+  it("sigue la alineación", () => {
     renderRoom([state("lineup")]);
-    expect(screen.getByRole("heading", { name: "El combate llega pronto" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Salir|Abandonar/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Elige tu alineación" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Abandonar/ })).toBeInTheDocument();
   });
 });
 

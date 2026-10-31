@@ -413,7 +413,6 @@ export const AUCTION_TEXT = {
   wasTrap: "¡Era una trampa!",
   ready: "Listo",
   waitingRival: "Esperando al rival…",
-  battleSoon: "El combate llega pronto",
   noWinner: "Sin ganador",
   noPurchases: "No llegó a comprar ninguno.",
   youTurn: "Te toca.",
@@ -423,6 +422,28 @@ export const AUCTION_TEXT = {
   leading: (name: string): string => `Va ganando ${name}`,
   teamSize: (size: number): string => `${size} de 3 Pokémon`,
   teamOf: (name: string): string => `Equipo de ${name}`,
+};
+
+export const BATTLE_TEXT = {
+  lineupTitle: "Elige tu alineación",
+  lineupTimer: "Tiempo para elegir la alineación",
+  yourLineup: "Tu alineación",
+  rivalTeam: "Equipo rival",
+  titular: "Titular",
+  confirm: "Confirmar",
+  moveTimer: "Tiempo para elegir movimiento",
+  resolving: "Resolviendo…",
+  pauseTitle: "Pausa entre asaltos",
+  pauseTimer: "Tiempo de la pausa",
+  noUse: "No usar",
+  nobodyLeft: "No te quedan Pokémon.",
+  useRevive: "Usa Revivir o perderás al acabar el tiempo.",
+  moveUp: (name: string): string => `Subir ${name}`,
+  moveDown: (name: string): string => `Bajar ${name}`,
+  position: (name: string, position: number): string => `${name}: posición ${position}`,
+  sendOut: (name: string): string => `Sacar a ${name}`,
+  hpOf: (name: string): string => `PS de ${name}`,
+  roundTurn: (round: number, turn: number): string => `Asalto ${round} · Turno ${turn}`,
 };
 
 /** «1.000.000»: siempre con punto de miles, sea cual sea el idioma del navegador. */
