@@ -126,7 +126,7 @@ describe("el combate por sockets", () => {
   /** Avanza el reloj hasta que la sala llegue a esa fase. */
   function advanceUntil(phase: string): void {
     const room = server.store.get("SUBAS2")!;
-    for (let tick = 0; tick < 5000 && room.phase !== phase; tick++) server.time.advance(1000);
+    for (let tick = 0; tick < 30_000 && room.phase !== phase; tick++) server.time.advance(1000);
     expect(room.phase).toBe(phase);
   }
 

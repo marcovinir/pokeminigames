@@ -248,6 +248,20 @@ describe("turnos", () => {
     }
   });
 
+  it("en un doble K.O. pierde el más lento también si es el asiento 2", () => {
+    const h = toBattle();
+    const [a, b] = [1, 2].map((seat) => h.state.battle!.fighters[seat as Seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat as Seat])!);
+    for (const fighter of [a!, b!]) {
+      fighter.hp = 1;
+      fighter.status = "poison";
+    }
+    a!.pokemon.stats.speed = 200;
+    b!.pokemon.stats.speed = 10;
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
+    expect(h.payloads("battle-round-ended")).toEqual([{ round: 1, loser: 2, atLimit: false }]);
+  });
+
   it("si el estado debilita a los dos a la vez, un único perdedor: el más lento", () => {
     const h = toBattle();
     const [a, b] = [1, 2].map((seat) => h.state.battle!.fighters[seat as Seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat as Seat])!);
