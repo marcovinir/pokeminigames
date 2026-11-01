@@ -117,6 +117,10 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
     if (box) expect.soft(box.y, "el sprite cabe en el escenario").toBeGreaterThanOrEqual(arena!.y - 0.5);
   }
 
+  // A 360 px el rótulo del turno no pisa el recuadro del rival.
+  const hud = await ash.page.locator("[data-arena] .battle-hud").first().boundingBox();
+  const pill = await ash.page.getByText(/^Asalto \d+ · Turno/).boundingBox();
+  expect(hud!.x + hud!.width).toBeLessThanOrEqual(pill!.x);
   // Los movimientos dicen sus PP, y la habilidad sale al poner el cursor.
   await expect(ash.page.locator(".battle-move").first()).toContainText(/PP \d+\/\d+/);
   await ash.page.getByRole("img", { name: newTitular }).hover({ force: true });

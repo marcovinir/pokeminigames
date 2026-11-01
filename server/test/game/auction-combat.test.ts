@@ -325,7 +325,7 @@ describe("habilidades", () => {
     expect(moveDamage(guts, normal(2), HIT)).toBe(Math.round(plain * 1.5));
   });
 
-  it("Adaptable, Experto y Potencia suben su daño", () => {
+  it("Adaptable y Experto suben su daño", () => {
     const fire = (ability: string | null) => mon(1, ["fire"], [FIRE], { ability });
     expect(moveDamage(fire("adaptability"), normal(2), FIRE)).toBeGreaterThan(moveDamage(fire(null), normal(2), FIRE));
     const weak = learn({ id: "t-tech", power: 60, type: "water" });
@@ -334,7 +334,6 @@ describe("habilidades", () => {
     const none = mon(1, ["normal"], [weak, strong]);
     expect(moveDamage(tech, normal(2), weak)).toBeGreaterThan(moveDamage(none, normal(2), weak));
     expect(moveDamage(tech, normal(2), strong)).toBe(moveDamage(none, normal(2), strong));
-    expect(moveDamage(mon(1, ["water"], [HIT], { ability: "huge-power" }), normal(2), HIT)).toBeGreaterThan(moveDamage(mon(1, ["water"], [HIT]), normal(2), HIT));
   });
 
   it("al tocarlo, Elec. Estática, Cuerpo Llama y Punto Tóxico pueden dar su estado", () => {
@@ -389,6 +388,64 @@ describe("habilidades", () => {
       expect(enterBattle(a, normal(2), 1)).toEqual([]);
       expect(moveDamage(a, normal(2), HIT)).toBe(moveDamage(normal(1), normal(2), HIT));
     }
+  });
+});
+
+describe("los detalles de la revisión", () => {
+  it("si el primero cae por su propio retroceso, el segundo no actúa ni gasta PP", () => {
+    const fast = mon(1, ["normal"], [HIT], { stats: { speed: 200 } });
+    fast.moves[0]!.pp = 0;
+    fast.hp = 1;
+    const slow = mon(2, ["normal"], [HIT], { stats: { speed: 10 } });
+    const actions = resolveTurn(sides(fast, slow), { 1: STRUGGLE, 2: HIT }, calm);
+    expect(fast.hp).toBe(0);
+    expect(actions.map((one) => one.actor)).toEqual([1]);
+    expect(slow.moves[0]!.pp).toBe(10);
+  });
+
+  it("un movimiento que sube varios stats tira el azar una sola vez", () => {
+    const ancient = learn({ id: "t-ancient", effect: { stats: [{ stat: "attack", change: 1, target: "user", chance: 10 }, { stat: "defense", change: 1, target: "user", chance: 10 }] } });
+    let rolls = 0;
+    const a = mon(1, ["normal"], [ancient]);
+    resolveTurn(sides(a, mon(2, ["water"], [HIT])), { 1: ancient, 2: null }, { int: (max) => { if (max === 100) rolls++; return max - 1; } });
+    expect(rolls).toBe(2);
+    expect(a.stages.attack).toBe(0);
+    const b = mon(1, ["normal"], [ancient]);
+    resolveTurn(sides(b, mon(2, ["water"], [HIT])), { 1: ancient, 2: null }, { int: (max) => (max === 100 ? 5 : max - 1) });
+    expect(b.stages).toMatchObject({ attack: 1, defense: 1 });
+  });
+
+  it("al despertar, el registro lo dice", () => {
+    const a = normal(1);
+    a.status = "sleep";
+    a.sleepTurns = 0;
+    const [action] = resolveTurn(sides(a, normal(2)), { 1: HIT, 2: null }, calm);
+    expect(action!.notes).toContainEqual({ kind: "woke", seat: 1 });
+  });
+
+  it("subir un stat ya al máximo o curarse con los PS llenos falla, sin culpar al rival", () => {
+    const a = mon(1, ["normal"], [SWORDS, HEAL]);
+    a.stages.attack = 6;
+    expect(resolveTurn(sides(a, normal(2)), { 1: SWORDS, 2: null }, calm)[0]!.notes).toEqual([{ kind: "failed" }]);
+    expect(resolveTurn(sides(a, normal(2)), { 1: HEAL, 2: null }, calm)[0]!.notes).toEqual([{ kind: "failed" }]);
+  });
+
+  it("un estado contra un tipo inmune solo lo dice una vez", () => {
+    const [action] = resolveTurn(sides(mon(1, ["ground"], [HIT]), mon(2, ["electric"], [THUNDER_WAVE])), { 1: null, 2: THUNDER_WAVE }, calm);
+    expect(action).toMatchObject({ effectiveness: 0, notes: [] });
+  });
+
+  it("Absorbe Agua dice cuánto curó", () => {
+    const target = mon(2, ["normal"], [HIT], { ability: "water-absorb" });
+    target.hp = 50;
+    const [action] = resolveTurn(sides(mon(1, ["normal"], [WATER]), target), { 1: WATER, 2: null }, calm);
+    expect(action!.notes).toContainEqual({ kind: "healed", seat: 2, amount: Math.floor(target.maxHp / 4) });
+  });
+
+  it("Corte Fuerte impide que le bajen el Ataque, y solo el Ataque", () => {
+    const a = mon(1, ["normal"], [HIT], { ability: "hyper-cutter" });
+    enterBattle(mon(2, ["normal"], [HIT], { ability: "intimidate" }), a, 2);
+    expect(a.stages.attack).toBe(0);
   });
 });
 

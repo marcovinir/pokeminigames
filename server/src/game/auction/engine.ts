@@ -648,13 +648,14 @@ function resolveCurrentTurn(c: Ctx): void {
     return [{ seat, pokemonId }];
   });
   const sides = { 1: titularOf(c, 1), 2: titularOf(c, 2) };
-  const entryNotes = [...battle.entryNotes, ...switches.flatMap(({ seat }) => enterBattle(sides[seat], sides[otherSeat(seat)], seat))];
+  const roundNotes = battle.entryNotes;
+  const entryNotes = [...switches.flatMap(({ seat }) => enterBattle(sides[seat], sides[otherSeat(seat)], seat))];
   battle.entryNotes = [];
   const choiceOf = (seat: Seat): BattleMove | null => (battle.switches[seat] !== undefined ? null : battle.moves[seat] ?? bestMove(sides[seat], sides[otherSeat(seat)]));
   const actions = resolveTurn(sides, { 1: choiceOf(1), 2: choiceOf(2) }, c.deps.rng);
   const endNotes = endOfTurn(sides);
   for (const action of actions) battle.damage[action.actor] += action.damage;
-  emit(c, "all", { name: "battle-turn", payload: { round: battle.round, turn: battle.turn, actions, switches, entryNotes, endNotes } });
+  emit(c, "all", { name: "battle-turn", payload: { round: battle.round, turn: battle.turn, actions, switches, roundNotes, entryNotes, endNotes } });
 
   const fallen = ([1, 2] as const).filter((seat) => sides[seat].hp <= 0);
   if (fallen.length > 0 || battle.turn >= MAX_TURNS_PER_ROUND) {
@@ -711,7 +712,11 @@ function closePause(c: Ctx): void {
   const battle = s.battle!;
   for (const seat of [1, 2] as const) {
     const choice = battle.pauses[seat];
-    if (choice) battle.titular[seat] = choice.titular;
+    if (choice) {
+      const out = battle.fighters[seat].find((fighter) => fighter.pokemon.id === battle.titular[seat]);
+      if (out && out.pokemon.id !== choice.titular) leaveBattle(out);
+      battle.titular[seat] = choice.titular;
+    }
     // No decidió: sale el primero vivo, en su orden. Quien ganó el asalto sigue como estaba.
     else if (battle.titular[seat] === null) battle.titular[seat] = battle.fighters[seat].find((fighter) => fighter.hp > 0)?.pokemon.id ?? null;
   }

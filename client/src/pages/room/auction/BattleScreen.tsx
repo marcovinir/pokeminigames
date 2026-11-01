@@ -58,6 +58,18 @@ export function BattleScreen() {
   const strike = useStrike(current?.actions ?? null, current ? `${current.round}-${current.turn}` : null);
   const movesRef = useRef<HTMLDivElement>(null);
   const [tip, setTip] = useState<"mine" | "theirs" | null>(null);
+  const titulars = `${battle?.myTitular}-${battle?.rivalTitular}`;
+  // Al entrar otro Pokémon el sprite se monta de nuevo sin avisar de que se fue el cursor.
+  useEffect(() => setTip(null), [titulars]);
+  // En un móvil nada avisa de que se tocó fuera: el foco no siempre se mueve.
+  useEffect(() => {
+    if (tip === null) return;
+    const close = (event: PointerEvent) => {
+      if (!(event.target as Element | null)?.closest?.("[data-ability-sprite]")) setTip(null);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [tip]);
   const choosing = battle?.choosing ?? false;
   // Se llega pulsando «Confirmar», más abajo: en el móvil el escenario quedaría cortado.
   useEffect(() => {
@@ -96,8 +108,8 @@ export function BattleScreen() {
       <div className="flex min-w-0 flex-col gap-2 lg:gap-3">
         <div data-arena className="battle-arena relative h-64 overflow-hidden rounded-xl bg-[#1b1147] sm:aspect-video sm:h-auto lg:aspect-auto lg:h-[30rem]">
           <img src={`/auction/combate-${battle.scene}.png`} alt="" className="absolute inset-0 size-full object-cover [image-rendering:pixelated]" />
-          {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} side="front" effect={effectOf(rival)} showsAbility={theirs.ability !== null} onAbility={(open) => setTip(open ? "theirs" : null)} /> : null}
-          {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} side="back" effect={effectOf(mySeat)} showsAbility={mine.ability !== null} onAbility={(open) => setTip(open ? "mine" : null)} /> : null}
+          {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} side="front" effect={effectOf(rival)} showsAbility={theirs.ability !== null} describedBy={tip === "theirs" ? "battle-tip" : undefined} onAbility={(open) => setTip(open ? "theirs" : null)} /> : null}
+          {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} side="back" effect={effectOf(mySeat)} showsAbility={mine.ability !== null} describedBy={tip === "mine" ? "battle-tip" : undefined} onAbility={(open) => setTip(open ? "mine" : null)} /> : null}
           {theirs ? (
             <div className="absolute top-1.5 left-1.5 w-44 lg:top-4 lg:left-4 lg:w-72">
               <HpBar fighter={theirs} standing={standing(battle.rivalTeam)} percentOnly />
@@ -108,9 +120,9 @@ export function BattleScreen() {
               <HpBar fighter={mine} standing={standing(battle.myTeam)} />
             </div>
           ) : null}
-          <p className="font-pixel absolute top-1.5 right-1.5 m-0 rounded-md bg-[#1b1147] px-2 py-1 text-sm font-bold text-white lg:top-4 lg:right-4 lg:text-lg">{BATTLE_TEXT.roundLabel(battle.round, battle.turn, BATTLE_MAX_TURNS)}</p>
+          <p className="absolute top-1.5 right-1.5 m-0 max-w-28 rounded-md bg-[#1b1147] px-1.5 py-0.5 text-center font-num text-xs font-bold text-white lg:top-4 lg:right-4 lg:max-w-none lg:px-2 lg:py-1 lg:text-base">{BATTLE_TEXT.roundLabel(battle.round, battle.turn, BATTLE_MAX_TURNS)}</p>
           {tipAbility ? (
-            <div role="tooltip" className="battle-tip">
+            <div id="battle-tip" role="tooltip" className="battle-tip">
               <b className="block font-display">{tipAbility.name}</b>
               {tipAbility.description}
             </div>
@@ -130,7 +142,7 @@ export function BattleScreen() {
                     {one.name}{" "}
                     <span className="block font-sans text-xs font-bold">{moveFacts(one)}</span>{" "}
                     <span className="block font-sans text-xs font-extrabold">{moveNote(one)}</span>{" "}
-                    <span className="block font-num text-xs font-bold">PP {one.pp}/{one.maxPp}</span>
+                    {one.type === null ? null : <span className="block font-num text-xs font-bold">PP {one.pp}/{one.maxPp}</span>}
                   </button>
                 );
               })}

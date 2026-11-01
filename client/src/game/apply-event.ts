@@ -105,6 +105,9 @@ export interface BattleLogEntry {
   names: Record<Seat, string>;
   /** Quiénes entraron a pelear en este turno. */
   entered: string[];
+  /** Lo que pasó al empezar el asalto, con quienes estaban entonces. */
+  roundNotes: BattleNote[];
+  roundNames: Record<Seat, string>;
   entryNotes: BattleNote[];
   endNotes: BattleNote[];
   abilityNames: Record<string, string>;
@@ -346,11 +349,11 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       return { ...view, lastSale: event.payload };
 
     case "battle-turn": {
-      const { round, turn, actions, switches = [], entryNotes = [], endNotes = [] } = event.payload;
+      const { round, turn, actions, switches = [], roundNotes = [], entryNotes = [], endNotes = [] } = event.payload;
       const names = fightingNames(view, switches);
       const battle = view.auction?.battle;
       const abilityNames = Object.fromEntries([...(battle?.myTeam ?? []), ...(battle?.rivalTeam ?? [])].flatMap((one) => (one.ability ? [[one.ability.id, one.ability.name]] : [])));
-      return { ...view, battleLog: [...view.battleLog, { round, turn, actions, names, entered: switches.map((one) => names[one.seat]), entryNotes, endNotes, abilityNames }].slice(-BATTLE_LOG_MAX) };
+      return { ...view, battleLog: [...view.battleLog, { round, turn, actions, names, entered: switches.map((one) => names[one.seat]), roundNotes, roundNames: fightingNames(view, []), entryNotes, endNotes, abilityNames }].slice(-BATTLE_LOG_MAX) };
     }
 
     case "battle-round-ended":

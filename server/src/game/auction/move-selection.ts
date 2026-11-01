@@ -32,7 +32,7 @@ const MAX_POWER = 120;
 /** Los ataques normales con los que se completan los 4 de quien aprende muy pocos. */
 export const FILLER_MOVES = ["tackle", "scratch", "pound", "cut"];
 
-const DAMAGE_CATEGORIES = ["damage", "damage+ailment", "damage+lower", "damage+raise"];
+const DAMAGE_CATEGORIES = ["damage", "damage-ailment", "damage-lower", "damage-raise"];
 const AILMENTS: Record<string, Status> = { burn: "burn", paralysis: "paralysis", poison: "poison", sleep: "sleep" };
 const STATS: Record<string, BoostStat> = { attack: "attack", defense: "defense", "special-attack": "spAttack", "special-defense": "spDefense", speed: "speed" };
 const TARGETS = ["selected-pokemon", "user", "all-opponents", "all-other-pokemon", "random-opponent"];
@@ -44,7 +44,7 @@ const RARE_ATTACKS = new Set([
   "future-sight", "doom-desire", "rollout", "ice-ball", "outrage", "thrash", "petal-dance", "raging-fury", "uproar", "last-resort", "dream-eater", "snore", "focus-punch",
   "self-destruct", "explosion", "misty-explosion", "steel-beam", "mind-blown", "natural-gift", "belch", "false-swipe", "hold-back", "stomping-tantrum", "fling", "synchronoise", "steel-roller", "poltergeist",
   "beat-up", "pay-day", "knock-off", "thief", "covet", "bug-bite", "pluck", "incinerate", "smack-down", "u-turn", "volt-switch", "flip-turn", "parting-shot", "dragon-tail", "circle-throw", "rapid-spin", "mortal-spin",
-  "facade", "venoshock", "brine", "hex", "payback", "assurance", "retaliate", "acrobatics", "round", "fury-cutter", "pursuit", "grass-pledge", "fire-pledge", "water-pledge", "jump-kick", "high-jump-kick", "foul-play", "rising-voltage", "expanding-force", "lash-out", "wake-up-slap", "smelling-salts", "fell-stinger", "grassy-glide", "flying-press", "spectral-thief", "jaw-lock", "bolt-beak", "fishious-rend", "dynamax-cannon", "hyperspace-hole", "secret-power", "swallow", "spit-up", "stockpile", "rest", "wish", "body-press",
+  "facade", "venoshock", "brine", "hex", "payback", "assurance", "retaliate", "acrobatics", "round", "fury-cutter", "pursuit", "grass-pledge", "fire-pledge", "water-pledge", "jump-kick", "high-jump-kick", "foul-play", "rising-voltage", "expanding-force", "lash-out", "wake-up-slap", "smelling-salts", "fell-stinger", "grassy-glide", "flying-press", "spectral-thief", "jaw-lock", "bolt-beak", "fishious-rend", "dynamax-cannon", "hyperspace-hole", "secret-power", "stuff-cheeks", "echoed-voice", "frost-breath", "storm-throw", "wicked-blow", "clear-smog", "swallow", "spit-up", "stockpile", "rest", "wish", "body-press",
   "brick-break", "psychic-fangs", "weather-ball", "terrain-pulse", "judgment", "multi-attack", "revelation-dance", "techno-blast", "hidden-power", "tera-blast", "relic-song",
 ]);
 
@@ -77,7 +77,7 @@ function toEffect(move: RawMove): MoveEffect {
   // Un secundario fuera de la lista, como congelar o hacer retroceder, se ignora: no perdemos Rayo Hielo por eso.
   const changes = move.stat_changes.filter((change) => change.stat.name in STATS);
   if (changes.length > 0) {
-    const onUser = isStatus ? move.target.name === "user" : meta.category.name === "damage+raise";
+    const onUser = isStatus ? move.target.name === "user" : meta.category.name === "damage-raise";
     effect.stats = changes.map((change) => ({ stat: STATS[change.stat.name]!, change: change.change, target: onUser ? "user" : "rival", chance: isStatus || meta.stat_chance === 0 ? 100 : meta.stat_chance }));
   }
   return effect;

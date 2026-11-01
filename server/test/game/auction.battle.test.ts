@@ -794,6 +794,34 @@ describe("cambiar de Pokémon", () => {
   });
 });
 
+describe("habilidades en el motor", () => {
+  const titularOf = (h: AuctionHarness, seat: Seat) => h.state.battle!.fighters[seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat])!;
+
+  it("Cura Natural también cura al cambiar de titular en la pausa", () => {
+    const h = toPause();
+    const winner: Seat = loserOf(h) === 1 ? 2 : 1;
+    const out = titularOf(h, winner);
+    out.ability = "natural-cure";
+    out.status = "burn";
+    const other = h.state.battle!.fighters[winner].find((one) => one !== out && one.hp > 0)!.pokemon.id;
+    h.dispatch({ type: "PAUSE_CONFIRM", seat: winner, choice: { titular: other } });
+    h.advance(15_000);
+    expect(h.state.battle!.fighters[winner].find((one) => one.pokemon.id === out.pokemon.id)!.status).toBeNull();
+  });
+
+  it("lo que pasó al empezar el asalto va aparte de lo que pasó al cambiar", () => {
+    const h = toPause();
+    for (const seat of [1, 2] as const) for (const fighter of h.state.battle!.fighters[seat]) fighter.ability = "intimidate";
+    h.advance(15_000);
+    const [first, second] = [moveOf(h, 1), moveOf(h, 2)];
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: first });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: second });
+    const turn = h.payloads("battle-turn").at(-1)!;
+    expect(turn.roundNotes!.filter((note) => note.kind === "ability")).toHaveLength(2);
+    expect(turn.entryNotes).toEqual([]);
+  });
+});
+
 describe("el escenario", () => {
   it("se sortea uno por combate: los dos ven el mismo y no cambia entre asaltos", () => {
     const seen = new Set<string>();

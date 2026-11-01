@@ -482,7 +482,7 @@ describe("el registro del combate", () => {
 
   it("guarda cada turno con los nombres de quienes pelearon entonces", () => {
     const view = applyServerEvent(start, turn(1), 0);
-    expect(view.battleLog).toEqual([{ round: 1, turn: 1, actions: [action], names: { 1: "Uno", 2: "Dos" }, entered: [], entryNotes: [], endNotes: [], abilityNames: {} }]);
+    expect(view.battleLog).toEqual([{ round: 1, turn: 1, actions: [action], names: { 1: "Uno", 2: "Dos" }, entered: [], roundNotes: [], roundNames: { 1: "Uno", 2: "Dos" }, entryNotes: [], endNotes: [], abilityNames: {} }]);
   });
 
   it("si alguien cambia, el golpe y el registro llevan el nombre de quien entró", () => {

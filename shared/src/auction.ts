@@ -71,7 +71,10 @@ export type BattleNote =
   | { kind: "ability"; seat: Seat; ability: string }
   | { kind: "recoil"; seat: Seat; damage: number }
   | { kind: "residual"; seat: Seat; cause: "burn" | "poison"; damage: number }
-  | { kind: "no_effect"; seat: Seat };
+  | { kind: "no_effect"; seat: Seat }
+  | { kind: "failed" }
+  | { kind: "woke"; seat: Seat }
+  | { kind: "healed"; seat: Seat; amount: number };
 
 export type Status = "burn" | "paralysis" | "poison" | "sleep";
 export type BoostStat = "attack" | "defense" | "spAttack" | "spDefense" | "speed";

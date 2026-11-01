@@ -7,7 +7,7 @@ import { BATTLE_TEXT } from "../../../i18n/es";
 const MAX_SPRITE_HEIGHT = 90;
 
 /** El Pokémon en el escenario: animado si se puede, si no el PNG clásico y, como último recurso, su nombre. */
-export function BattleSprite({ id, name, side, effect, showsAbility = false, onAbility }: { id: number; name: string; side: SpriteSide; effect: string; showsAbility?: boolean; onAbility?(open: boolean): void }) {
+export function BattleSprite({ id, name, side, effect, showsAbility = false, describedBy, onAbility }: { id: number; name: string; side: SpriteSide; effect: string; showsAbility?: boolean; describedBy?: string; onAbility?(open: boolean): void }) {
   const [source, setSource] = useState<"animated" | "still" | "none">("animated");
   const [fit, setFit] = useState(1);
   const reduced = useReducedMotion();
@@ -26,7 +26,7 @@ export function BattleSprite({ id, name, side, effect, showsAbility = false, onA
     <div className={`battle-spot battle-spot-${side}`}>
       {/* La entrada va aparte de los golpes: en el mismo nodo, se repetiría al acabar cada uno. */}
       {showsAbility ? (
-        <button type="button" aria-label={BATTLE_TEXT.seeAbility(name)} onMouseEnter={() => onAbility?.(true)} onMouseLeave={() => onAbility?.(false)} onFocus={() => onAbility?.(true)} onBlur={() => onAbility?.(false)} onClick={() => onAbility?.(true)} className="battle-enter battle-sprite-button flex-none">
+        <button type="button" data-ability-sprite aria-label={BATTLE_TEXT.seeAbility(name)} aria-describedby={describedBy} onMouseEnter={() => onAbility?.(true)} onMouseLeave={() => onAbility?.(false)} onFocus={() => onAbility?.(true)} onBlur={() => onAbility?.(false)} onClick={() => onAbility?.(true)} className="battle-enter battle-sprite-button flex-none">
           <span className={`block ${effect}`}>{picture}</span>
         </button>
       ) : (

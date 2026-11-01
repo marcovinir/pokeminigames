@@ -187,6 +187,43 @@ describe("el combate", () => {
     expect(screen.queryByRole("tooltip")?.textContent ?? "").not.toContain("Mar Llamas");
   });
 
+  it("si entra otro Pokémon, la ficha abierta se cierra", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([battleState("battle", abilityTeam)], services);
+    await user.hover(screen.getByRole("img", { name: "Uno" }));
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    serverSends(services, battleState("battle", { ...abilityTeam, myTitular: 2 }));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("tocar fuera cierra la ficha", async () => {
+    const { user } = renderRoom([battleState("battle", abilityTeam)]);
+    await user.click(screen.getByRole("button", { name: "Ver la habilidad de Uno" }));
+    await user.pointer({ keys: "[MouseLeft]", target: document.body });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("Forcejeo no muestra PP: se puede usar sin límite", () => {
+    renderRoom([battleState("battle", { moves: [moveView({ move: "forcejeo", name: "Forcejeo", type: null, pp: 1, maxPp: 1 })] })]);
+    expect(screen.getByRole("button", { name: /^Forcejeo/ })).not.toHaveTextContent("PP");
+  });
+
+  it("el lector oye estados y habilidades, no solo el daño", () => {
+    const services = fakeServices();
+    renderRoom([battleState("battle", abilityTeam)], services);
+    serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [{ ...hit, notes: [{ kind: "status", seat: 2, status: "burn" }] }], endNotes: [{ kind: "residual", seat: 2, cause: "burn", damage: 6 }] } });
+    const log = screen.getByRole("log", { name: "Anuncios de la partida" });
+    expect(log).toHaveTextContent("Cuatro se quemó.");
+    expect(log).toHaveTextContent("Cuatro perdió 6 PS por la quemadura.");
+  });
+
+  it("las notas del inicio del asalto llevan el nombre de quien estaba, aunque luego cambie", () => {
+    const services = fakeServices();
+    const { container } = renderRoom([battleState("battle", abilityTeam)], services);
+    serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [], switches: [{ seat: 1, pokemonId: 2 }], roundNotes: [{ kind: "ability", seat: 1, ability: "blaze" }] } });
+    expect(within(container.querySelector("[data-battle-log]") as HTMLElement).getByText("Habilidad de Uno: Mar Llamas.")).toBeInTheDocument();
+  });
+
   it("sin habilidad no sale ficha", async () => {
     const { user } = renderRoom([battleState("battle")]);
     await user.hover(screen.getByRole("img", { name: "Uno" }));

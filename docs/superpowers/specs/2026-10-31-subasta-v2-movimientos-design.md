@@ -50,9 +50,9 @@ Una por Pokémon: la primera que no es oculta. Con efecto:
 - **Al entrar o por tipo:** Intimidación, Levitación, Absorbe Agua, Absorbe Electricidad, Absorbe Fuego e Inmunidad.
 - **Con pocos PS:** Mar Llamas, Torrente, Espesura y Enjambre.
 - **Por contacto:** Elec. Estática, Cuerpo Llama, Punto Tóxico y Piel Tosca.
-- **Otras:** Robustez, Sebo, Agallas, Adaptable, Experto, Potencia, Flexibilidad, Insomnio, Impulso, Cuerpo Puro y Cura Natural.
+- **Otras:** Robustez, Sebo, Agallas, Adaptable, Experto, Corte Fuerte, Flexibilidad, Insomnio, Impulso, Cuerpo Puro y Cura Natural.
 
-Son 24. Se revisará su frecuencia real al generar los datos, sin pasar de 30.
+Son 25. Al generar los datos, Potencia no tenía ningún Pokémon como primera habilidad, así que se cambió por Corte Fuerte, que tiene 11.
 
 ## Pantalla
 

@@ -23,7 +23,7 @@ export const ABILITY_TEXT: Record<string, string> = {
   guts: "Con un estado, sus ataques físicos pegan más.",
   adaptability: "Sus ataques de su propio tipo pegan aún más.",
   technician: "Sus ataques de poca potencia pegan más.",
-  "huge-power": "Sus ataques físicos pegan el doble.",
+  "hyper-cutter": "Nadie puede bajarle el Ataque.",
   "speed-boost": "Su Velocidad sube al acabar cada turno.",
   "clear-body": "Nadie puede bajarle los stats.",
   "natural-cure": "Se cura de su estado al salir del combate.",
@@ -45,7 +45,6 @@ export function attackerModifier(ability: string | null, move: MoveData, inPinch
   if (inPinch && PINCH[ability] === move.type) return 1.5;
   if (ability === "guts" && hasStatus && move.category === "physical") return 1.5;
   if (ability === "technician" && (move.power ?? 0) <= 60) return 1.5;
-  if (ability === "huge-power" && move.category === "physical") return 2;
   return 1;
 }
 

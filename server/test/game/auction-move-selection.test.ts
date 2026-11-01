@@ -21,7 +21,7 @@ const raw = (over: Partial<Omit<RawMove, "meta">> & { meta?: Partial<RawMove["me
   };
 };
 
-const FLAMETHROWER = raw({ name: "flamethrower", meta: { category: { name: "damage+ailment" }, ailment: { name: "burn" }, ailment_chance: 10 } });
+const FLAMETHROWER = raw({ name: "flamethrower", meta: { category: { name: "damage-ailment" }, ailment: { name: "burn" }, ailment_chance: 10 } });
 const THUNDER_WAVE = raw({ name: "thunder-wave", type: { name: "electric" }, damage_class: { name: "status" }, power: null, accuracy: 90, meta: { category: { name: "ailment" }, ailment: { name: "paralysis" } } });
 const RECOVER = raw({ name: "recover", type: { name: "normal" }, damage_class: { name: "status" }, target: { name: "user" }, power: null, accuracy: null, pp: 5, meta: { category: { name: "heal" }, healing: 50 } });
 
@@ -37,7 +37,7 @@ describe("qué movimientos entran", () => {
       raw({ priority: 1 }),
       raw({ meta: { min_hits: 2, max_hits: 5 } }),
       raw({ meta: { drain: -33 } }),
-      raw({ meta: { drain: 50, category: { name: "damage+heal" } } }),
+      raw({ meta: { drain: 50, category: { name: "damage-heal" } } }),
       raw({ meta: { category: { name: "ohko" } } }),
       raw({ power: null }),
       raw({ damage_class: { name: "status" }, power: null, meta: { category: { name: "field-effect" } } }),
@@ -50,7 +50,7 @@ describe("qué movimientos entran", () => {
   });
 
   it("un efecto secundario que no está en la lista se ignora, sin perder el ataque", () => {
-    const iceBeam = raw({ name: "ice-beam", type: { name: "ice" }, meta: { category: { name: "damage+ailment" }, ailment: { name: "freeze" }, ailment_chance: 10 } });
+    const iceBeam = raw({ name: "ice-beam", type: { name: "ice" }, meta: { category: { name: "damage-ailment" }, ailment: { name: "freeze" }, ailment_chance: 10 } });
     expect(isUsableMove(iceBeam)).toBe(true);
     expect(toMoveData(iceBeam).effect).toEqual({});
   });
@@ -67,7 +67,7 @@ describe("cómo se guarda", () => {
   it("los stats dicen a quién afectan, y una probabilidad 0 en un movimiento de estado es segura", () => {
     const growl = raw({ name: "growl", damage_class: { name: "status" }, power: null, meta: { category: { name: "net-good-stats" } }, stat_changes: [{ change: -1, stat: { name: "attack" } }] });
     expect(toMoveData(growl).effect.stats).toEqual([{ stat: "attack", change: -1, target: "rival", chance: 100 }]);
-    const closeCombat = raw({ name: "close-combat", damage_class: { name: "physical" }, meta: { category: { name: "damage+raise" }, stat_chance: 100 }, stat_changes: [{ change: -1, stat: { name: "defense" } }] });
+    const closeCombat = raw({ name: "close-combat", damage_class: { name: "physical" }, meta: { category: { name: "damage-raise" }, stat_chance: 100 }, stat_changes: [{ change: -1, stat: { name: "defense" } }] });
     expect(toMoveData(closeCombat).effect.stats).toEqual([{ stat: "defense", change: -1, target: "user", chance: 100 }]);
   });
 
@@ -130,6 +130,8 @@ describe("qué 4 le tocan", () => {
   });
 });
 
+const catalogTypes = Object.fromEntries((JSON.parse(readFileSync(new URL("../../data/catalog.snapshot.json", import.meta.url), "utf8")) as { pokemon: { id: number; types: TypeName[] }[] }).pokemon.map((one) => [String(one.id), one.types]));
+
 describe("la instantánea real", () => {
   const snapshot = JSON.parse(readFileSync(new URL("../../data/moves.snapshot.json", import.meta.url), "utf8")) as {
     moves: Record<string, MoveData>;
@@ -148,6 +150,22 @@ describe("la instantánea real", () => {
   it("todo movimiento tiene nombre, y toda habilidad también", () => {
     for (const move of Object.values(snapshot.moves)) expect(move.names.es.length).toBeGreaterThan(0);
     for (const set of Object.values(snapshot.sets)) if (set.ability) expect(snapshot.abilities[set.ability]?.es).toBeTruthy();
+  });
+
+  it("los ataques con efecto están: Lanzallamas quema y hay ataques que cambian stats", () => {
+    expect(snapshot.moves["flamethrower"]?.effect).toEqual({ ailment: "burn", ailmentChance: 10 });
+    const attacks = Object.values(snapshot.moves).filter((move) => move.category !== "status");
+    expect(attacks.filter((move) => move.effect.ailment).length).toBeGreaterThan(10);
+    expect(attacks.filter((move) => move.effect.stats).length).toBeGreaterThan(5);
+  });
+
+  it("casi todos llevan un ataque de su tipo, y los que no es porque no aprenden ninguno", () => {
+    const withOwn = (id: string) => snapshot.sets[id]!.moves.some((move) => catalogTypes[id]!.includes(snapshot.moves[move]!.type) && snapshot.moves[move]!.category !== "status");
+    const missing = Object.keys(snapshot.sets).filter((id) => !withOwn(id));
+    expect(missing.length).toBeLessThan(60);
+    expect(withOwn("6")).toBe(true);
+    expect(snapshot.sets[6]!.moves.some((move) => snapshot.moves[move]!.type === "fire")).toBe(true);
+    expect(snapshot.sets[25]!.moves.some((move) => snapshot.moves[move]!.type === "electric")).toBe(true);
   });
 
   it("quien aprende una curación la lleva", () => {

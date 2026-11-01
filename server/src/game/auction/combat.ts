@@ -112,8 +112,8 @@ function applyStatus(target: Fighter, seat: Seat, status: Status, rng: Rng, note
 }
 
 function changeStat(target: Fighter, seat: Seat, stat: BoostStat, change: number, fromRival: boolean, notes: BattleNote[]): boolean {
-  if (fromRival && change < 0 && target.ability === "clear-body") {
-    notes.push({ kind: "ability", seat, ability: "clear-body" });
+  if (fromRival && change < 0 && (target.ability === "clear-body" || (target.ability === "hyper-cutter" && stat === "attack"))) {
+    notes.push({ kind: "ability", seat, ability: target.ability });
     return false;
   }
   const next = Math.max(-MAX_STAGE, Math.min(MAX_STAGE, target.stages[stat] + change));
@@ -149,8 +149,9 @@ function applyEffects(move: MoveData, me: Fighter, rival: Fighter, actor: Seat, 
   let applied = false;
   const { ailment, ailmentChance = 100, stats = [] } = move.effect;
   if (ailment && rng.int(100) < ailmentChance) applied = applyStatus(rival, target, ailment, rng, notes) || applied;
+  // Una sola tirada por movimiento: si sube cinco stats, suben los cinco o ninguno.
+  if (stats.length === 0 || rng.int(100) >= stats[0]!.chance) return applied;
   for (const change of stats) {
-    if (rng.int(100) >= change.chance) continue;
     const onUser = change.target === "user";
     applied = changeStat(onUser ? me : rival, onUser ? actor : target, change.stat, change.change, !onUser, notes) || applied;
   }
@@ -158,13 +159,14 @@ function applyEffects(move: MoveData, me: Fighter, rival: Fighter, actor: Seat, 
 }
 
 /** No actúa si duerme, o a veces si está paralizado. */
-function blockedBy(me: Fighter, rng: Rng): "sleep" | "paralysis" | null {
+function blockedBy(me: Fighter, seat: Seat, rng: Rng, notes: BattleNote[]): "sleep" | "paralysis" | null {
   if (me.status === "sleep") {
     if (me.sleepTurns > 0) {
       me.sleepTurns--;
       return "sleep";
     }
     me.status = null;
+    notes.push({ kind: "woke", seat });
   }
   return me.status === "paralysis" && rng.int(PARALYSIS_ODDS) === 0 ? "paralysis" : null;
 }
@@ -173,7 +175,7 @@ function useMove(id: BattleMove, me: Fighter, rival: Fighter, actor: Seat, rng: 
   const move = moveData(id) ?? STRUGGLE_MOVE;
   const target = otherSeat(actor);
   const notes: BattleNote[] = [];
-  const action: BattleAction = { actor, move: id, moveName: move.names.es, damage: 0, critical: false, effectiveness: 1, healed: 0, actorHp: me.hp, targetHp: rival.hp, missed: false, blocked: blockedBy(me, rng), notes };
+  const action: BattleAction = { actor, move: id, moveName: move.names.es, damage: 0, critical: false, effectiveness: 1, healed: 0, actorHp: me.hp, targetHp: rival.hp, missed: false, blocked: blockedBy(me, actor, rng, notes), notes };
   const finish = () => ({ ...action, actorHp: me.hp, targetHp: rival.hp });
   if (action.blocked) return finish();
 
@@ -188,10 +190,13 @@ function useMove(id: BattleMove, me: Fighter, rival: Fighter, actor: Seat, rng: 
     if (move.effect.healing) {
       action.healed = Math.min(me.maxHp - me.hp, Math.round((me.maxHp * move.effect.healing) / 100));
       me.hp += action.healed;
+      if (action.healed === 0) notes.push({ kind: "failed" });
       return finish();
     }
     action.effectiveness = move.effect.ailment ? moveEffectiveness(id, rival) : 1;
-    if (action.effectiveness === 0 || !applyEffects(move, me, rival, actor, rng, notes)) notes.push({ kind: "no_effect", seat: target });
+    if (action.effectiveness === 0) return finish();
+    const before = notes.length;
+    if (!applyEffects(move, me, rival, actor, rng, notes) && notes.length === before) notes.push(move.effect.ailment ? { kind: "no_effect", seat: target } : { kind: "failed" });
     return finish();
   }
 
@@ -199,7 +204,11 @@ function useMove(id: BattleMove, me: Fighter, rival: Fighter, actor: Seat, rng: 
   if (action.effectiveness === 0) {
     if (isImmuneByAbility(rival.ability, move.type)) {
       notes.push({ kind: "ability", seat: target, ability: rival.ability! });
-      if (healsWhenHit(rival.ability)) rival.hp = Math.min(rival.maxHp, rival.hp + Math.floor(rival.maxHp / ABSORB_HEAL));
+      if (healsWhenHit(rival.ability)) {
+        const amount = Math.min(rival.maxHp - rival.hp, Math.floor(rival.maxHp / ABSORB_HEAL));
+        rival.hp += amount;
+        notes.push({ kind: "healed", seat: target, amount });
+      }
     }
     return finish();
   }
@@ -242,7 +251,8 @@ export function resolveTurn(sides: Record<Seat, Fighter>, choices: Record<Seat, 
   for (const actor of [first, otherSeat(first)]) {
     const me = sides[actor];
     const move = choices[actor];
-    if (me.hp <= 0 || move === null) continue;
+    // Si el rival cayó por su propio retroceso, no hay a quién atacar.
+    if (me.hp <= 0 || move === null || sides[otherSeat(actor)].hp <= 0) continue;
     actions.push(useMove(move, me, sides[otherSeat(actor)], actor, rng, options));
   }
   return actions;
