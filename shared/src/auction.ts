@@ -64,6 +64,30 @@ export interface AuctionSalePayload {
 /** Un movimiento: el ataque de un tipo, Forcejeo (sin tipo) o Recuperar. */
 export type BattleMove = TypeName | "forcejeo" | "recuperar";
 
+export type Status = "burn" | "paralysis" | "poison" | "sleep";
+export type BoostStat = "attack" | "defense" | "spAttack" | "spDefense" | "speed";
+
+/** Lo que hace un movimiento además de su daño. Solo los efectos que el combate implementa. */
+export interface MoveEffect {
+  ailment?: Status;
+  ailmentChance?: number;
+  stats?: { stat: BoostStat; change: number; target: "user" | "rival"; chance: number }[];
+  /** Porcentaje de los PS máximos que cura al usuario. */
+  healing?: number;
+}
+
+/** Un movimiento real, de la instantánea de PokéAPI. */
+export interface MoveData {
+  id: string;
+  names: { es: string; en: string };
+  type: TypeName;
+  category: "physical" | "special" | "status";
+  power: number | null;
+  accuracy: number | null;
+  pp: number;
+  effect: MoveEffect;
+}
+
 /** Quién entró a pelear en un turno: los cambios van antes que los ataques. */
 export interface BattleSwitch {
   seat: Seat;

@@ -17,6 +17,7 @@
     "catalog:fetch": "tsx scripts/fetch-catalog.ts",
     "pokedex:fetch": "tsx scripts/fetch-pokedex.ts",
     "auction:simulate": "tsx scripts/simulate-auction.ts",
+    "moves:fetch": "tsx scripts/fetch-moves.ts",
     "smoke": "tsx scripts/smoke-game.ts",
     "smoke:deployed": "tsx scripts/smoke-deployed.ts",
     "account:delete": "tsx scripts/delete-account.ts",
