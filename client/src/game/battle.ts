@@ -1,4 +1,4 @@
-import type { BattleAction, BattleFighterView, BattleMove, Seat, TypeName } from "@pokemon-minigames/shared";
+import type { BattleAction, BattleFighterView, BattleNote, BoostStat, Seat, Status, TypeName } from "@pokemon-minigames/shared";
 import { TYPE_LABELS } from "../i18n/es";
 
 type Names = Record<Seat, string>;
@@ -9,13 +9,6 @@ export function hpTone(hp: number, maxHp: number): "good" | "warn" | "danger" {
   return share > 0.5 ? "good" : share >= 0.2 ? "warn" : "danger";
 }
 
-export function moveLabel(move: BattleMove): string {
-  if (move === "forcejeo") return "Forcejeo";
-  if (move === "recuperar") return "Recuperar";
-  const type = TYPE_LABELS[move as TypeName];
-  return `Ataque ${type.charAt(0).toUpperCase()}${type.slice(1)}`;
-}
-
 /** La eficacia en palabras; nada si aún no se sabe contra quién. */
 export function effectivenessLabel(effectiveness: number | null): string {
   if (effectiveness === null) return "";
@@ -24,7 +17,7 @@ export function effectivenessLabel(effectiveness: number | null): string {
 }
 
 /** Tinte claro y borde oscuro de cada tipo. Son claros para que el texto oscuro se lea sobre cualquiera. */
-export const MOVE_COLORS: Record<TypeName | "forcejeo" | "recuperar", [string, string]> = {
+export const MOVE_COLORS: Record<TypeName | "forcejeo", [string, string]> = {
   normal: ["#d9d7c3", "#94927a"],
   fire: ["#f5a36b", "#b4602b"],
   water: ["#8fbcf5", "#4a78b8"],
@@ -44,31 +37,77 @@ export const MOVE_COLORS: Record<TypeName | "forcejeo" | "recuperar", [string, s
   steel: ["#c3c6d8", "#808498"],
   fairy: ["#f5b5d0", "#b37490"],
   forcejeo: ["#d6d3e8", "#9d99b8"],
-  recuperar: ["#86efac", "#3fae68"],
 };
 
+export const STATUS_LABELS: Record<Status, string> = { burn: "Quemado", paralysis: "Paralizado", poison: "Envenenado", sleep: "Dormido" };
+export const STAT_LABELS: Record<BoostStat, string> = { attack: "Ataque", defense: "Defensa", spAttack: "Ataque Especial", spDefense: "Defensa Especial", speed: "Velocidad" };
+
+/** «Ataque +2»: con el signo menos de verdad. */
+export const stageLabel = (stat: BoostStat, stage: number): string => `${STAT_LABELS[stat]} ${stage > 0 ? "+" : "−"}${Math.abs(stage)}`;
+
+const STATUS_LINES: Record<Status, (name: string) => string> = {
+  burn: (name) => `${name} se quemó.`,
+  paralysis: (name) => `${name} quedó paralizado.`,
+  poison: (name) => `${name} fue envenenado.`,
+  sleep: (name) => `${name} se durmió.`,
+};
+
+export interface TurnExtras {
+  entered?: string[];
+  entryNotes?: BattleNote[];
+  endNotes?: BattleNote[];
+  abilityNames?: Record<string, string>;
+}
+
+function noteLine(note: BattleNote, names: Names, abilityNames: Record<string, string>): string {
+  const name = names[note.seat];
+  switch (note.kind) {
+    case "status":
+      return STATUS_LINES[note.status](name);
+    case "stat": {
+      const size = Math.abs(note.change) >= 2 ? " mucho" : "";
+      return `${note.stat === "defense" || note.stat === "spDefense" || note.stat === "speed" ? "La" : "El"} ${STAT_LABELS[note.stat]} de ${name} ${note.change > 0 ? "subió" : "bajó"}${size}.`;
+    }
+    case "ability":
+      return `Habilidad de ${name}: ${abilityNames[note.ability] ?? note.ability}.`;
+    case "recoil":
+      return `${name} perdió ${note.damage} PS.`;
+    case "residual":
+      return `${name} perdió ${note.damage} PS por ${note.cause === "burn" ? "la quemadura" : "el veneno"}.`;
+    case "no_effect":
+      return `No afecta a ${name}.`;
+  }
+}
+
 function actionLine(action: BattleAction, names: Names): string {
-  const start = `${names[action.actor]} usó ${moveLabel(action.move)}`;
-  if (action.move === "recuperar") return `${start}: recuperó ${action.healed} PS.`;
-  if (action.effectiveness === 0) return `${start}: no afecta.`;
+  const name = names[action.actor];
+  if (action.blocked) return `${name} está ${action.blocked === "sleep" ? "dormido" : "paralizado"} y no puede moverse.`;
+  const start = `${name} usó ${action.moveName}`;
+  if (action.missed) return `${start}, pero falló.`;
+  if (action.healed > 0) return `${start}: recuperó ${action.healed} PS.`;
+  if (action.damage === 0) return action.effectiveness === 0 ? `${start}: no afecta.` : `${start}.`;
   const notes = [action.critical ? "¡Crítico!" : "", action.effectiveness > 1 ? "¡Es muy eficaz!" : action.effectiveness < 1 ? "No es muy eficaz." : ""].filter(Boolean);
   return [`${start}: ${action.damage} de daño.`, ...notes].join(" ");
 }
 
-/** Lo ocurrido en un turno, una línea por ataque: es el registro visible. */
-export function turnLines(actions: BattleAction[], names: Names, entered: string[] = []): string[] {
-  return [...entered.map(enteredLine), ...actions.map((action) => actionLine(action, names))];
-}
-
 const enteredLine = (name: string): string => `¡Adelante, ${name}!`;
+
+/** Lo ocurrido en un turno, una línea por cosa: es el registro visible. */
+export function turnLines(actions: BattleAction[], names: Names, { entered = [], entryNotes = [], endNotes = [], abilityNames = {} }: TurnExtras = {}): string[] {
+  const notes = (list: BattleNote[]) => list.map((note) => noteLine(note, names, abilityNames));
+  return [...entered.map(enteredLine), ...notes(entryNotes), ...actions.flatMap((action) => [actionLine(action, names), ...notes(action.notes)]), ...notes(endNotes)];
+}
 
 /** El mismo turno en una sola frase corta: es lo que oye quien usa lector de pantalla, para no saturarlo. */
 export function turnSummary(actions: BattleAction[], names: Names, entered: string[] = []): string {
-  const hits = actions
-    .map((action) => {
-      if (action.move === "recuperar") return `${names[action.actor]}, recuperó ${action.healed} PS.`;
-      return action.effectiveness === 0 ? `${names[action.actor]}, no afecta.` : `${names[action.actor]}, ${action.damage} de daño.`;
-    });
+  const hits = actions.map((action) => {
+    const name = names[action.actor];
+    if (action.blocked) return `${name}, no puede moverse.`;
+    if (action.missed) return `${name}, falló.`;
+    if (action.healed > 0) return `${name}, recuperó ${action.healed} PS.`;
+    if (action.damage > 0) return `${name}, ${action.damage} de daño.`;
+    return action.effectiveness === 0 ? `${name}, no afecta.` : `${name} usó ${action.moveName}.`;
+  });
   return [...entered.map(enteredLine), ...hits].join(" ");
 }
 

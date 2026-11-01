@@ -1,5 +1,5 @@
-import type { BattleFighterView } from "@pokemon-minigames/shared";
-import { hpTone } from "../../../game/battle";
+import type { BattleFighterView, BoostStat } from "@pokemon-minigames/shared";
+import { STATUS_LABELS, hpTone, stageLabel } from "../../../game/battle";
 import { BATTLE_TEXT } from "../../../i18n/es";
 
 /** El recuadro de un Pokémon en el escenario. Del rival, los PS van en porcentaje, como en Showdown. */
@@ -24,7 +24,13 @@ export function HpBar({ fighter, standing, percentOnly = false }: { fighter: Bat
       >
         <div className={`hp-fill hp-${tone} h-full transition-[width] duration-(--dur-fast)`} style={{ width: `${percent}%` }} />
       </div>
-      <p className="font-num text-xs font-bold tabular-nums">{percentOnly ? `${Math.round(percent)} %` : `${fighter.hp} / ${fighter.maxHp}`}</p>
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+        <p className="m-0 font-num text-xs font-bold tabular-nums">{percentOnly ? `${Math.round(percent)} %` : `${fighter.hp} / ${fighter.maxHp}`}</p>
+        {fighter.status ? <span className={`battle-status battle-status-${fighter.status}`}>{STATUS_LABELS[fighter.status]}</span> : null}
+        {Object.entries(fighter.stages).map(([stat, stage]) => (
+          <span key={stat} className="battle-status battle-status-stage">{stageLabel(stat as BoostStat, stage)}</span>
+        ))}
+      </div>
     </div>
   );
 }

@@ -2,10 +2,10 @@ import type { BattleFighterView, BattleMoveView, Seat } from "@pokemon-minigames
 import { useEffect, useRef, useState } from "react";
 import { spriteUrl } from "../../../catalog/artwork";
 import { BATTLE_MAX_TURNS } from "../../../game/durations";
-import { MOVE_COLORS, effectivenessLabel, moveLabel, turnLines } from "../../../game/battle";
+import { MOVE_COLORS, effectivenessLabel, turnLines } from "../../../game/battle";
 import { useReducedMotion } from "../../../game/motion";
 import { rivalSeat } from "../../../game/seats";
-import { BATTLE_TEXT } from "../../../i18n/es";
+import { BATTLE_TEXT, TYPE_LABELS } from "../../../i18n/es";
 import { useLastSeconds } from "../../../sound/use-last-seconds";
 import { LeaveButton } from "../LeaveButton";
 import { focusWasLost } from "../RematchPanel";
@@ -39,9 +39,12 @@ function useStrike(actions: { actor: Seat; damage: number }[] | null, key: strin
 
 const standing = (team: BattleFighterView[]): number => team.filter((one) => one.hp > 0).length;
 
-function moveNote(one: BattleMoveView): string {
-  if (one.move === "recuperar") return one.used ? BATTLE_TEXT.usedNote : BATTLE_TEXT.healNote;
-  return effectivenessLabel(one.effectiveness);
+const moveNote = (one: BattleMoveView): string => one.effect && one.category === "status" ? one.effect : effectivenessLabel(one.effectiveness);
+
+function moveFacts(one: BattleMoveView): string {
+  const type = one.type ? TYPE_LABELS[one.type] : "";
+  const label = type ? `${type.charAt(0).toUpperCase()}${type.slice(1)}` : "";
+  return [label, one.power ?? BATTLE_TEXT.noRoll, one.accuracy === null ? BATTLE_TEXT.noRoll : `${one.accuracy} %`].filter((part) => part !== "").join(" · ");
 }
 
 /** El combate con el aspecto de Showdown: tu Pokémon de espaldas abajo, el rival de frente arriba, y sin reloj para elegir. */
@@ -54,6 +57,7 @@ export function BattleScreen() {
   const current = last && battle && last.round === battle.round && last.turn === battle.turn ? last : null;
   const strike = useStrike(current?.actions ?? null, current ? `${current.round}-${current.turn}` : null);
   const movesRef = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<"mine" | "theirs" | null>(null);
   const choosing = battle?.choosing ?? false;
   // Se llega pulsando «Confirmar», más abajo: en el móvil el escenario quedaría cortado.
   useEffect(() => {
@@ -83,7 +87,8 @@ export function BattleScreen() {
   };
   // El K.O. sale cuando acaba el golpe que lo causó.
   const knockedOut = view.lastRoundEnd?.round === battle.round && strike === null;
-  const lines = [...view.battleLog].reverse().flatMap((entry) => turnLines(entry.actions, entry.names, entry.entered).map((line, index) => ({ key: `${entry.round}-${entry.turn}-${index}`, line })));
+  const lines = [...view.battleLog].reverse().flatMap((entry) => turnLines(entry.actions, entry.names, entry).map((line, index) => ({ key: `${entry.round}-${entry.turn}-${index}`, line })));
+  const tipAbility = (tip === "mine" ? mine : tip === "theirs" ? theirs : undefined)?.ability ?? null;
   const prompt = !choosing ? BATTLE_TEXT.resolving : battle.rivalIdle ? BATTLE_TEXT.rivalSlow(rivalName) : battle.confirmed ? BATTLE_TEXT.waitingFor(rivalName) : mine ? BATTLE_TEXT.whatDoes(mine.pokemon.names.es) : "";
 
   return (
@@ -91,8 +96,8 @@ export function BattleScreen() {
       <div className="flex min-w-0 flex-col gap-2 lg:gap-3">
         <div data-arena className="battle-arena relative h-64 overflow-hidden rounded-xl bg-[#1b1147] sm:aspect-video sm:h-auto lg:aspect-auto lg:h-[30rem]">
           <img src={`/auction/combate-${battle.scene}.png`} alt="" className="absolute inset-0 size-full object-cover [image-rendering:pixelated]" />
-          {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} side="front" effect={effectOf(rival)} /> : null}
-          {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} side="back" effect={effectOf(mySeat)} /> : null}
+          {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} side="front" effect={effectOf(rival)} showsAbility={theirs.ability !== null} onAbility={(open) => setTip(open ? "theirs" : null)} /> : null}
+          {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} side="back" effect={effectOf(mySeat)} showsAbility={mine.ability !== null} onAbility={(open) => setTip(open ? "mine" : null)} /> : null}
           {theirs ? (
             <div className="absolute top-1.5 left-1.5 w-44 lg:top-4 lg:left-4 lg:w-72">
               <HpBar fighter={theirs} standing={standing(battle.rivalTeam)} percentOnly />
@@ -104,6 +109,12 @@ export function BattleScreen() {
             </div>
           ) : null}
           <p className="font-pixel absolute top-1.5 right-1.5 m-0 rounded-md bg-[#1b1147] px-2 py-1 text-sm font-bold text-white lg:top-4 lg:right-4 lg:text-lg">{BATTLE_TEXT.roundLabel(battle.round, battle.turn, BATTLE_MAX_TURNS)}</p>
+          {tipAbility ? (
+            <div role="tooltip" className="battle-tip">
+              <b className="block font-display">{tipAbility.name}</b>
+              {tipAbility.description}
+            </div>
+          ) : null}
           {knockedOut ? <p className="battle-ko font-pixel absolute inset-0 m-0 flex items-center justify-center text-6xl font-bold text-[#ffcb05] [text-shadow:0_4px_0_#1b1147] lg:text-8xl">K.O.</p> : null}
           {battle.warningUntil !== null ? <InactivityWarning until={battle.warningUntil} offset={view.clockOffset} onStillHere={() => client.stillHere(battle.stepId)} /> : null}
         </div>
@@ -113,11 +124,13 @@ export function BattleScreen() {
           {choosing ? (
             <div ref={movesRef} className="grid grid-cols-2 gap-1.5 lg:grid-cols-4 lg:gap-2">
               {battle.moves.map((one) => {
-                const [color, edge] = MOVE_COLORS[one.move];
+                const [color, edge] = MOVE_COLORS[one.type ?? "forcejeo"];
                 return (
-                  <button key={one.move} type="button" className="battle-move" style={{ background: color, boxShadow: `0 3px 0 ${edge}` }} aria-pressed={battle.myMove === one.move} disabled={one.used} onClick={() => client.move(one.move)}>
-                    {moveLabel(one.move)}{" "}
-                    <span className="block font-sans text-xs font-extrabold">{moveNote(one)}</span>
+                  <button key={one.move} type="button" className="battle-move" style={{ background: color, boxShadow: `0 3px 0 ${edge}` }} aria-pressed={battle.myMove === one.move} disabled={one.pp <= 0} onClick={() => client.move(one.move)}>
+                    {one.name}{" "}
+                    <span className="block font-sans text-xs font-bold">{moveFacts(one)}</span>{" "}
+                    <span className="block font-sans text-xs font-extrabold">{moveNote(one)}</span>{" "}
+                    <span className="block font-num text-xs font-bold">PP {one.pp}/{one.maxPp}</span>
                   </button>
                 );
               })}
