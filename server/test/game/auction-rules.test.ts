@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { bidCap, combatHp, damage, drawLots, moveCategory, movesFor, startingPrice } from "../../src/game/auction/rules.js";
+import { bidCap, combatHp, damage, drawLots, startingPrice } from "../../src/game/auction/rules.js";
 import { type AuctionPokemon, STRATEGIES, openingBid, seededRng, simulateGame } from "../../src/game/auction/simulation.js";
 
 const { pokemon: raw } = JSON.parse(readFileSync(new URL("../../data/pokedex.snapshot.json", import.meta.url), "utf8")) as { pokemon: AuctionPokemon[] };
@@ -29,18 +29,7 @@ describe("fórmulas", () => {
     expect(damage({ power: 30, attack: 80, defense: 80, effectiveness: 0, critical: true })).toBe(0);
   });
 
-  it("físico o especial según el tipo, con la regla clásica", () => {
-    for (const type of ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel"] as const) expect(moveCategory(type)).toBe("physical");
-    for (const type of ["fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy"] as const) expect(moveCategory(type)).toBe("special");
-  });
-
-  it("un ataque por tipo, y Forcejeo siempre", () => {
-    expect(movesFor(["fire", "flying"]).map((move) => move.name)).toEqual(["fire", "flying", "forcejeo"]);
-    expect(movesFor(["normal"]).map((move) => move.name)).toEqual(["normal", "forcejeo"]);
-    expect(movesFor(["normal"]).find((move) => move.name === "forcejeo")).toMatchObject({ type: null, power: 20, category: "physical" });
-  });
-
-  it("el precio inicial va de ±20 % y redondeado a miles", () => {
+it("el precio inicial va de ±20 % y redondeado a miles", () => {
     expect(startingPrice(500, fixedRng(0))).toBe(120_000);
     expect(startingPrice(500, fixedRng(40))).toBe(180_000);
     expect(startingPrice(500, fixedRng(20))).toBe(150_000);

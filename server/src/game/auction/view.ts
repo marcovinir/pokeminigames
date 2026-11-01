@@ -1,8 +1,10 @@
-import type { AuctionLotView, BattleFighterView, BattleView, GameEndedPayload, PokemonView, RoomPlayerView, RoomStateView, Seat } from "@pokemon-minigames/shared";
+import type { AuctionLotView, BattleFighterView, BattleMoveView, BattleView, GameEndedPayload, PokemonView, RoomPlayerView, RoomStateView, Seat } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../../catalog/pokemon-catalog.js";
 import { SEATS, otherSeat } from "../engine/types.js";
 import { toPokemonView } from "../engine/view.js";
-import { type Fighter, moveEffectiveness, movesOf } from "./combat.js";
+import { ABILITY_TEXT } from "./abilities.js";
+import { type Fighter, STRUGGLE, availableMoves, moveData, moveEffectiveness } from "./combat.js";
+import { getMoveBook } from "./move-book.js";
 import { bidCap } from "./rules.js";
 import type { AuctionState } from "./types.js";
 
@@ -13,8 +15,45 @@ function limitOf(state: AuctionState, seat: Seat): number {
 /** Lo máximo que puede pujar un jugador por el lote abierto. */
 export const auctionLimit = limitOf;
 
+function abilityView(id: string | null): BattleFighterView["ability"] {
+  if (!id) return null;
+  const description = ABILITY_TEXT[id];
+  return { id, name: getMoveBook().abilities[id]?.es ?? id, description: description ?? "Sin efecto en este juego.", active: description !== undefined };
+}
+
+/** Qué hace además de su daño, en palabras. */
+function effectText(id: string): string | null {
+  const effect = moveData(id)?.effect;
+  if (!effect) return null;
+  if (effect.healing) return `Cura el ${effect.healing} % de sus PS`;
+  if (effect.ailment) return { burn: "Puede quemar", paralysis: "Puede paralizar", poison: "Puede envenenar", sleep: "Duerme al rival" }[effect.ailment];
+  if (effect.stats?.length) return effect.stats.every((one) => one.target === "user") ? (effect.stats.every((one) => one.change > 0) ? "Sube sus stats" : "Baja sus stats") : "Baja los stats del rival";
+  return null;
+}
+
+function moveViews(mine: Fighter, rival: Fighter | undefined): BattleMoveView[] {
+  const available = availableMoves(mine);
+  const slots = available[0] === STRUGGLE ? [{ id: STRUGGLE, pp: 1 }] : mine.moves;
+  return slots.map(({ id, pp }) => {
+    const move = moveData(id)!;
+    return {
+      move: id,
+      name: move.names.es,
+      type: id === STRUGGLE ? null : move.type,
+      category: move.category,
+      power: move.power,
+      accuracy: move.accuracy,
+      pp,
+      maxPp: move.pp,
+      effectiveness: rival && move.category !== "status" ? moveEffectiveness(id, rival) : null,
+      effect: effectText(id),
+    };
+  });
+}
+
 function fighterView(fighter: Fighter, catalog: PokemonCatalog): BattleFighterView {
-  return { pokemon: toPokemonView(catalog.get(fighter.pokemon.id)!), hp: fighter.hp, maxHp: fighter.maxHp };
+  const stages = Object.fromEntries(Object.entries(fighter.stages).filter(([, stage]) => stage !== 0));
+  return { pokemon: toPokemonView(catalog.get(fighter.pokemon.id)!), hp: fighter.hp, maxHp: fighter.maxHp, ability: abilityView(fighter.ability), status: fighter.status, stages };
 }
 
 /** El combate para un jugador: de lo que el rival está decidiendo no va nada, ni si ya decidió. */
@@ -51,11 +90,7 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
     rivalTitular: rivalFighter?.pokemon.id ?? null,
     moves:
       mine && inFight && battle.choosing
-        ? movesOf(mine).map((move) => ({
-            move,
-            effectiveness: rivalFighter ? moveEffectiveness(move, rivalFighter) : null,
-            used: move === "recuperar" && battle.healed[seat],
-          }))
+        ? moveViews(mine, rivalFighter)
         : [],
   };
 }

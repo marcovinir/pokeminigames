@@ -1,4 +1,4 @@
-import type { AuctionConfig, AuctionRevealEntry, AuctionScene, BattleMove, GamePhase, PauseChoice, Seat } from "@pokemon-minigames/shared";
+import type { AuctionConfig, AuctionRevealEntry, AuctionScene, BattleMove, BattleNote, GamePhase, PauseChoice, Seat } from "@pokemon-minigames/shared";
 import type { PokemonCatalog } from "../../catalog/pokemon-catalog.js";
 import type { GameOutcome, PlayerState } from "../engine/types.js";
 import type { Rng } from "../rng.js";
@@ -50,7 +50,10 @@ export interface AuctionBattle {
   moves: Partial<Record<Seat, BattleMove>>;
   switches: Partial<Record<Seat, number>>;
   pauses: Partial<Record<Seat, PauseChoice>>;
-  healed: Record<Seat, boolean>;
+  /** Lo que pasó al salir a pelear: va con el turno siguiente. */
+  entryNotes: BattleNote[];
+  /** Quién perdió el último asalto: decide si los dos se quedan sin Pokémon a la vez. */
+  lastLoser: Seat | null;
   deadline: number | null;
   step: number;
   /** Se está eligiendo movimiento, sin reloj. */

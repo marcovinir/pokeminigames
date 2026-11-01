@@ -61,8 +61,17 @@ export interface AuctionSalePayload {
   paid: number;
 }
 
-/** Un movimiento: el ataque de un tipo, Forcejeo (sin tipo) o Recuperar. */
-export type BattleMove = TypeName | "forcejeo" | "recuperar";
+/** El identificador de un movimiento real, o `forcejeo` si ya no quedan PP. */
+export type BattleMove = string;
+
+/** Algo que pasó además del golpe, para el registro. */
+export type BattleNote =
+  | { kind: "status"; seat: Seat; status: Status }
+  | { kind: "stat"; seat: Seat; stat: BoostStat; change: number }
+  | { kind: "ability"; seat: Seat; ability: string }
+  | { kind: "recoil"; seat: Seat; damage: number }
+  | { kind: "residual"; seat: Seat; cause: "burn" | "poison"; damage: number }
+  | { kind: "no_effect"; seat: Seat };
 
 export type Status = "burn" | "paralysis" | "poison" | "sleep";
 export type BoostStat = "attack" | "defense" | "spAttack" | "spDefense" | "speed";
@@ -98,26 +107,43 @@ export interface BattleSwitch {
 export interface BattleAction {
   actor: Seat;
   move: BattleMove;
+  moveName: string;
   damage: number;
   critical: boolean;
   effectiveness: number;
   healed: number;
   actorHp: number;
   targetHp: number;
+  missed: boolean;
+  /** No pudo actuar. */
+  blocked: "sleep" | "paralysis" | null;
+  notes: BattleNote[];
 }
 
 export interface BattleFighterView {
   pokemon: PokemonView;
   hp: number;
   maxHp: number;
+  /** Con `active` falso se muestra sin efecto. */
+  ability: { id: string; name: string; description: string; active: boolean } | null;
+  status: Status | null;
+  stages: Partial<Record<BoostStat, number>>;
 }
 
 export interface BattleMoveView {
   move: BattleMove;
-  /** Contra el titular rival; nula hasta que se sabe quién es. */
+  name: string;
+  /** Nulo en Forcejeo, que no tiene tipo. */
+  type: TypeName | null;
+  category: "physical" | "special" | "status";
+  power: number | null;
+  accuracy: number | null;
+  pp: number;
+  maxPp: number;
+  /** Contra el titular rival; nula hasta que se sabe quién es, o si no hace daño. */
   effectiveness: number | null;
-  /** Recuperar ya se usó en este asalto. */
-  used: boolean;
+  /** Qué hace además, en una frase; nula si solo hace daño. */
+  effect: string | null;
 }
 
 /**
