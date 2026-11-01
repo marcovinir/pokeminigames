@@ -26,14 +26,23 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
   const mineId = battle.titular[seat];
   const mine = battle.fighters[seat].find((fighter) => fighter.pokemon.id === mineId);
   const rivalFighter = inFight ? battle.fighters[rival].find((fighter) => fighter.pokemon.id === battle.titular[rival]) : undefined;
-  const confirmed = state.phase === "reveal" ? state.readyForBattle.includes(seat) : state.phase === "lineup" ? battle.lineups[seat] !== undefined : state.phase === "battle_pause" ? battle.pauses[seat] !== undefined : battle.moves[seat] !== undefined;
+  const chosen = battle.moves[seat] !== undefined || battle.switches[seat] !== undefined;
+  const confirmed = state.phase === "reveal" ? state.readyForBattle.includes(seat) : state.phase === "lineup" ? battle.lineups[seat] !== undefined : state.phase === "battle_pause" ? battle.pauses[seat] !== undefined : chosen;
   return {
     round: battle.round,
     turn: battle.turn,
-    deadline: battle.deadline,
+    scene: battle.scene,
+    // Elegir movimiento no tiene reloj: su plazo es solo cuándo se avisa.
+    deadline: inFight ? null : battle.deadline,
+    choosing: inFight && battle.choosing,
+    stepId: battle.step,
+    warningUntil: inFight && battle.choosing ? battle.idle[seat].warningUntil : null,
+    // Solo a quien ya eligió: a los demás les diría si el rival eligió.
+    rivalIdle: inFight && battle.choosing && chosen && battle.idle[rival].warningUntil !== null,
     confirmed,
     myLineup: state.phase === "lineup" ? structuredClone(battle.lineups[seat] ?? null) : null,
     myMove: battle.moves[seat] ?? null,
+    mySwitch: battle.switches[seat] ?? null,
     myPause: state.phase === "battle_pause" ? structuredClone(battle.pauses[seat] ?? null) : null,
     myTeam: battle.fighters[seat].map((fighter) => fighterView(fighter, catalog)),
     // En orden de compra: su alineación diría quién es su reserva.
@@ -41,7 +50,7 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
     myTitular: mineId,
     rivalTitular: rivalFighter?.pokemon.id ?? null,
     moves:
-      mine && inFight && battle.deadline !== null
+      mine && inFight && battle.choosing
         ? movesOf(mine).map((move) => ({
             move,
             effectiveness: rivalFighter ? moveEffectiveness(move, rivalFighter) : null,

@@ -2,14 +2,17 @@ import type { BattleFighterView } from "@pokemon-minigames/shared";
 import { hpTone } from "../../../game/battle";
 import { BATTLE_TEXT } from "../../../i18n/es";
 
-/** La barra de vida con su nombre y sus PS. `reverse` hace que baje hacia el centro en el lado del rival. */
-export function HpBar({ fighter, reverse = false }: { fighter: BattleFighterView; reverse?: boolean }) {
+/** El recuadro de un Pokémon en el escenario. Del rival, los PS van en porcentaje, como en Showdown. */
+export function HpBar({ fighter, standing, percentOnly = false }: { fighter: BattleFighterView; standing?: number; percentOnly?: boolean }) {
   const name = fighter.pokemon.names.es;
   const percent = Math.max(0, Math.min(100, (fighter.hp / fighter.maxHp) * 100));
   const tone = hpTone(fighter.hp, fighter.maxHp);
   return (
-    <div className="min-w-0">
-      <p className="truncate text-sm font-semibold">{name}</p>
+    <div className="battle-hud">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="min-w-0 truncate font-display text-sm font-semibold lg:text-lg">{name}</p>
+        {standing === undefined ? null : <span className="flex-none text-xs font-extrabold">{BATTLE_TEXT.stillStanding(standing)}</span>}
+      </div>
       <div
         role="meter"
         aria-label={BATTLE_TEXT.hpOf(name)}
@@ -17,13 +20,11 @@ export function HpBar({ fighter, reverse = false }: { fighter: BattleFighterView
         aria-valuemax={fighter.maxHp}
         aria-valuenow={fighter.hp}
         data-tone={tone}
-        className="framed mt-1 h-3 overflow-hidden rounded-pill bg-surface-2"
+        className="mt-1 h-2.5 overflow-hidden rounded-pill bg-[#e5e3f2]"
       >
-        <div className={`hp-fill hp-${tone} h-full transition-[width] duration-(--dur-fast) ${reverse ? "ml-auto" : ""}`} style={{ width: `${percent}%` }} />
+        <div className={`hp-fill hp-${tone} h-full transition-[width] duration-(--dur-fast)`} style={{ width: `${percent}%` }} />
       </div>
-      <p className="mt-0.5 font-num text-xs tabular-nums text-muted">
-        {fighter.hp} / {fighter.maxHp}
-      </p>
+      <p className="font-num text-xs font-bold tabular-nums">{percentOnly ? `${Math.round(percent)} %` : `${fighter.hp} / ${fighter.maxHp}`}</p>
     </div>
   );
 }

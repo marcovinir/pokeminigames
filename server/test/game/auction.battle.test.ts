@@ -130,9 +130,9 @@ describe("revelación y alineación", () => {
 });
 
 describe("turnos", () => {
-  it("se elige en 8 s; si el rival ya eligió no se dice, y se resuelve en cuanto eligen los dos", () => {
+  it("se elige sin reloj; si el rival ya eligió no se dice, y se resuelve en cuanto eligen los dos", () => {
     const h = toBattle();
-    expect(battle(h, 1).deadline).toBe(h.now + 8000);
+    expect(battle(h, 1)).toMatchObject({ deadline: null, choosing: true, warningUntil: null });
     const before = JSON.stringify(h.view(2));
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     expect(battle(h, 1).confirmed).toBe(true);
@@ -152,11 +152,11 @@ describe("turnos", () => {
     }
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
-    expect(battle(h, 1).deadline).toBeNull();
+    expect(battle(h, 1).choosing).toBe(false);
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
     expect(h.errorCodes(1)).toEqual(["WRONG_PHASE"]);
     h.advance(3000);
-    expect(battle(h, 1)).toMatchObject({ turn: 2, confirmed: false, deadline: h.now + 8000 });
+    expect(battle(h, 1)).toMatchObject({ turn: 2, confirmed: false, choosing: true });
   });
 
   it("quien no elige usa el más efectivo; un temporizador viejo no hace nada", () => {
@@ -166,14 +166,14 @@ describe("turnos", () => {
       fighter.maxHp = 5000;
     }
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
-    h.advance(7000);
+    h.advance(59_000);
     expect(h.payloads("battle-turn")).toEqual([]);
     h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(h.payloads("battle-turn")).toHaveLength(1);
     // El temporizador del turno 1 vence durante la animación: no cierra nada.
     h.advance(3000);
     expect(battle(h, 1).turn).toBe(2);
-    h.advance(7999);
+    h.advance(74_999);
     expect(h.payloads("battle-turn")).toHaveLength(1);
     h.advance(1);
     expect(h.payloads("battle-turn")).toHaveLength(2);
@@ -307,7 +307,10 @@ describe("desconexiones", () => {
     const h = toBattle();
     h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
     h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
-    h.advance(8000);
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(50_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
+    h.advance(25_000);
     expect(h.payloads("battle-turn")).toHaveLength(1);
     expect(h.state.outcome).toBeNull();
   });
@@ -407,7 +410,7 @@ describe("recargar tras decidir", () => {
     const h = toBattle();
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
     h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
-    expect(battle(h, 1).deadline).toBeNull();
+    expect(battle(h, 1).choosing).toBe(false);
     expect(battle(h, 1).moves).toEqual([]);
   });
 });
@@ -504,5 +507,244 @@ describe("volver recargando con el rival ya vencido", () => {
     const endedAt = effects.findIndex((one) => one.kind === "emit" && one.event.name === "game-ended");
     expect(stateAt).toBeGreaterThanOrEqual(0);
     expect(stateAt).toBeLessThan(endedAt);
+  });
+});
+
+/** Con mucha vida: nadie cae por accidente en estas pruebas. */
+function sturdy(h: AuctionHarness): AuctionHarness {
+  for (const fighter of h.state.battle!.fighters[1].concat(h.state.battle!.fighters[2])) {
+    fighter.hp = 5000;
+    fighter.maxHp = 5000;
+  }
+  return h;
+}
+
+describe("sin reloj para elegir", () => {
+  it("a los 60 s avisa solo a quien no eligió, y el otro sabe que espera", () => {
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.advance(59_999);
+    expect(battle(h, 2).warningUntil).toBeNull();
+    h.advance(1);
+    expect(battle(h, 2).warningUntil).toBe(h.now + 15_000);
+    expect(battle(h, 2).rivalIdle).toBe(false);
+    expect(battle(h, 1).warningUntil).toBeNull();
+    expect(battle(h, 1).rivalIdle).toBe(true);
+  });
+
+  it("quien aún elige no sabe si el rival ya eligió: también a él solo le sale su aviso", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    for (const seat of [1, 2] as const) expect(battle(h, seat)).toMatchObject({ warningUntil: h.now + 15_000, rivalIdle: false });
+  });
+
+  it("cada uno tiene su aviso: si el rival responde, a mí no me llega nada ni cambia lo que veo", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    const before = JSON.stringify(h.view(1));
+    const effects = h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    expect(effects.filter((one) => one.kind === "send_state" || one.kind === "emit")).toEqual([{ kind: "send_state", to: 2 }]);
+    expect(JSON.stringify(h.view(1))).toBe(before);
+    expect(battle(h, 2).warningUntil).toBeNull();
+  });
+
+  it("agotar mis respuestas no gasta las del rival", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 1, turnId: battle(h, 1).stepId });
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    h.dispatch({ type: "STILL_HERE", seat: 1, turnId: battle(h, 1).stepId });
+    expect(h.errorCodes(1)).toEqual([]);
+    expect(h.errorCodes(2)).toEqual([]);
+  });
+
+  it("si a uno se le acaba el aviso, juega solo él: el otro conserva su tiempo y puede elegir", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    h.advance(15_000);
+    expect(h.payloads("battle-turn")).toEqual([]);
+    expect(battle(h, 1).confirmed).toBe(true);
+    expect(battle(h, 2).confirmed).toBe(false);
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(h.payloads("battle-turn")).toHaveLength(1);
+  });
+
+  it("sin responder al aviso juega su mejor ataque, y sigue otro turno", () => {
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.advance(74_999);
+    expect(h.payloads("battle-turn")).toEqual([]);
+    h.advance(1);
+    const [turn] = h.payloads("battle-turn");
+    expect(turn!.actions.find((one) => one.actor === 2)!.move).not.toBe("recuperar");
+    h.advance(3000);
+    expect(battle(h, 1)).toMatchObject({ turn: 2, warningUntil: null, choosing: true });
+  });
+
+  it("«Sigo aquí» vuelve a dar 60 s, como mucho dos veces en un turno", () => {
+    const h = sturdy(toBattle());
+    for (const answer of [1, 2]) {
+      h.advance(60_000);
+      const { stepId, warningUntil } = battle(h, 1);
+      expect(warningUntil, `aviso ${answer}`).toBe(h.now + 15_000);
+      h.dispatch({ type: "STILL_HERE", seat: 1, turnId: stepId });
+      expect(battle(h, 1).warningUntil).toBeNull();
+    }
+    h.advance(59_999);
+    expect(h.payloads("battle-turn")).toEqual([]);
+    h.advance(1);
+    expect(h.payloads("battle-turn")).toHaveLength(1);
+  });
+
+  it("el temporizador del aviso respondido ya no vale", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 1, turnId: battle(h, 1).stepId });
+    h.advance(15_000);
+    expect(h.payloads("battle-turn")).toEqual([]);
+    expect(battle(h, 1).warningUntil).toBeNull();
+  });
+
+  it("«Sigo aquí» de otro paso, o de quien ya eligió, no vale", () => {
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.advance(60_000);
+    const { stepId } = battle(h, 2);
+    h.dispatch({ type: "STILL_HERE", seat: 1, turnId: stepId });
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: stepId - 1 });
+    expect(h.errorCodes(1)).toEqual(["NOT_YOUR_TURN"]);
+    expect(h.errorCodes(2)).toEqual(["NOT_YOUR_TURN"]);
+    expect(battle(h, 2).warningUntil).not.toBeNull();
+  });
+
+  it("elegir durante el aviso resuelve el turno", () => {
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.advance(60_000);
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(h.payloads("battle-turn")).toHaveLength(1);
+  });
+
+  it("recargar no alarga el turno", () => {
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.advance(59_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(1000);
+    expect(battle(h, 1).warningUntil).toBe(h.now + 15_000);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    h.advance(15_000);
+    expect(h.payloads("battle-turn")).toHaveLength(1);
+  });
+});
+
+describe("cambiar de Pokémon", () => {
+  const reserve = (h: AuctionHarness, seat: Seat): number => h.state.battle!.fighters[seat].find((one) => one.pokemon.id !== h.state.battle!.titular[seat] && one.hp > 0)!.pokemon.id;
+
+  it("gasta el turno: entra primero, recibe el golpe del rival y no ataca", () => {
+    const h = sturdy(toBattle());
+    const before = h.state.battle!.titular[1];
+    const next = reserve(h, 1);
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(h.state.battle!.titular[1]).toBe(next);
+    const [turn] = h.payloads("battle-turn");
+    expect(turn!.switches).toEqual([{ seat: 1, pokemonId: next }]);
+    expect(turn!.actions.map((one) => one.actor)).toEqual([2]);
+    const fighters = h.state.battle!.fighters[1];
+    expect(fighters.find((one) => one.pokemon.id === next)!.hp).toBeLessThan(5000);
+    expect(fighters.find((one) => one.pokemon.id === before)!.hp).toBe(5000);
+  });
+
+  it("el rival no sabe nada hasta que se resuelve", () => {
+    const h = sturdy(toBattle());
+    const before = JSON.stringify(h.view(2));
+    const effects = h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: reserve(h, 1) });
+    expect(effects.filter((one) => one.kind === "send_state" || one.kind === "emit")).toEqual([{ kind: "send_state", to: 1 }]);
+    expect(JSON.stringify(h.view(2))).toBe(before);
+  });
+
+  it("quien cambia lo ve al recargar, y lo último que elige es lo que vale", () => {
+    const h = sturdy(toBattle());
+    const next = reserve(h, 1);
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
+    expect(battle(h, 1)).toMatchObject({ mySwitch: next, myMove: null, confirmed: true });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    expect(battle(h, 1)).toMatchObject({ mySwitch: null, myMove: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
+    expect(battle(h, 1)).toMatchObject({ mySwitch: next, myMove: null });
+  });
+
+  it("si cambian los dos no hay golpes, y sigue otro turno", () => {
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: reserve(h, 1) });
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 2, pokemonId: reserve(h, 2) });
+    const [turn] = h.payloads("battle-turn");
+    expect(turn!.actions).toEqual([]);
+    expect(turn!.switches).toHaveLength(2);
+    h.advance(3000);
+    expect(battle(h, 1)).toMatchObject({ turn: 2, choosing: true, mySwitch: null });
+  });
+
+  it("si el que entra cae con el golpe, termina el asalto", () => {
+    const h = sturdy(toBattle());
+    const next = reserve(h, 1);
+    const entering = h.state.battle!.fighters[1].find((one) => one.pokemon.id === next)!;
+    entering.hp = 1;
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(h.payloads("battle-round-ended")[0]).toMatchObject({ loser: 1, atLimit: false });
+  });
+
+  it("rechaza al que ya pelea, a un debilitado, a uno ajeno y la basura", () => {
+    const h = sturdy(toBattle());
+    const fallen = h.state.battle!.fighters[1].find((one) => one.pokemon.id !== h.state.battle!.titular[1])!;
+    fallen.hp = 0;
+    for (const pokemonId of [h.state.battle!.titular[1]!, fallen.pokemon.id, h.state.teams[2][0]!, "x" as unknown as number]) h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId });
+    expect(h.errorCodes(1)).toEqual(Array(4).fill("INVALID_CHOICE"));
+    expect(battle(h, 1).confirmed).toBe(false);
+  });
+
+  it("no se puede fuera de elegir: ni en la alineación ni mientras se anima", () => {
+    const early = toLineup();
+    early.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: early.state.teams[1][1]! });
+    expect(early.errorCodes(1)).toEqual(["WRONG_PHASE"]);
+    const h = sturdy(toBattle());
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: reserve(h, 1) });
+    expect(h.errorCodes(1)).toEqual(["WRONG_PHASE"]);
+  });
+
+  it("cambiar sin parar no alarga el asalto: lo cierra el límite de turnos", () => {
+    const h = sturdy(toBattle());
+    for (let turn = 0; turn < 20; turn++) {
+      h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: reserve(h, 1) });
+      h.dispatch({ type: "CHOOSE_SWITCH", seat: 2, pokemonId: reserve(h, 2) });
+      h.advance(3000);
+    }
+    expect(h.payloads("battle-round-ended")[0]).toMatchObject({ round: 1, atLimit: true });
+    expect(h.state.phase).toBe("battle_pause");
+  });
+});
+
+describe("el escenario", () => {
+  it("se sortea uno por combate: los dos ven el mismo y no cambia entre asaltos", () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const h = toPause(seed);
+      const scene = battle(h, 1).scene;
+      expect(["bosque", "volcan", "playa", "noche"]).toContain(scene);
+      expect(battle(h, 2).scene).toBe(scene);
+      h.advance(15_000);
+      expect(battle(h, 1).scene).toBe(scene);
+      seen.add(scene);
+    }
+    expect(seen.size).toBeGreaterThan(1);
   });
 });

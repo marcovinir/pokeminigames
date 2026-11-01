@@ -1,6 +1,6 @@
 import type { BattleAction, BattleFighterView } from "@pokemon-minigames/shared";
 import { describe, expect, it } from "vitest";
-import { battleSpriteUrl } from "../../src/catalog/artwork";
+import { battleSpriteUrl, battleStillUrl } from "../../src/catalog/artwork";
 import { aliveIds, effectivenessLabel, hpTone, moveLabel, turnLines, turnSummary } from "../../src/game/battle";
 
 const fighter = (id: number, hp: number, maxHp = 100): BattleFighterView => ({ pokemon: { id } as never, hp, maxHp });
@@ -17,15 +17,28 @@ describe("hpTone", () => {
   });
 });
 
+describe("los sprites del combate", () => {
+  it("de espaldas el propio y de frente el rival", () => {
+    expect(battleSpriteUrl(6, "back")).toMatch(/other\/showdown\/back\/6\.gif$/);
+    expect(battleStillUrl(6, "back")).toMatch(/pokemon\/back\/6\.png$/);
+    expect(battleStillUrl(6, "front")).toMatch(/pokemon\/6\.png$/);
+  });
+
+  it("sin GIF, el PNG clásico del lado que toca", () => {
+    expect(battleSpriteUrl(990, "back")).toBe(battleStillUrl(990, "back"));
+    expect(battleSpriteUrl(990, "front")).toBe(battleStillUrl(990, "front"));
+  });
+});
+
 describe("battleSpriteUrl", () => {
   it("usa el GIF animado de Showdown", () => {
-    expect(battleSpriteUrl(6)).toMatch(/other\/showdown\/6\.gif$/);
+    expect(battleSpriteUrl(6, "front")).toMatch(/other\/showdown\/6\.gif$/);
   });
 
   it("los 14 sin animación usan la imagen fija", () => {
-    for (const id of [990, 991, 992, 993, 994, 995, 1006, 1008, 1010, 1017, 1022, 1023, 1024, 1025]) expect(battleSpriteUrl(id)).not.toContain("showdown");
-    expect(battleSpriteUrl(989)).toContain("showdown");
-    expect(battleSpriteUrl(1021)).toContain("showdown");
+    for (const id of [990, 991, 992, 993, 994, 995, 1006, 1008, 1010, 1017, 1022, 1023, 1024, 1025]) expect(battleSpriteUrl(id, "front")).not.toContain("showdown");
+    expect(battleSpriteUrl(989, "front")).toContain("showdown");
+    expect(battleSpriteUrl(1021, "front")).toContain("showdown");
   });
 });
 
@@ -36,10 +49,11 @@ describe("los textos de los movimientos", () => {
     expect(moveLabel("recuperar")).toBe("Recuperar");
   });
 
-  it("la eficacia se lee con coma", () => {
-    expect(effectivenessLabel(2)).toBe("×2");
-    expect(effectivenessLabel(0.5)).toBe("×0,5");
-    expect(effectivenessLabel(0)).toBe("×0");
+  it("la eficacia se dice en palabras", () => {
+    expect(effectivenessLabel(2)).toBe("Muy eficaz");
+    expect(effectivenessLabel(1)).toBe("Normal");
+    expect(effectivenessLabel(0.5)).toBe("Poco eficaz");
+    expect(effectivenessLabel(0)).toBe("No afecta");
     expect(effectivenessLabel(null)).toBe("");
   });
 });

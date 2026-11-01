@@ -26,6 +26,7 @@ export interface GameClientApi {
   ready(): void;
   lineup(order: number[]): void;
   move(move: BattleMove): void;
+  switchTo(pokemonId: number): void;
   pauseConfirm(choice: PauseChoice): void;
   /** Sale de la sala: cancela la espera o abandona la partida. */
   leave(): void;
@@ -131,6 +132,10 @@ export class GameClient implements GameClientApi {
 
   move(move: BattleMove): void {
     this.socket?.emit("auction-move", { move });
+  }
+
+  switchTo(pokemonId: number): void {
+    this.socket?.emit("auction-switch", { pokemonId });
   }
 
   pauseConfirm(choice: PauseChoice): void {

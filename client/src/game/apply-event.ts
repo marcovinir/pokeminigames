@@ -1,6 +1,7 @@
 import type {
   AuctionSalePayload,
   BattleAction,
+  BattleSwitch,
   AuctionStateView,
   ErrorCode,
   GameEndedPayload,
@@ -101,15 +102,21 @@ export interface BattleLogEntry {
   turn: number;
   actions: BattleAction[];
   names: Record<Seat, string>;
+  /** Quiénes entraron a pelear en este turno. */
+  entered: string[];
 }
 
 const BATTLE_LOG_MAX = 30;
 
 /** Quiénes pelean ahora mismo: el `room-state` con los PS nuevos llega después del `battle-turn`. */
-function fightingNames(view: GameView): Record<Seat, string> {
+function fightingNames(view: GameView, switches: BattleSwitch[]): Record<Seat, string> {
   const battle = view.auction?.battle;
-  const mine = battle?.myTeam.find((one) => one.pokemon.id === battle.myTitular)?.pokemon.names.es ?? "Tu Pokémon";
-  const theirs = battle?.rivalTeam.find((one) => one.pokemon.id === battle.rivalTitular)?.pokemon.names.es ?? "Rival";
+  const rivalSeat = view.mySeat === 2 ? 1 : 2;
+  const titular = (seat: Seat, fallback: number | null | undefined) => switches.find((one) => one.seat === seat)?.pokemonId ?? fallback;
+  const myId = titular(rivalSeat === 1 ? 2 : 1, battle?.myTitular);
+  const rivalId = titular(rivalSeat, battle?.rivalTitular);
+  const mine = battle?.myTeam.find((one) => one.pokemon.id === myId)?.pokemon.names.es ?? "Tu Pokémon";
+  const theirs = battle?.rivalTeam.find((one) => one.pokemon.id === rivalId)?.pokemon.names.es ?? "Rival";
   return view.mySeat === 2 ? { 1: theirs, 2: mine } : { 1: mine, 2: theirs };
 }
 
@@ -335,8 +342,9 @@ export function applyServerEvent(view: GameView, event: ServerEvent, receivedAt:
       return { ...view, lastSale: event.payload };
 
     case "battle-turn": {
-      const { round, turn, actions } = event.payload;
-      return { ...view, battleLog: [...view.battleLog, { round, turn, actions, names: fightingNames(view) }].slice(-BATTLE_LOG_MAX) };
+      const { round, turn, actions, switches = [] } = event.payload;
+      const names = fightingNames(view, switches);
+      return { ...view, battleLog: [...view.battleLog, { round, turn, actions, names, entered: switches.map((one) => names[one.seat]) }].slice(-BATTLE_LOG_MAX) };
     }
 
     case "battle-round-ended":

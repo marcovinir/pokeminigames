@@ -158,6 +158,12 @@ describe("el combate por sockets", () => {
     }
   });
 
+  it("rechaza un cambio mal formado", async () => {
+    const { current } = await startAuction();
+    current.emit("auction-switch" as never, { pokemonId: "x" } as never);
+    expect(await current.next("error")).toMatchObject({ code: "VALIDATION_ERROR" });
+  });
+
   it("la revancha empieza de cero y conserva las siluetas trampa", async () => {
     const { current, other } = await startAuction();
     advanceUntil("finished");

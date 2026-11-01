@@ -90,7 +90,7 @@ function announcement(view: GameView): string {
         return BATTLE_TEXT.roundVersus(battle.round, nameIn(battle.myTeam, battle.myTitular), nameIn(battle.rivalTeam, battle.rivalTitular));
       }
       // Con el asalto y el turno delante, dos turnos con el mismo daño también se anuncian.
-      const news = BATTLE_TEXT.turnNews(last.round, last.turn, turnSummary(last.actions, last.names));
+      const news = BATTLE_TEXT.turnNews(last.round, last.turn, turnSummary(last.actions, last.names, last.entered));
       const end = view.lastRoundEnd?.round === battle.round ? view.lastRoundEnd : null;
       return end ? `${news} ${BATTLE_TEXT.fell(last.names[end.loser], end.atLimit)}` : news;
     }

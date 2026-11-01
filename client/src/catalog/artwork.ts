@@ -8,13 +8,21 @@ function assertPokedexNumber(id: number): void {
   if (!Number.isInteger(id) || id < 1) throw new RangeError(`Número de Pokédex inválido: ${id}`);
 }
 
-/** Los que no tienen sprite animado en Showdown: usan el arte fijo. */
+/** Los que no tienen sprite animado en Showdown: usan el PNG clásico. */
 const NO_SHOWDOWN_SPRITE: ReadonlySet<number> = new Set([990, 991, 992, 993, 994, 995, 1006, 1008, 1010, 1017, 1022, 1023, 1024, 1025]);
 
-/** El sprite del combate: animado si existe. */
-export function battleSpriteUrl(id: number): string {
+export type SpriteSide = "front" | "back";
+
+/** El sprite fijo del combate: el PNG clásico, de frente o de espaldas. Existe para todos. */
+export function battleStillUrl(id: number, side: SpriteSide): string {
   assertPokedexNumber(id);
-  return NO_SHOWDOWN_SPRITE.has(id) ? artworkUrl(id) : `${REPO}/pokemon/other/showdown/${id}.gif`;
+  return `${REPO}/pokemon/${side === "back" ? "back/" : ""}${id}.png`;
+}
+
+/** El sprite del combate: animado si existe. */
+export function battleSpriteUrl(id: number, side: SpriteSide): string {
+  assertPokedexNumber(id);
+  return NO_SHOWDOWN_SPRITE.has(id) ? battleStillUrl(id, side) : `${REPO}/pokemon/other/showdown/${side === "back" ? "back/" : ""}${id}.gif`;
 }
 
 /** El arte oficial grande (475 × 475) de un Pokémon, a partir de su número de Pokédex. */

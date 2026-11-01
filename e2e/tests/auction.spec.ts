@@ -102,6 +102,29 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
   await misty.page.reload();
   await expect(misty.page.getByRole("meter").first()).toBeVisible({ timeout: 30_000 });
 
+  // No hay reloj, y a 360 × 760 los movimientos y el equipo se alcanzan sin desplazar la página.
+  await expect(ash.page.getByRole("button", { name: /^Cambiar a/ }).first()).toBeVisible({ timeout: 15_000 });
+  await expect(ash.page.getByRole("timer")).toHaveCount(0);
+  for (const control of [ash.page.getByRole("button", { name: /^(Ataque|Forcejeo)/ }).last(), ash.page.getByRole("button", { name: /^Cambiar a/ }).last()]) {
+    const box = await control.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y + box!.height + (await ash.page.evaluate(() => window.scrollY))).toBeLessThanOrEqual(760);
+  }
+  const arena = await ash.page.locator("[data-arena]").boundingBox();
+  expect(arena!.y, "el escenario se ve entero al empezar").toBeGreaterThanOrEqual(0);
+  for (const sprite of await ash.page.locator("[data-arena] .battle-sprite").all()) {
+    const box = await sprite.boundingBox();
+    if (box) expect.soft(box.y, "el sprite cabe en el escenario").toBeGreaterThanOrEqual(arena!.y - 0.5);
+  }
+
+  // Cambiar gasta el turno: entra el elegido y el rival lo ve al resolverse.
+  const switchButton = ash.page.getByRole("button", { name: /^Cambiar a/ }).first();
+  const entering = /^Cambiar a (.+), \d+ % de PS$/.exec((await switchButton.getAttribute("aria-label")) ?? "")![1]!;
+  await switchButton.click();
+  await expect(switchButton).toHaveAttribute("aria-pressed", "true");
+  await misty.page.getByRole("button", { name: /^(Ataque|Forcejeo)/ }).first().click();
+  for (const page of pages) await expect(page.getByRole("meter", { name: `PS de ${entering}` })).toBeVisible({ timeout: 15_000 });
+
   // Se pelea hasta el final, eligiendo movimiento y titular. Recargar en la primera pausa la conserva.
   const verdict = (page: Page) => page.getByRole("heading", { name: /^(Ganaste|Perdiste)$/ });
   let reloadedInPause = false;

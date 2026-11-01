@@ -90,6 +90,7 @@ export type TimerId =
   | { kind: "result"; round: number }
   | { kind: "grace"; seat: Seat; graceEndsAt: number }
   | { kind: "idle"; turn: number; at: number }
+  | { kind: "battle_idle"; seat: Seat; step: number; at: number }
   | { kind: "auto_lot"; lot: number }
   | { kind: "battle"; step: number };
 
@@ -105,6 +106,7 @@ export type GameEvent =
   | { type: "READY"; seat: Seat }
   | { type: "CHOOSE_LINEUP"; seat: Seat; order: number[] }
   | { type: "CHOOSE_MOVE"; seat: Seat; move: BattleMove }
+  | { type: "CHOOSE_SWITCH"; seat: Seat; pokemonId: number }
   | { type: "PAUSE_CONFIRM"; seat: Seat; choice: PauseChoice }
   | { type: "LEAVE"; seat: Seat }
   | { type: "TIMER"; timer: TimerId };

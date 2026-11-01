@@ -321,8 +321,125 @@ body::before {
 /* El combate: embestida del atacante, y vibración con destello rojo que tiñe solo al Pokémon. */
 @keyframes battle-lunge {
   50% {
-    transform: translateX(var(--lunge, 24px));
+    transform: translate(var(--lunge, 48px), var(--lunge-y, -20px));
   }
+}
+@keyframes battle-enter {
+  from {
+    transform: translateY(12px) scale(0.2);
+    opacity: 0;
+    filter: brightness(4);
+  }
+  70% {
+    filter: brightness(2);
+  }
+}
+.battle-enter {
+  animation: battle-enter 450ms ease-out both;
+}
+/* Cada Pokémon sobre su plataforma del fondo. El sprite se agranda desde los pies, así que no empuja nada. */
+.battle-spot {
+  position: absolute;
+  display: flex;
+  width: 0;
+  justify-content: center;
+  align-items: flex-end;
+}
+.battle-spot-front {
+  left: 74%;
+  bottom: 25%;
+}
+.battle-spot-back {
+  left: 24%;
+  bottom: 7%;
+}
+.battle-sprite {
+  display: block;
+  max-width: none;
+  image-rendering: pixelated;
+  transform-origin: bottom center;
+}
+.battle-sprite-front {
+  transform: scale(calc(1.5 * var(--sprite-fit, 1)));
+}
+.battle-sprite-back {
+  transform: scale(calc(2 * var(--sprite-fit, 1)));
+}
+@media (min-width: 40rem) {
+  .battle-spot-front {
+    left: 71%;
+  }
+  .battle-spot-back {
+    left: 26%;
+  }
+}
+@media (min-width: 64rem) {
+  .battle-sprite-front {
+  transform: scale(calc(2.5 * var(--sprite-fit, 1)));
+  }
+  .battle-sprite-back {
+  transform: scale(calc(3.3 * var(--sprite-fit, 1)));
+  }
+}
+.battle-hud {
+  border-radius: 0.625rem;
+  background: #fff;
+  color: #1b1147;
+  padding: 0.3rem 0.5rem;
+  box-shadow: 0 3px 0 rgb(27 17 71 / 0.4);
+}
+.battle-move {
+  min-height: 3.5rem;
+  border-radius: 0.625rem;
+  color: #1b1147;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.battle-move[aria-pressed="true"] {
+  outline: 3px solid #1b1147;
+  outline-offset: 1px;
+}
+.battle-move:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.battle-team-member {
+  display: flex;
+  min-width: 0;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: #eeecf7;
+  color: #1b1147;
+  cursor: pointer;
+}
+.battle-team-member[data-active] {
+  border-color: #1b1147;
+  background: #ffcb05;
+  cursor: default;
+}
+.battle-team-member[data-fainted] {
+  background: #3a2f6b;
+  color: #fff;
+  cursor: default;
+}
+.battle-team-member[data-fainted] img {
+  filter: grayscale(1);
+}
+.battle-team-member[aria-pressed="true"] {
+  border-color: #1b1147;
+  background: #c4b5fd;
+}
+.battle-team-member:disabled:not([data-active]):not([data-fainted]) {
+  opacity: 0.6;
+  cursor: default;
 }
 @keyframes battle-shake {
   25% {
@@ -346,7 +463,8 @@ body::before {
   animation: battle-lunge 200ms ease-in-out;
 }
 .battle-lunge-left {
-  --lunge: -24px;
+  --lunge: -48px;
+  --lunge-y: 20px;
 }
 .battle-hit {
   animation: battle-shake 200ms ease-in-out 200ms, battle-tint 400ms ease-in-out 200ms;
