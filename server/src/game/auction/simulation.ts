@@ -1,7 +1,7 @@
 import { BID_STEPS, type BaseStats, type BattleMove, type TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 import { pickOne } from "../rng.js";
-import { type Fighter, bestMove, hpShare, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
+import { type Fighter, availableMoves, bestMove, bothFallenLoser, clearStages, endOfTurn, enterBattle, hpShare, moveData, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
 import {
   MAX_TURNS_PER_ROUND,
   STARTING_MONEY,
@@ -55,6 +55,7 @@ export interface SimulationResult {
   roundsAtLimit: number;
   traps: number;
   criticals: number;
+  doubleKnockouts?: number;
   /** Dinero gastado por cada jugador. */
   spent: [number, number];
 }
@@ -170,7 +171,6 @@ function runAuction(pool: readonly AuctionPokemon[], players: [Player, Player], 
 interface Side {
   fighters: Fighter[];
   titular: Fighter | null;
-  healed: boolean;
 }
 
 const alive = (side: Side) => side.fighters.filter((fighter) => fighter.hp > 0);
@@ -180,32 +180,39 @@ const totalOf = (fighter: Fighter) => (fighter.pokemon as AuctionPokemon).total;
 /** Lo que haría alguien razonable en la pausa: sacar a su mejor Pokémon si cayó el titular. */
 function prepare(side: Side): void {
   if (!side.titular || side.titular.hp <= 0) side.titular = strongest(alive(side));
-  side.healed = false;
 }
 
 function choose(me: Side, rival: Side): BattleMove {
-  if (!me.healed && hpShare(me.titular!) < HEAL_BELOW) return "recuperar";
+  const healing = availableMoves(me.titular!).find((id) => moveData(id)?.effect.healing);
+  if (healing && hpShare(me.titular!) < HEAL_BELOW) return healing;
   return bestMove(me.titular!, rival.titular!);
 }
 
 function runBattle(players: [Player, Player], options: SimulationOptions, rng: Rng, result: SimulationResult): Seat {
   const sides = players.map((player) => ({
-    fighters: player.team.map(newFighter),
+    fighters: player.team.map((one) => newFighter(one)),
     titular: null,
-    healed: false,
   })) as [Side, Side];
   for (const side of sides) side.titular = strongest(alive(side));
 
   for (;;) {
     const [a, b] = [sides[0].titular!, sides[1].titular!];
     let turns = 0;
+    clearStages(a);
+    clearStages(b);
+    enterBattle(a, b, 1);
+    enterBattle(b, a, 2);
     while (a.hp > 0 && b.hp > 0 && turns < MAX_TURNS_PER_ROUND) {
       turns++;
-      const combat = { 1: { fighter: a, healed: sides[0].healed }, 2: { fighter: b, healed: sides[1].healed } };
-      const actions = resolveTurn(combat, { 1: choose(sides[0], sides[1]), 2: choose(sides[1], sides[0]) }, rng, { criticals: options.criticals !== false });
+      const fighters = { 1: a, 2: b };
+      const actions = resolveTurn(fighters, { 1: choose(sides[0], sides[1]), 2: choose(sides[1], sides[0]) }, rng, { criticals: options.criticals !== false });
+      endOfTurn(fighters);
       result.criticals += actions.filter((action) => action.critical).length;
-      sides[0].healed = combat[1].healed;
-      sides[1].healed = combat[2].healed;
+    }
+    if (a.hp <= 0 && b.hp <= 0) {
+      // Solo uno pierde el asalto, como en el motor; el otro también queda fuera.
+      result.doubleKnockouts = (result.doubleKnockouts ?? 0) + 1;
+      if (alive(sides[0]).length === 0 && alive(sides[1]).length === 0) return bothFallenLoser({ 1: a, 2: b }, rng) === 1 ? 1 : 0;
     }
     if (a.hp > 0 && b.hp > 0) {
       result.roundsAtLimit++;

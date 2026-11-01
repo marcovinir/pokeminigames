@@ -33,7 +33,8 @@ function toBattle(seed = 1): AuctionHarness {
 }
 
 const battle = (h: AuctionHarness, seat: Seat) => h.view(seat).auction!.battle!;
-const moveOf = (h: AuctionHarness, seat: Seat) => battle(h, seat).moves.find((one) => one.move !== "recuperar")!.move;
+/** Un ataque que tenga; fuera de elegir no hay, y cualquier nombre sirve para ver que se rechaza. */
+const moveOf = (h: AuctionHarness, seat: Seat) => battle(h, seat).moves.find((one) => one.category !== "status" && one.pp > 0)?.move ?? battle(h, seat).moves.find((one) => one.pp > 0)?.move ?? "tackle";
 
 /** Elige los dos y deja pasar la animación. */
 function playTurn(h: AuctionHarness, a?: BattleMove, b?: BattleMove): void {
@@ -153,7 +154,7 @@ describe("turnos", () => {
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(battle(h, 1).choosing).toBe(false);
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     expect(h.errorCodes(1)).toEqual(["WRONG_PHASE"]);
     h.advance(3000);
     expect(battle(h, 1)).toMatchObject({ turn: 2, confirmed: false, choosing: true });
@@ -180,26 +181,104 @@ describe("turnos", () => {
     expect(battle(h, 1).turn).toBe(2);
   });
 
-  it("rechaza un movimiento que no tiene, fuera de fase, o Recuperar repetido", () => {
+  it("rechaza un movimiento que no tiene o fuera de fase", () => {
     const h = toBattle();
-    const notMine: BattleMove = battle(h, 1).moves.some((one) => one.move === "dragon") ? "fairy" : "dragon";
+    const notMine: BattleMove = "no-es-mio";
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: notMine });
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "hax" as BattleMove });
     expect(h.errorCodes(1)).toEqual(["INVALID_CHOICE", "INVALID_CHOICE"]);
     const early = toLineup();
-    early.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    early.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(early, 1) });
     expect(early.errorCodes(1)).toEqual(["WRONG_PHASE"]);
 
-    const heal = toBattle();
-    playTurn(heal, "recuperar", "recuperar");
-    expect(battle(heal, 1).moves.find((one) => one.move === "recuperar")!.used).toBe(true);
-    heal.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "recuperar" });
-    expect(heal.errorCodes(1)).toEqual(["INVALID_CHOICE"]);
   });
 
-  it("los movimientos dicen su eficacia contra el rival", () => {
+  it("cada Pokémon ofrece sus 4 movimientos con su PP, y los de ataque dicen su eficacia", () => {
     const h = toBattle();
-    for (const move of battle(h, 1).moves) expect(typeof move.effectiveness).toBe("number");
+    expect(battle(h, 1).moves).toHaveLength(4);
+    for (const move of battle(h, 1).moves) {
+      expect(move.pp).toBeGreaterThan(0);
+      if (move.category !== "status") expect(typeof move.effectiveness).toBe("number");
+    }
+  });
+
+  it("usar un movimiento baja su PP, se conserva al recargar y sin PP se rechaza", () => {
+    const h = toBattle();
+    for (const fighter of h.state.battle!.fighters[1].concat(h.state.battle!.fighters[2])) fighter.hp = fighter.maxHp = 5000;
+    const before = battle(h, 1).moves.find((one) => one.category !== "status")!;
+    playTurn(h, before.move);
+    expect(battle(h, 1).moves.find((one) => one.move === before.move)!.pp).toBe(before.pp - 1);
+    h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
+    h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
+    expect(battle(h, 1).moves.find((one) => one.move === before.move)!.pp).toBe(before.pp - 1);
+    const titular = h.state.battle!.fighters[1].find((one) => one.pokemon.id === h.state.battle!.titular[1])!;
+    titular.moves.find((one) => one.id === before.move)!.pp = 0;
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: before.move });
+    expect(h.errorCodes(1)).toContain("INVALID_CHOICE");
+  });
+
+  it("sin PP en ninguno solo se ofrece Forcejeo, y el turno automático lo usa", () => {
+    const h = toBattle();
+    for (const fighter of h.state.battle!.fighters[1].concat(h.state.battle!.fighters[2])) fighter.hp = fighter.maxHp = 5000;
+    const titular = h.state.battle!.fighters[1].find((one) => one.pokemon.id === h.state.battle!.titular[1])!;
+    for (const slot of titular.moves) slot.pp = 0;
+    expect(battle(h, 1).moves.map((one) => one.move)).toEqual(["forcejeo"]);
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
+    h.advance(75_000);
+    expect(h.payloads("battle-turn")[0]!.actions.find((one) => one.actor === 1)!.move).toBe("forcejeo");
+  });
+
+  it("los PP y los movimientos del rival no salen en mi vista", () => {
+    const h = toBattle();
+    const rival = battle(h, 1).rivalTeam;
+    expect(JSON.stringify(rival)).not.toMatch(/"pp"|"moves"/);
+    expect(rival[0]!).toHaveProperty("status");
+  });
+
+  it("los niveles de stats se limpian al empezar otro asalto, y el estado sigue", () => {
+    const h = toPause();
+    for (const seat of [1, 2] as const) for (const fighter of h.state.battle!.fighters[seat]) {
+      fighter.stages.attack = 2;
+      if (fighter.hp > 0) fighter.status = "burn";
+    }
+    h.advance(15_000);
+    for (const fighter of h.state.battle!.fighters[1]) {
+      expect(fighter.stages.attack).toBe(0);
+      if (fighter.hp > 0) expect(fighter.status).toBe("burn");
+    }
+  });
+
+  it("en un doble K.O. pierde el más lento también si es el asiento 2", () => {
+    const h = toBattle();
+    const [a, b] = [1, 2].map((seat) => h.state.battle!.fighters[seat as Seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat as Seat])!);
+    for (const fighter of [a!, b!]) {
+      fighter.hp = 1;
+      fighter.status = "poison";
+    }
+    a!.pokemon.stats.speed = 200;
+    b!.pokemon.stats.speed = 10;
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
+    expect(h.payloads("battle-round-ended")).toEqual([{ round: 1, loser: 2, atLimit: false }]);
+  });
+
+  it("si el estado debilita a los dos a la vez, un único perdedor: el más lento", () => {
+    const h = toBattle();
+    const [a, b] = [1, 2].map((seat) => h.state.battle!.fighters[seat as Seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat as Seat])!);
+    for (const fighter of [a!, b!]) {
+      fighter.hp = 1;
+      fighter.status = "poison";
+    }
+    a!.pokemon.stats.speed = 10;
+    b!.pokemon.stats.speed = 200;
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
+    for (const seat of [1, 2] as const) expect(h.state.battle!.fighters[seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat])!.hp).toBe(0);
+    expect(h.payloads("battle-round-ended")).toEqual([{ round: 1, loser: 1, atLimit: false }]);
+    h.advance(3000);
+    expect(h.state.phase).toBe("battle_pause");
+    h.advance(15_000);
+    expect(h.state.phase).toBe("battle");
   });
 
   it("al debilitarse un Pokémon, avisa y tras la animación abre la pausa", () => {
@@ -223,7 +302,7 @@ describe("turnos", () => {
         fighter.maxHp = 5000;
       }
     }
-    for (let turn = 0; turn < 20; turn++) playTurn(h, "forcejeo", "forcejeo");
+    for (let turn = 0; turn < 20; turn++) playTurn(h);
     expect(h.payloads("battle-round-ended")[0]).toMatchObject({ round: 1, atLimit: true });
     expect(h.state.phase).toBe("battle_pause");
     expect(battle(h, 1).round).toBe(1);
@@ -263,12 +342,6 @@ describe("la pausa", () => {
     expect(h.state.battle!.titular).toEqual({ [winner]: other, [loser]: next });
   });
 
-  it("Recuperar vuelve a estar disponible en el asalto siguiente", () => {
-    const h = toPause();
-    h.state.battle!.healed = { 1: true, 2: true };
-    h.advance(15_000);
-    expect(battle(h, 1).moves.find((one) => one.move === "recuperar")!.used).toBe(false);
-  });
 });
 
 describe("el final", () => {
@@ -349,7 +422,7 @@ describe("nada se adelanta en el combate", () => {
   it("lo que un jugador envía no llega al rival hasta resolverse", () => {
     const h = toBattle();
     const sentBefore = h.emitted.length;
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     expect(h.emitted.slice(sentBefore).filter((e) => e.to === 2 || e.to === "all")).toEqual([]);
   });
 
@@ -361,7 +434,7 @@ describe("nada se adelanta en el combate", () => {
     const lineup = toLineup();
     onlyTo(lineup.dispatch({ type: "CHOOSE_LINEUP", seat: 1, order: [...lineup.state.teams[1]] }), 1);
     const fight = toBattle();
-    onlyTo(fight.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" }), 2);
+    onlyTo(fight.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(fight, 2) }), 2);
     const pause = toPause();
     const loser = loserOf(pause);
     const next = pause.state.battle!.fighters[loser].find((one) => one.hp > 0)!.pokemon.id;
@@ -380,10 +453,11 @@ describe("recargar tras decidir", () => {
 
   it("quien eligió movimiento lo recupera; el rival no, y se olvida al resolver", () => {
     const h = toBattle();
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
-    expect(battle(h, 1).myMove).toBe("forcejeo");
+    const move = moveOf(h, 1);
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move });
+    expect(battle(h, 1).myMove).toBe(move);
     expect(battle(h, 2).myMove).toBeNull();
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(battle(h, 1).myMove).toBeNull();
   });
 
@@ -408,8 +482,8 @@ describe("recargar tras decidir", () => {
 
   it("mientras se anima no se ofrecen movimientos", () => {
     const h = toBattle();
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(battle(h, 1).choosing).toBe(false);
     expect(battle(h, 1).moves).toEqual([]);
   });
@@ -522,7 +596,7 @@ function sturdy(h: AuctionHarness): AuctionHarness {
 describe("sin reloj para elegir", () => {
   it("a los 60 s avisa solo a quien no eligió, y el otro sabe que espera", () => {
     const h = sturdy(toBattle());
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.advance(59_999);
     expect(battle(h, 2).warningUntil).toBeNull();
     h.advance(1);
@@ -568,13 +642,13 @@ describe("sin reloj para elegir", () => {
     expect(h.payloads("battle-turn")).toEqual([]);
     expect(battle(h, 1).confirmed).toBe(true);
     expect(battle(h, 2).confirmed).toBe(false);
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(h.payloads("battle-turn")).toHaveLength(1);
   });
 
   it("sin responder al aviso juega su mejor ataque, y sigue otro turno", () => {
     const h = sturdy(toBattle());
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.advance(74_999);
     expect(h.payloads("battle-turn")).toEqual([]);
     h.advance(1);
@@ -610,7 +684,7 @@ describe("sin reloj para elegir", () => {
 
   it("«Sigo aquí» de otro paso, o de quien ya eligió, no vale", () => {
     const h = sturdy(toBattle());
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.advance(60_000);
     const { stepId } = battle(h, 2);
     h.dispatch({ type: "STILL_HERE", seat: 1, turnId: stepId });
@@ -622,15 +696,15 @@ describe("sin reloj para elegir", () => {
 
   it("elegir durante el aviso resuelve el turno", () => {
     const h = sturdy(toBattle());
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
     h.advance(60_000);
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(h.payloads("battle-turn")).toHaveLength(1);
   });
 
   it("recargar no alarga el turno", () => {
     const h = sturdy(toBattle());
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     h.advance(59_000);
     h.dispatch({ type: "PLAYER_DISCONNECTED", seat: 1 });
     h.dispatch({ type: "PLAYER_CONNECTED", seat: 1 });
@@ -651,7 +725,7 @@ describe("cambiar de Pokémon", () => {
     const before = h.state.battle!.titular[1];
     const next = reserve(h, 1);
     h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(h.state.battle!.titular[1]).toBe(next);
     const [turn] = h.payloads("battle-turn");
     expect(turn!.switches).toEqual([{ seat: 1, pokemonId: next }]);
@@ -674,8 +748,9 @@ describe("cambiar de Pokémon", () => {
     const next = reserve(h, 1);
     h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
     expect(battle(h, 1)).toMatchObject({ mySwitch: next, myMove: null, confirmed: true });
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
-    expect(battle(h, 1)).toMatchObject({ mySwitch: null, myMove: "forcejeo" });
+    const move = moveOf(h, 1);
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move });
+    expect(battle(h, 1)).toMatchObject({ mySwitch: null, myMove: move });
     h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
     expect(battle(h, 1)).toMatchObject({ mySwitch: next, myMove: null });
   });
@@ -697,7 +772,7 @@ describe("cambiar de Pokémon", () => {
     const entering = h.state.battle!.fighters[1].find((one) => one.pokemon.id === next)!;
     entering.hp = 1;
     h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: next });
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     expect(h.payloads("battle-round-ended")[0]).toMatchObject({ loser: 1, atLimit: false });
   });
 
@@ -715,8 +790,8 @@ describe("cambiar de Pokémon", () => {
     early.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: early.state.teams[1][1]! });
     expect(early.errorCodes(1)).toEqual(["WRONG_PHASE"]);
     const h = sturdy(toBattle());
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });
-    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: moveOf(h, 1) });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: moveOf(h, 2) });
     h.dispatch({ type: "CHOOSE_SWITCH", seat: 1, pokemonId: reserve(h, 1) });
     expect(h.errorCodes(1)).toEqual(["WRONG_PHASE"]);
   });
@@ -730,6 +805,34 @@ describe("cambiar de Pokémon", () => {
     }
     expect(h.payloads("battle-round-ended")[0]).toMatchObject({ round: 1, atLimit: true });
     expect(h.state.phase).toBe("battle_pause");
+  });
+});
+
+describe("habilidades en el motor", () => {
+  const titularOf = (h: AuctionHarness, seat: Seat) => h.state.battle!.fighters[seat].find((one) => one.pokemon.id === h.state.battle!.titular[seat])!;
+
+  it("Cura Natural también cura al cambiar de titular en la pausa", () => {
+    const h = toPause();
+    const winner: Seat = loserOf(h) === 1 ? 2 : 1;
+    const out = titularOf(h, winner);
+    out.ability = "natural-cure";
+    out.status = "burn";
+    const other = h.state.battle!.fighters[winner].find((one) => one !== out && one.hp > 0)!.pokemon.id;
+    h.dispatch({ type: "PAUSE_CONFIRM", seat: winner, choice: { titular: other } });
+    h.advance(15_000);
+    expect(h.state.battle!.fighters[winner].find((one) => one.pokemon.id === out.pokemon.id)!.status).toBeNull();
+  });
+
+  it("lo que pasó al empezar el asalto va aparte de lo que pasó al cambiar", () => {
+    const h = toPause();
+    for (const seat of [1, 2] as const) for (const fighter of h.state.battle!.fighters[seat]) fighter.ability = "intimidate";
+    h.advance(15_000);
+    const [first, second] = [moveOf(h, 1), moveOf(h, 2)];
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: first });
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: second });
+    const turn = h.payloads("battle-turn").at(-1)!;
+    expect(turn.roundNotes!.filter((note) => note.kind === "ability")).toHaveLength(2);
+    expect(turn.entryNotes).toEqual([]);
   });
 });
 

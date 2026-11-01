@@ -169,7 +169,7 @@ describe("la subasta suena", () => {
 
 describe("el combate suena", () => {
   const me = { ...initialGameView, mySeat: 1 as const };
-  const action = { actor: 1 as const, move: "fire" as const, damage: 5, critical: false, effectiveness: 1, healed: 0, actorHp: 9, targetHp: 9 };
+  const action = { actor: 1 as const, move: "ember", moveName: "Ascuas", damage: 5, critical: false, effectiveness: 1, healed: 0, actorHp: 9, targetHp: 9, missed: false, blocked: null, notes: [] };
   const turn = (actor: 1 | 2): ServerEvent => ({ name: "battle-turn", payload: { round: 1, turn: 1, actions: [{ ...action, actor }] } });
 
   it("distinto si ataco yo primero o el rival", () => {

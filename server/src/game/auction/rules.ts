@@ -1,4 +1,3 @@
-import type { TypeName } from "@pokemon-minigames/shared";
 import type { Rng } from "../rng.js";
 
 /** Valores de Subasta Pokémon. Son de partida: los ajusta lo que diga el simulador (`npm run auction:simulate -w server`). */
@@ -23,8 +22,15 @@ export const LOTS_PER_THIRD = 4;
 /** Lo que se reserva por cada hueco del equipo, para poder completarlo. */
 export const SLOT_RESERVE = 50_000;
 export const PRICE_PER_STAT = 300;
-export const TYPE_MOVE_POWER = 30;
-export const STRUGGLE_POWER = 20;
+/** Baja la potencia real a la escala de vida de este juego. Lo ajusta el simulador. */
+export const POWER_SCALE = 0.15;
+/** Bonificación de un ataque de su propio tipo. */
+export const STAB = 1.5;
+export const STRUGGLE_POWER = 50;
+/** Paralizado: 1 turno de cada tantos sin actuar. */
+export const PARALYSIS_ODDS = 4;
+/** Tocar a un Pokémon con estado por contacto: 3 de cada tantos lo contagian. */
+export const CONTACT_ODDS = 10;
 export const MAX_TURNS_PER_ROUND = 20;
 /** Un crítico de cada tantos ataques. */
 export const CRITICAL_ODDS = 16;
@@ -34,33 +40,8 @@ const MIN_RATIO = 0.25;
 const MAX_RATIO = 4;
 const HP_BONUS = 60;
 
-export type MoveCategory = "physical" | "special";
-
-export interface AttackMove {
-  /** El tipo del ataque, o `forcejeo`. */
-  name: TypeName | "forcejeo";
-  /** Forcejeo no tiene tipo: siempre hace ×1, y así dos Pokémon inmunes entre sí pueden hacerse daño. */
-  type: TypeName | null;
-  power: number;
-  category: MoveCategory;
-}
-
-const PHYSICAL_TYPES: readonly TypeName[] = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel"];
-
 export function combatHp(baseHp: number): number {
   return baseHp + HP_BONUS;
-}
-
-/** Físico o especial según el tipo, con la regla de los juegos clásicos. */
-export function moveCategory(type: TypeName): MoveCategory {
-  return PHYSICAL_TYPES.includes(type) ? "physical" : "special";
-}
-
-export function movesFor(types: readonly TypeName[]): AttackMove[] {
-  return [
-    ...types.map((type) => ({ name: type, type, power: TYPE_MOVE_POWER, category: moveCategory(type) })),
-    { name: "forcejeo", type: null, power: STRUGGLE_POWER, category: "physical" },
-  ];
 }
 
 export interface DamageInput {

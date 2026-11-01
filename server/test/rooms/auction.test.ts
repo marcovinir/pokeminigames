@@ -126,7 +126,7 @@ describe("el combate por sockets", () => {
   /** Avanza el reloj hasta que la sala llegue a esa fase. */
   function advanceUntil(phase: string): void {
     const room = server.store.get("SUBAS2")!;
-    for (let tick = 0; tick < 5000 && room.phase !== phase; tick++) server.time.advance(1000);
+    for (let tick = 0; tick < 30_000 && room.phase !== phase; tick++) server.time.advance(1000);
     expect(room.phase).toBe(phase);
   }
 
@@ -137,10 +137,10 @@ describe("el combate por sockets", () => {
     current.emit("auction-lineup", { order: state.auction!.battle!.myTeam.map((one) => one.pokemon.id).reverse() });
     const rivalState = await stateWhere(other, (s) => s.phase === "lineup");
     other.emit("auction-lineup", { order: rivalState.auction!.battle!.myTeam.map((one) => one.pokemon.id) });
-    await stateWhere(current, (s) => s.phase === "battle");
-    await stateWhere(other, (s) => s.phase === "battle");
-    current.emit("auction-move", { move: "forcejeo" });
-    other.emit("auction-move", { move: "forcejeo" });
+    const mine = await stateWhere(current, (s) => s.phase === "battle");
+    const theirs = await stateWhere(other, (s) => s.phase === "battle");
+    current.emit("auction-move", { move: mine.auction!.battle!.moves[0]!.move });
+    other.emit("auction-move", { move: theirs.auction!.battle!.moves[0]!.move });
     for (const client of [current, other]) expect(await client.next("battle-turn")).toMatchObject({ round: 1, turn: 1 });
   });
 

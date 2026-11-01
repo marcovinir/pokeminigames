@@ -10,7 +10,7 @@ import {
 import { type Effect, type GameEvent, type GameOutcome, type PlayerState, type SeatOccupant, type TimerId, otherSeat } from "../engine/types.js";
 import { toPokemonView } from "../engine/view.js";
 import { pickOne } from "../rng.js";
-import { type CombatSide, type Fighter, bestMove, movesOf, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
+import { type Fighter, availableMoves, bestMove, bothFallenLoser, clearStages, endOfTurn, enterBattle, leaveBattle, newFighter, resolveTurn, roundLimitLoser } from "./combat.js";
 import { AUTO_LOT_MS, INACTIVITY_MS, INACTIVITY_WARNING_MS, LINEUP_MS, MAX_STILL_HERE, MAX_TURNS_PER_ROUND, PAUSE_MS, REVEAL_MS, STARTING_MONEY, TEAM_SIZE, TRAP_ODDS, TURN_ANIMATION_MS, drawLots, startingPrice } from "./rules.js";
 import type { AuctionDeps, AuctionLot, AuctionState } from "./types.js";
 import { auctionLimit, buildAuctionGameEnded } from "./view.js";
@@ -463,7 +463,8 @@ function revealAll(c: Ctx): void {
     moves: {},
     switches: {},
     pauses: {},
-    healed: { 1: false, 2: false },
+    entryNotes: [],
+    lastLoser: null,
     deadline: null,
     step: 0,
     choosing: false,
@@ -539,7 +540,8 @@ function beginRound(c: Ctx): void {
   s.phase = "battle";
   battle.round++;
   battle.turn = 0;
-  battle.healed = { 1: false, 2: false };
+  for (const seat of [1, 2] as const) for (const fighter of battle.fighters[seat]) clearStages(fighter);
+  battle.entryNotes = [...enterBattle(titularOf(c, 1), titularOf(c, 2), 1), ...enterBattle(titularOf(c, 2), titularOf(c, 1), 2)];
   battle.roundOver = false;
   beginTurn(c);
 }
@@ -610,8 +612,7 @@ function onMove(c: Ctx, seat: Seat, move: BattleMove): void {
   const battle = s.battle;
   // Sin elegir se está animando el turno anterior.
   if (s.phase !== "battle" || !battle?.choosing) return reject(c, seat, "WRONG_PHASE", "Ahora no se elige movimiento");
-  if (!movesOf(titularOf(c, seat)).includes(move)) return reject(c, seat, "INVALID_CHOICE", "Ese movimiento no es válido");
-  if (move === "recuperar" && battle.healed[seat]) return reject(c, seat, "INVALID_CHOICE", "Recuperar ya se usó en este asalto");
+  if (!availableMoves(titularOf(c, seat)).includes(move)) return reject(c, seat, "INVALID_CHOICE", "Ese movimiento no es válido");
   battle.moves[seat] = move;
   delete battle.switches[seat];
   battle.idle[seat].warningUntil = null;
@@ -642,23 +643,27 @@ function resolveCurrentTurn(c: Ctx): void {
   const switches = ([1, 2] as const).flatMap((seat) => {
     const pokemonId = battle.switches[seat];
     if (pokemonId === undefined) return [];
+    leaveBattle(titularOf(c, seat));
     battle.titular[seat] = pokemonId;
     return [{ seat, pokemonId }];
   });
-  const sideOf = (seat: Seat): CombatSide => ({ fighter: titularOf(c, seat), healed: battle.healed[seat] });
-  const sides = { 1: sideOf(1), 2: sideOf(2) };
-  const choiceOf = (seat: Seat): BattleMove | null => (battle.switches[seat] !== undefined ? null : battle.moves[seat] ?? bestMove(sides[seat].fighter, sides[otherSeat(seat)].fighter));
+  const sides = { 1: titularOf(c, 1), 2: titularOf(c, 2) };
+  const roundNotes = battle.entryNotes;
+  const entryNotes = [...switches.flatMap(({ seat }) => enterBattle(sides[seat], sides[otherSeat(seat)], seat))];
+  battle.entryNotes = [];
+  const choiceOf = (seat: Seat): BattleMove | null => (battle.switches[seat] !== undefined ? null : battle.moves[seat] ?? bestMove(sides[seat], sides[otherSeat(seat)]));
   const actions = resolveTurn(sides, { 1: choiceOf(1), 2: choiceOf(2) }, c.deps.rng);
-  battle.healed = { 1: sides[1].healed, 2: sides[2].healed };
+  const endNotes = endOfTurn(sides);
   for (const action of actions) battle.damage[action.actor] += action.damage;
-  emit(c, "all", { name: "battle-turn", payload: { round: battle.round, turn: battle.turn, actions, switches } });
+  emit(c, "all", { name: "battle-turn", payload: { round: battle.round, turn: battle.turn, actions, switches, roundNotes, entryNotes, endNotes } });
 
-  const fallen = ([1, 2] as const).find((seat) => sides[seat].fighter.hp <= 0);
-  if (fallen !== undefined || battle.turn >= MAX_TURNS_PER_ROUND) {
-    const atLimit = fallen === undefined;
-    const loser = fallen ?? roundLimitLoser({ 1: sides[1].fighter, 2: sides[2].fighter }, c.deps.rng);
-    sides[loser].fighter.hp = 0;
+  const fallen = ([1, 2] as const).filter((seat) => sides[seat].hp <= 0);
+  if (fallen.length > 0 || battle.turn >= MAX_TURNS_PER_ROUND) {
+    const atLimit = fallen.length === 0;
+    const loser = atLimit ? roundLimitLoser(sides, c.deps.rng) : fallen.length === 2 ? bothFallenLoser(sides, c.deps.rng) : fallen[0]!;
+    sides[loser].hp = 0;
     battle.roundOver = true;
+    battle.lastLoser = loser;
     emit(c, "all", { name: "battle-round-ended", payload: { round: battle.round, loser, atLimit } });
   }
   battle.step = c.s.nextTurnId++;
@@ -707,12 +712,17 @@ function closePause(c: Ctx): void {
   const battle = s.battle!;
   for (const seat of [1, 2] as const) {
     const choice = battle.pauses[seat];
-    if (choice) battle.titular[seat] = choice.titular;
+    if (choice) {
+      const out = battle.fighters[seat].find((fighter) => fighter.pokemon.id === battle.titular[seat]);
+      if (out && out.pokemon.id !== choice.titular) leaveBattle(out);
+      battle.titular[seat] = choice.titular;
+    }
     // No decidió: sale el primero vivo, en su orden. Quien ganó el asalto sigue como estaba.
     else if (battle.titular[seat] === null) battle.titular[seat] = battle.fighters[seat].find((fighter) => fighter.hp > 0)?.pokemon.id ?? null;
   }
-  const out = ([1, 2] as const).find((seat) => battle.titular[seat] === null);
-  if (out !== undefined) return finish(c, "completed", otherSeat(out));
+  const out = ([1, 2] as const).filter((seat) => battle.titular[seat] === null);
+  // Sin nadie los dos a la vez: pierde quien perdió este último asalto.
+  if (out.length > 0) return finish(c, "completed", otherSeat(out.length === 2 ? battle.lastLoser ?? 1 : out[0]!));
   battle.pauses = {};
   beginRound(c);
 }

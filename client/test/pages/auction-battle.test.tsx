@@ -1,11 +1,11 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fighter, battleState, MY_TEAM, RIVAL_TEAM } from "../helpers/battle";
+import { fighter, battleState, moveView, MY_TEAM, RIVAL_TEAM } from "../helpers/battle";
 import { SERVER_NOW } from "../helpers/events";
 import { renderRoom, serverSends } from "../helpers/room";
 import { fakeServices } from "../helpers/services";
 
-const hit = { actor: 1 as const, move: "fire" as const, damage: 42, critical: false, effectiveness: 2, healed: 0, actorHp: 100, targetHp: 58 };
+const hit = { actor: 1 as const, move: "flamethrower", moveName: "Lanzallamas", damage: 42, critical: false, effectiveness: 2, healed: 0, actorHp: 100, targetHp: 58, missed: false, blocked: null, notes: [] };
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -90,9 +90,9 @@ describe("el combate", () => {
     const services = fakeServices();
     renderRoom([battleState("battle")], services);
     expect(screen.getByText("¿Qué hace Uno?")).toBeInTheDocument();
-    serverSends(services, battleState("battle", { confirmed: true, myMove: "fire" }));
+    serverSends(services, battleState("battle", { confirmed: true, myMove: "flamethrower" }));
     expect(screen.getByText("Esperando a misty…")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Forcejeo Normal" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /^Placaje/ })).toBeEnabled();
   });
 
   it("con el aviso abierto, «Sigo aquí» manda el paso actual", async () => {
@@ -104,7 +104,7 @@ describe("el combate", () => {
   });
 
   it("si yo ya elegí y el rival tarda, se dice", () => {
-    renderRoom([battleState("battle", { confirmed: true, myMove: "fire", rivalIdle: true })]);
+    renderRoom([battleState("battle", { confirmed: true, myMove: "flamethrower", rivalIdle: true })]);
     expect(screen.getByText("misty lleva rato sin elegir…")).toBeInTheDocument();
   });
 
@@ -137,26 +137,121 @@ describe("el combate", () => {
   it("los movimientos dicen su eficacia en palabras, y elegir lo envía", async () => {
     const services = fakeServices();
     const { user } = renderRoom([battleState("battle")], services);
-    expect(screen.getByRole("button", { name: "Forcejeo Normal" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Ataque Fuego Muy eficaz" }));
-    expect(services.game.client.move).toHaveBeenCalledWith("fire");
+    expect(screen.getByRole("button", { name: /^Placaje .*Normal/ })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: /^Lanzallamas .*Muy eficaz/ }));
+    expect(services.game.client.move).toHaveBeenCalledWith("flamethrower");
   });
 
-  it("Recuperar ya usado no se puede elegir", () => {
-    renderRoom([battleState("battle", { moves: [{ move: "recuperar", effectiveness: null, used: true }] })]);
-    expect(screen.getByRole("button", { name: "Recuperar Ya usado" })).toBeDisabled();
+  it("el botón dice tipo, potencia, precisión, PP y lo que hace", () => {
+    renderRoom([battleState("battle")]);
+    const fire = screen.getByRole("button", { name: /^Lanzallamas/ });
+    expect(fire).toHaveTextContent("Fuego");
+    expect(fire).toHaveTextContent("90");
+    expect(fire).toHaveTextContent("100 %");
+    expect(fire).toHaveTextContent("PP 10/15");
+    expect(screen.getByRole("button", { name: /^Recuperación/ })).toHaveTextContent("Cura el 50 % de sus PS");
+  });
+
+  it("sin PP no se puede elegir", () => {
+    renderRoom([battleState("battle", { moves: [moveView({ move: "tackle", name: "Placaje", pp: 0 })] })]);
+    expect(screen.getByRole("button", { name: /^Placaje/ })).toBeDisabled();
+  });
+
+  it("muestra el estado con su nombre y los niveles de stats", () => {
+    renderRoom([battleState("battle", { myTeam: [fighter(1, "Uno", 100, 100, { status: "burn", stages: { attack: 2, speed: -1 } }), ...MY_TEAM.slice(1)], rivalTeam: [fighter(4, "Cuatro", 100, 100, { status: "sleep" }), ...RIVAL_TEAM.slice(1)] })]);
+    expect(screen.getByText("Quemado")).toBeInTheDocument();
+    expect(screen.getByText("Dormido")).toBeInTheDocument();
+    expect(screen.getByText("Ataque +2")).toBeInTheDocument();
+    expect(screen.getByText("Velocidad −1")).toBeInTheDocument();
+  });
+
+  const abilityTeam = { myTeam: [fighter(1, "Uno", 100, 100, { ability: { id: "blaze", name: "Mar Llamas", description: "Con poca vida pega más.", active: true } }), ...MY_TEAM.slice(1)], rivalTeam: [fighter(4, "Cuatro", 100, 100, { ability: { id: "swift-swim", name: "Nado Rápido", description: "Sin efecto en este juego.", active: false } }), ...RIVAL_TEAM.slice(1)] };
+
+  it("la habilidad, propia y rival, se ve al poner el cursor sobre el Pokémon", async () => {
+    const { user } = renderRoom([battleState("battle", abilityTeam)]);
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    await user.hover(screen.getByRole("img", { name: "Uno" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Mar Llamas");
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Con poca vida pega más.");
+    await user.unhover(screen.getByRole("img", { name: "Uno" }));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    await user.hover(screen.getByRole("img", { name: "Cuatro" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Sin efecto en este juego.");
+  });
+
+  it("también al tocarlo y con el teclado", async () => {
+    const { user } = renderRoom([battleState("battle", abilityTeam)]);
+    await user.click(screen.getByRole("button", { name: "Ver la habilidad de Uno" }));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Mar Llamas");
+    await user.tab();
+    expect(screen.queryByRole("tooltip")?.textContent ?? "").not.toContain("Mar Llamas");
+  });
+
+  it("si entra otro Pokémon, la ficha abierta se cierra", async () => {
+    const services = fakeServices();
+    const { user } = renderRoom([battleState("battle", abilityTeam)], services);
+    await user.hover(screen.getByRole("img", { name: "Uno" }));
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    serverSends(services, battleState("battle", { ...abilityTeam, myTitular: 2 }));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("tocar fuera cierra la ficha", async () => {
+    const { user } = renderRoom([battleState("battle", abilityTeam)]);
+    await user.click(screen.getByRole("button", { name: "Ver la habilidad de Uno" }));
+    await user.pointer({ keys: "[MouseLeft]", target: document.body });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("Forcejeo no muestra PP: se puede usar sin límite", () => {
+    renderRoom([battleState("battle", { moves: [moveView({ move: "forcejeo", name: "Forcejeo", type: null, pp: 1, maxPp: 1 })] })]);
+    expect(screen.getByRole("button", { name: /^Forcejeo/ })).not.toHaveTextContent("PP");
+  });
+
+  it("el lector oye estados y habilidades, no solo el daño", () => {
+    const services = fakeServices();
+    renderRoom([battleState("battle", abilityTeam)], services);
+    serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [{ ...hit, notes: [{ kind: "status", seat: 2, status: "burn" }] }], endNotes: [{ kind: "residual", seat: 2, cause: "burn", damage: 6 }] } });
+    const log = screen.getByRole("log", { name: "Anuncios de la partida" });
+    expect(log).toHaveTextContent("Cuatro se quemó.");
+    expect(log).toHaveTextContent("Cuatro perdió 6 PS por la quemadura.");
+  });
+
+  it("las notas del inicio del asalto llevan el nombre de quien estaba, aunque luego cambie", () => {
+    const services = fakeServices();
+    const { container } = renderRoom([battleState("battle", abilityTeam)], services);
+    serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [], switches: [{ seat: 1, pokemonId: 2 }], roundNotes: [{ kind: "ability", seat: 1, ability: "blaze" }] } });
+    expect(within(container.querySelector("[data-battle-log]") as HTMLElement).getByText("Habilidad de Uno: Mar Llamas.")).toBeInTheDocument();
+  });
+
+  it("sin habilidad no sale ficha", async () => {
+    const { user } = renderRoom([battleState("battle")]);
+    await user.hover(screen.getByRole("img", { name: "Uno" }));
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("el registro cuenta los fallos, los bloqueos, los estados, los stats y las habilidades", () => {
+    const services = fakeServices();
+    const { container } = renderRoom([battleState("battle", abilityTeam)], services);
+    serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [
+      { ...hit, missed: true, damage: 0 },
+      { ...hit, actor: 2, blocked: "paralysis", damage: 0 },
+      { ...hit, notes: [{ kind: "status", seat: 2, status: "burn" }, { kind: "stat", seat: 1, stat: "attack", change: 2 }, { kind: "ability", seat: 1, ability: "blaze" }, { kind: "no_effect", seat: 2 }] },
+    ], endNotes: [{ kind: "residual", seat: 2, cause: "burn", damage: 6 }], entryNotes: [{ kind: "recoil", seat: 1, damage: 3 }] } });
+    const log = within(container.querySelector("[data-battle-log]") as HTMLElement);
+    for (const line of ["Uno usó Lanzallamas, pero falló.", "Cuatro está paralizado y no puede moverse.", "Cuatro se quemó.", "El Ataque de Uno subió mucho.", "Habilidad de Uno: Mar Llamas.", "No afecta a Cuatro.", "Cuatro perdió 6 PS por la quemadura.", "Uno perdió 3 PS."]) expect(log.getByText(line)).toBeInTheDocument();
   });
 
   it("lo elegido sigue marcado al recargar", () => {
-    renderRoom([battleState("battle", { confirmed: true, myMove: "fire" })]);
-    expect(screen.getByRole("button", { name: "Ataque Fuego Muy eficaz" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Forcejeo Normal" })).toHaveAttribute("aria-pressed", "false");
+    renderRoom([battleState("battle", { confirmed: true, myMove: "flamethrower" })]);
+    expect(screen.getByRole("button", { name: /^Lanzallamas/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Placaje/ })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("mientras se anima no hay botones", () => {
     renderRoom([battleState("battle", { choosing: false, moves: [] })]);
     expect(screen.getByText("Resolviendo…")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Forcejeo/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Placaje/ })).toBeNull();
   });
 
   it("un turno va al registro visible, y al lector solo una frase", () => {
@@ -165,7 +260,7 @@ describe("el combate", () => {
     serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [hit] } });
     const log = container.querySelector("[data-battle-log]")!;
     expect(log).toHaveAttribute("aria-hidden", "true");
-    expect(within(log as HTMLElement).getByText("Uno usó Ataque Fuego: 42 de daño. ¡Es muy eficaz!")).toBeInTheDocument();
+    expect(within(log as HTMLElement).getByText("Uno usó Lanzallamas: 42 de daño. ¡Es muy eficaz!")).toBeInTheDocument();
     expect(screen.getByRole("log", { name: "Anuncios de la partida" })).toHaveTextContent(/^Asalto 1, turno 1: Uno, 42 de daño\.$/);
   });
 

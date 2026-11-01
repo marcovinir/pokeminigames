@@ -1,6 +1,6 @@
 import type { ErrorCode } from "./errors.js";
 import type { RematchState } from "./rematch.js";
-import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction, BattleSwitch, BattleMove, BidStep, PauseChoice } from "./auction.js";
+import type { AuctionRevealEntry, AuctionSalePayload, AuctionStateView, AuctionSummary, BattleAction, BattleNote, BattleSwitch, BattleMove, BidStep, PauseChoice } from "./auction.js";
 import type { SilhouetteReveal, SilhouetteStateView } from "./silhouette.js";
 import type {
   GameEndReason,
@@ -155,7 +155,7 @@ export interface ServerToClientEvents {
   /** Acabó la subasta: los Pokémon reales de los dos. */
   "auction-reveal": (payload: { reveal: AuctionRevealEntry[] }) => void;
   /** Se resolvió un turno: lo ocurrido en orden. */
-  "battle-turn": (payload: { round: number; turn: number; actions: BattleAction[]; switches?: BattleSwitch[] }) => void;
+  "battle-turn": (payload: { round: number; turn: number; actions: BattleAction[]; switches?: BattleSwitch[]; roundNotes?: BattleNote[]; entryNotes?: BattleNote[]; endNotes?: BattleNote[] }) => void;
   /** Cayó un Pokémon: `atLimit` si fue por el límite de turnos. */
   "battle-round-ended": (payload: { round: number; loser: Seat; atLimit: boolean }) => void;
   "silhouette-round-started": (payload: { serverNow: number; round: number; totalRounds: number; deadline: number; silhouetteUrl: string }) => void;

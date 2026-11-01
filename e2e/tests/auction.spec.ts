@@ -105,7 +105,7 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
   // No hay reloj, y a 360 × 760 los movimientos y el equipo se alcanzan sin desplazar la página.
   await expect(ash.page.getByRole("button", { name: /^Cambiar a/ }).first()).toBeVisible({ timeout: 15_000 });
   await expect(ash.page.getByRole("timer")).toHaveCount(0);
-  for (const control of [ash.page.getByRole("button", { name: /^(Ataque|Forcejeo)/ }).last(), ash.page.getByRole("button", { name: /^Cambiar a/ }).last()]) {
+  for (const control of [ash.page.locator(".battle-move").last(), ash.page.getByRole("button", { name: /^Cambiar a/ }).last()]) {
     const box = await control.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.y + box!.height + (await ash.page.evaluate(() => window.scrollY))).toBeLessThanOrEqual(760);
@@ -117,12 +117,22 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
     if (box) expect.soft(box.y, "el sprite cabe en el escenario").toBeGreaterThanOrEqual(arena!.y - 0.5);
   }
 
+  // A 360 px el rótulo del turno no pisa el recuadro del rival.
+  const hud = await ash.page.locator("[data-arena] .battle-hud").first().boundingBox();
+  const pill = await ash.page.getByText(/^Asalto \d+ · Turno/).boundingBox();
+  expect(hud!.x + hud!.width).toBeLessThanOrEqual(pill!.x);
+  // Los movimientos dicen sus PP, y la habilidad sale al poner el cursor.
+  await expect(ash.page.locator(".battle-move").first()).toContainText(/PP \d+\/\d+/);
+  await ash.page.getByRole("img", { name: newTitular }).hover({ force: true });
+  await expect(ash.page.getByRole("tooltip")).toBeVisible();
+  await ash.page.mouse.move(0, 0);
+
   // Cambiar gasta el turno: entra el elegido y el rival lo ve al resolverse.
   const switchButton = ash.page.getByRole("button", { name: /^Cambiar a/ }).first();
   const entering = /^Cambiar a (.+), \d+ % de PS$/.exec((await switchButton.getAttribute("aria-label")) ?? "")![1]!;
   await switchButton.click();
   await expect(switchButton).toHaveAttribute("aria-pressed", "true");
-  await misty.page.getByRole("button", { name: /^(Ataque|Forcejeo)/ }).first().click();
+  await misty.page.locator(".battle-move:enabled").first().click();
   for (const page of pages) await expect(page.getByRole("meter", { name: `PS de ${entering}` })).toBeVisible({ timeout: 15_000 });
 
   // Se pelea hasta el final, eligiendo movimiento y titular. Recargar en la primera pausa la conserva.
@@ -136,7 +146,7 @@ test("una partida completa: puja, revelación, alineación, combate, resumen y r
         await page.reload();
         await expect(page.getByRole("heading", { name: "Pausa entre asaltos" })).toBeVisible({ timeout: 30_000 });
       }
-      const move = page.getByRole("button", { name: /^(Ataque|Forcejeo)/ }).first();
+      const move = page.locator(".battle-move:enabled").first();
       if (await move.isVisible()) await move.click({ timeout: 500 }).catch(() => undefined);
       const confirm = page.getByRole("button", { name: "Confirmar" });
       if (await confirm.isVisible()) {

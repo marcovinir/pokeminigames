@@ -1,8 +1,9 @@
-import type { BattleFighterView, BattleView, Seat } from "@pokemon-minigames/shared";
+import type { BattleFighterView, BattleMoveView, BattleView, Seat } from "@pokemon-minigames/shared";
 import { SERVER_NOW, event, pokemon } from "./events";
 import { ash, misty } from "./room";
 
-export const fighter = (id: number, name: string, hp = 100, maxHp = 100): BattleFighterView => ({ pokemon: pokemon(id, 400, { names: { es: name, en: name } }), hp, maxHp });
+export const fighter = (id: number, name: string, hp = 100, maxHp = 100, over: Partial<BattleFighterView> = {}): BattleFighterView => ({ pokemon: pokemon(id, 400, { names: { es: name, en: name } }), hp, maxHp, ability: null, status: null, stages: {}, ...over });
+export const moveView = (over: Partial<BattleMoveView> & { move: string }): BattleMoveView => ({ name: over.move, type: "normal", category: "physical", power: 80, accuracy: 100, pp: 10, maxPp: 15, effectiveness: 1, effect: null, ...over });
 export const MY_TEAM = [fighter(1, "Uno"), fighter(2, "Dos"), fighter(3, "Tres")];
 export const RIVAL_TEAM = [fighter(4, "Cuatro"), fighter(5, "Cinco"), fighter(6, "Seis")];
 
@@ -25,9 +26,9 @@ export const battleView = (over: Partial<BattleView> = {}): BattleView => ({
   myTitular: 1,
   rivalTitular: 4,
   moves: [
-    { move: "fire", effectiveness: 2, used: false },
-    { move: "forcejeo", effectiveness: 1, used: false },
-    { move: "recuperar", effectiveness: null, used: false },
+    moveView({ move: "flamethrower", name: "Lanzallamas", type: "fire", category: "special", power: 90, effectiveness: 2 }),
+    moveView({ move: "tackle", name: "Placaje", power: 40, accuracy: 100 }),
+    moveView({ move: "recover", name: "Recuperación", category: "status", power: null, accuracy: null, pp: 5, maxPp: 5, effectiveness: null, effect: "Cura el 50 % de sus PS" }),
   ],
   ...over,
 });
