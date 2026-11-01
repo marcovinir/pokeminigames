@@ -538,6 +538,40 @@ describe("sin reloj para elegir", () => {
     for (const seat of [1, 2] as const) expect(battle(h, seat)).toMatchObject({ warningUntil: h.now + 15_000, rivalIdle: false });
   });
 
+  it("cada uno tiene su aviso: si el rival responde, a mí no me llega nada ni cambia lo que veo", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    const before = JSON.stringify(h.view(1));
+    const effects = h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    expect(effects.filter((one) => one.kind === "send_state" || one.kind === "emit")).toEqual([{ kind: "send_state", to: 2 }]);
+    expect(JSON.stringify(h.view(1))).toBe(before);
+    expect(battle(h, 2).warningUntil).toBeNull();
+  });
+
+  it("agotar mis respuestas no gasta las del rival", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 1, turnId: battle(h, 1).stepId });
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    h.dispatch({ type: "STILL_HERE", seat: 1, turnId: battle(h, 1).stepId });
+    expect(h.errorCodes(1)).toEqual([]);
+    expect(h.errorCodes(2)).toEqual([]);
+  });
+
+  it("si a uno se le acaba el aviso, juega solo él: el otro conserva su tiempo y puede elegir", () => {
+    const h = sturdy(toBattle());
+    h.advance(60_000);
+    h.dispatch({ type: "STILL_HERE", seat: 2, turnId: battle(h, 2).stepId });
+    h.advance(15_000);
+    expect(h.payloads("battle-turn")).toEqual([]);
+    expect(battle(h, 1).confirmed).toBe(true);
+    expect(battle(h, 2).confirmed).toBe(false);
+    h.dispatch({ type: "CHOOSE_MOVE", seat: 2, move: "forcejeo" });
+    expect(h.payloads("battle-turn")).toHaveLength(1);
+  });
+
   it("sin responder al aviso juega su mejor ataque, y sigue otro turno", () => {
     const h = sturdy(toBattle());
     h.dispatch({ type: "CHOOSE_MOVE", seat: 1, move: "forcejeo" });

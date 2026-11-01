@@ -23,3 +23,4 @@ export const AUCTION_REVEAL_MS = 36_000;
 export const AUCTION_REVEAL_STEP_MS = 3000;
 export const BATTLE_LINEUP_MS = 30_000;
 export const BATTLE_PAUSE_MS = 15_000;
+export const BATTLE_MAX_TURNS = 20;

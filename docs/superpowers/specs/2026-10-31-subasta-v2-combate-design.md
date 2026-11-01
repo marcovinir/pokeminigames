@@ -17,13 +17,13 @@ Tras jugarlo con un amigo, Marco quiere que el combate se vea y se sienta como P
 ## Decisiones aprobadas con el boceto
 
 - Cambiar gasta el turno: el cambio va antes que los ataques y quien entra recibe el golpe de ese turno.
-- Sin reloj, con el aviso «¿Sigues ahí?» de la puja: a los 60 s avisa a quien no eligió, con 15 s para responder y 2 respuestas por turno como mucho. Si se agota, juega su mejor ataque.
+- Sin reloj, con el aviso «¿Sigues ahí?» de la puja: a los 60 s avisa a quien no eligió, con 15 s para responder y 2 respuestas por turno como mucho. Si se agota, juega su mejor ataque, y solo él: cada uno tiene su propio aviso, porque uno común delataría si el rival ya eligió.
 - Los 14 Pokémon sin GIF usan el PNG clásico. Los PS del rival van en porcentaje y los propios en números.
 
 ## Reglas que se mantienen
 
 - La elección es secreta: el rival no sabe si ya elegiste ni qué. Solo quien ya eligió se entera de que el otro tarda (`rivalIdle`).
-- Límite de 20 turnos por asalto: cambiar sin parar no alarga la partida.
+- Límite de 20 turnos por asalto: cambiar sin parar no alarga la partida. En pantalla se ve «Turno N/20». Cambiar en el último turno para que el que entra compare mejor es una jugada válida.
 - El reloj del aviso no se detiene por caerse ni se reinicia al recargar: recargar no da más tiempo. A quien sigue caído lo resuelven los 30 s de gracia.
 - La revelación, la alineación y la pausa conservan sus plazos: Marco solo quitó el de elegir movimiento.
 

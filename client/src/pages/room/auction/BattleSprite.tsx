@@ -17,12 +17,15 @@ export function BattleSprite({ id, name, side, effect }: { id: number; name: str
   const next = () => setSource(shown === "animated" && url !== battleStillUrl(id, side) ? "still" : "none");
   return (
     <div className={`battle-spot battle-spot-${side}`}>
-      <div className={`battle-enter flex-none ${effect}`}>
+      {/* La entrada va aparte de los golpes: en el mismo nodo, se repetiría al acabar cada uno. */}
+      <div className="battle-enter flex-none">
+        <div className={effect}>
         {source === "none" ? (
           <span className="block w-24 rounded-md bg-white/90 p-1 text-center font-display text-sm font-semibold text-[#1b1147] [overflow-wrap:anywhere]">{name}</span>
         ) : (
           <img src={url} alt={name} onError={next} onLoad={(event) => setFit(Math.min(1, MAX_SPRITE_HEIGHT / event.currentTarget.naturalHeight))} style={{ "--sprite-fit": String(fit) } as CSSProperties} className={`battle-sprite battle-sprite-${side}`} />
         )}
+        </div>
       </div>
     </div>
   );

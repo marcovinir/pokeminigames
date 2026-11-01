@@ -1,10 +1,12 @@
 import type { BattleFighterView, BattleMoveView, Seat } from "@pokemon-minigames/shared";
 import { useEffect, useRef, useState } from "react";
 import { spriteUrl } from "../../../catalog/artwork";
+import { BATTLE_MAX_TURNS } from "../../../game/durations";
 import { MOVE_COLORS, effectivenessLabel, moveLabel, turnLines } from "../../../game/battle";
 import { useReducedMotion } from "../../../game/motion";
 import { rivalSeat } from "../../../game/seats";
 import { BATTLE_TEXT } from "../../../i18n/es";
+import { useLastSeconds } from "../../../sound/use-last-seconds";
 import { LeaveButton } from "../LeaveButton";
 import { focusWasLost } from "../RematchPanel";
 import { useRoom } from "../use-room";
@@ -54,8 +56,14 @@ export function BattleScreen() {
   const movesRef = useRef<HTMLDivElement>(null);
   const choosing = battle?.choosing ?? false;
   // Se llega pulsando «Confirmar», más abajo: en el móvil el escenario quedaría cortado.
-  useEffect(() => window.scrollTo(0, 0), []);
-  const turnKey = choosing ? `${battle?.round}-${battle?.turn}` : null;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  const warningUntil = battle?.warningUntil ?? null;
+  // Solo hay urgencia con el aviso abierto: suena a los últimos segundos, una vez por aviso.
+  useLastSeconds({ deadline: warningUntil, offset: view.clockOffset, answered: warningUntil === null, round: warningUntil ?? 0 });
+  // También al responder el aviso: su botón desaparece.
+  const turnKey = choosing && warningUntil === null ? `${battle?.round}-${battle?.turn}` : null;
   // Un turno nuevo vuelve a poner los botones: si el foco se perdió con ellos, regresa.
   useEffect(() => {
     if (turnKey !== null && focusWasLost()) movesRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
@@ -81,7 +89,7 @@ export function BattleScreen() {
   return (
     <section className="mx-auto grid w-full max-w-6xl gap-2 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-3">
       <div className="flex min-w-0 flex-col gap-2 lg:gap-3">
-        <div data-arena className="battle-arena relative h-64 overflow-hidden rounded-xl bg-[#1b1147] lg:h-[30rem]">
+        <div data-arena className="battle-arena relative h-64 overflow-hidden rounded-xl bg-[#1b1147] sm:aspect-video sm:h-auto lg:aspect-auto lg:h-[30rem]">
           <img src={`/auction/combate-${battle.scene}.png`} alt="" className="absolute inset-0 size-full object-cover [image-rendering:pixelated]" />
           {theirs ? <BattleSprite key={theirs.pokemon.id} id={theirs.pokemon.id} name={theirs.pokemon.names.es} side="front" effect={effectOf(rival)} /> : null}
           {mine ? <BattleSprite key={mine.pokemon.id} id={mine.pokemon.id} name={mine.pokemon.names.es} side="back" effect={effectOf(mySeat)} /> : null}
@@ -95,7 +103,7 @@ export function BattleScreen() {
               <HpBar fighter={mine} standing={standing(battle.myTeam)} />
             </div>
           ) : null}
-          <p className="font-pixel absolute top-1.5 right-1.5 m-0 rounded-md bg-[#1b1147] px-2 py-1 text-sm font-bold text-white lg:top-4 lg:right-4 lg:text-lg">{BATTLE_TEXT.roundLabel(battle.round)}</p>
+          <p className="font-pixel absolute top-1.5 right-1.5 m-0 rounded-md bg-[#1b1147] px-2 py-1 text-sm font-bold text-white lg:top-4 lg:right-4 lg:text-lg">{BATTLE_TEXT.roundLabel(battle.round, battle.turn, BATTLE_MAX_TURNS)}</p>
           {knockedOut ? <p className="battle-ko font-pixel absolute inset-0 m-0 flex items-center justify-center text-6xl font-bold text-[#ffcb05] [text-shadow:0_4px_0_#1b1147] lg:text-8xl">K.O.</p> : null}
           {battle.warningUntil !== null ? <InactivityWarning until={battle.warningUntil} offset={view.clockOffset} onStillHere={() => client.stillHere(battle.stepId)} /> : null}
         </div>
@@ -129,10 +137,10 @@ export function BattleScreen() {
               const active = one.pokemon.id === battle.myTitular;
               const label = active ? BATTLE_TEXT.inBattle(name) : fainted ? BATTLE_TEXT.fainted(name) : BATTLE_TEXT.switchTo(name, percent);
               return (
-                <button key={one.pokemon.id} type="button" aria-label={label} aria-pressed={battle.mySwitch === one.pokemon.id} disabled={fainted || active || !choosing} data-active={active || undefined} data-fainted={fainted || undefined} onClick={() => client.switchTo(one.pokemon.id)} className="battle-team-member">
-                  <img src={spriteUrl(one.pokemon.id)} alt="" className="size-10 flex-none [image-rendering:pixelated] lg:size-11" />
-                  <span aria-hidden="true" className="hidden min-w-0 text-left text-xs leading-tight font-extrabold lg:block">
-                    <span className="block truncate">{name}</span>
+                <button key={one.pokemon.id} type="button" aria-label={label} aria-pressed={battle.mySwitch === one.pokemon.id} disabled={fainted || active || !choosing} data-active={active || undefined} data-fainted={fainted || undefined} onClick={() => client.switchTo(one.pokemon.id)} className="battle-team-member flex-col lg:flex-row">
+                  <img src={spriteUrl(one.pokemon.id)} alt="" className="size-8 flex-none [image-rendering:pixelated] lg:size-11" />
+                  <span aria-hidden="true" className="min-w-0 text-left text-xs leading-tight font-extrabold">
+                    <span className="hidden truncate lg:block">{name}</span>
                     <span className="font-num">{percent} %</span>
                   </span>
                 </button>

@@ -55,4 +55,10 @@ describe("la pausa", () => {
     expect(within(rival).getByText(RIVAL_TEAM[0]!.pokemon.names.es)).toBeInTheDocument();
     expect(within(rival).queryByText("Titular")).toBeNull();
   });
+
+  it("los PS del rival también van en porcentaje", () => {
+    renderRoom([battleState("battle_pause", { myTitular: null, rivalTitular: null, moves: [], rivalTeam: [fighter(4, "Cuatro", 57, 130), ...RIVAL_TEAM.slice(1)] })]);
+    expect(screen.getByText("44 %")).toBeInTheDocument();
+    expect(screen.queryByText("57 / 130")).toBeNull();
+  });
 });

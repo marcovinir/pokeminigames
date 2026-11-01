@@ -36,9 +36,9 @@ function battleView(state: AuctionState, seat: Seat, catalog: PokemonCatalog): B
     deadline: inFight ? null : battle.deadline,
     choosing: inFight && battle.choosing,
     stepId: battle.step,
-    warningUntil: chosen ? null : battle.warningUntil,
+    warningUntil: inFight && battle.choosing ? battle.idle[seat].warningUntil : null,
     // Solo a quien ya eligió: a los demás les diría si el rival eligió.
-    rivalIdle: chosen && battle.warningUntil !== null,
+    rivalIdle: inFight && battle.choosing && chosen && battle.idle[rival].warningUntil !== null,
     confirmed,
     myLineup: state.phase === "lineup" ? structuredClone(battle.lineups[seat] ?? null) : null,
     myMove: battle.moves[seat] ?? null,

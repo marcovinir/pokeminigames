@@ -56,7 +56,7 @@ export function PauseView() {
         <ul aria-label={BATTLE_TEXT.rivalTeam} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {battle.rivalTeam.map((one) => (
             <li key={one.pokemon.id} className="framed rounded-ui bg-surface p-2">
-              <HpBar fighter={one} />
+              <HpBar fighter={one} percentOnly />
             </li>
           ))}
         </ul>

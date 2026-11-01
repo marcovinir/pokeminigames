@@ -365,13 +365,15 @@ body::before {
 .battle-sprite-back {
   transform: scale(calc(2 * var(--sprite-fit, 1)));
 }
-@media (min-width: 64rem) {
+@media (min-width: 40rem) {
   .battle-spot-front {
     left: 71%;
   }
   .battle-spot-back {
     left: 26%;
   }
+}
+@media (min-width: 64rem) {
   .battle-sprite-front {
   transform: scale(calc(2.5 * var(--sprite-fit, 1)));
   }

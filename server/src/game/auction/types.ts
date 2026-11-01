@@ -32,6 +32,13 @@ export interface AuctionBidding {
   awayWarningUsed: boolean;
 }
 
+export interface BattleIdle {
+  /** Cuándo vence su plazo actual. */
+  at: number;
+  warningUntil: number | null;
+  stillHere: number;
+}
+
 /** El combate. `step` deja obsoletos los temporizadores de pasos anteriores. */
 export interface AuctionBattle {
   fighters: Record<Seat, Fighter[]>;
@@ -46,10 +53,10 @@ export interface AuctionBattle {
   healed: Record<Seat, boolean>;
   deadline: number | null;
   step: number;
-  /** Se está eligiendo movimiento, sin reloj: `deadline` es solo cuándo se avisa de la inactividad. */
+  /** Se está eligiendo movimiento, sin reloj. */
   choosing: boolean;
-  warningUntil: number | null;
-  stillHere: number;
+  /** El aviso de inactividad de cada uno: si fuera común, responder delataría que aún no elegiste. */
+  idle: Record<Seat, BattleIdle>;
   scene: AuctionScene;
   /** El asalto ya terminó: al acabar la animación se abre la pausa. */
   roundOver: boolean;

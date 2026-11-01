@@ -52,6 +52,29 @@ describe("el combate", () => {
     expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 
+  it("la entrada no comparte nodo con los golpes: al acabar uno no se repetiría", () => {
+    const services = fakeServices();
+    renderRoom([battleState("battle")], services);
+    serverSends(services, { name: "battle-turn", payload: { round: 1, turn: 1, actions: [hit] } });
+    const hitNode = screen.getByRole("img", { name: "Cuatro" }).parentElement!;
+    expect(hitNode).toHaveClass("battle-hit");
+    expect(hitNode).not.toHaveClass("battle-enter");
+    expect(hitNode.parentElement).toHaveClass("battle-enter");
+  });
+
+  it("dice el turno y el límite: el asalto se cierra en el 20", () => {
+    renderRoom([battleState("battle", { round: 2, turn: 7 })]);
+    expect(screen.getByText("Asalto 2 · Turno 7/20")).toBeInTheDocument();
+  });
+
+  it("salir del combate no revienta aunque el navegador devuelva algo al desplazar", () => {
+    vi.stubGlobal("scrollTo", () => Promise.resolve());
+    const services = fakeServices();
+    renderRoom([battleState("battle")], services);
+    serverSends(services, battleState("battle_pause", { moves: [] }));
+    expect(screen.getByRole("heading", { name: "Pausa entre asaltos" })).toBeInTheDocument();
+  });
+
   it("el fondo es el escenario del combate", () => {
     const { container } = renderRoom([battleState("battle", { scene: "volcan" })]);
     expect(container.querySelector("[data-arena] img")!.getAttribute("src")).toBe("/auction/combate-volcan.png");

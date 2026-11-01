@@ -256,6 +256,9 @@ function onTimer(c: Ctx, timer: TimerId): void {
     case "battle":
       if (s.battle?.step === timer.step) onBattleTimer(c);
       break;
+    case "battle_idle":
+      if (s.phase === "battle" && s.battle?.choosing && s.battle.step === timer.step && s.battle.idle[timer.seat].at === timer.at) onBattleIdle(c, timer.seat);
+      break;
     case "choose":
     case "round":
     case "result":
@@ -464,8 +467,7 @@ function revealAll(c: Ctx): void {
     deadline: null,
     step: 0,
     choosing: false,
-    warningUntil: null,
-    stillHere: 0,
+    idle: { 1: { at: 0, warningUntil: null, stillHere: 0 }, 2: { at: 0, warningUntil: null, stillHere: 0 } },
     scene: pickOne(c.deps.rng, AUCTION_SCENES),
     roundOver: false,
     damage: { 1: 0, 2: 0 },
@@ -491,8 +493,7 @@ function onBattleTimer(c: Ctx): void {
   if (s.phase === "lineup") return beginFirstRound(c);
   if (s.phase === "battle_pause") return closePause(c);
   if (s.phase !== "battle") return;
-  if (battle.choosing) onBattleIdle(c);
-  else afterAnimation(c);
+  if (!battle.choosing) afterAnimation(c);
 }
 
 function onReady(c: Ctx, seat: Seat): void {
@@ -549,22 +550,40 @@ function beginTurn(c: Ctx): void {
   battle.moves = {};
   battle.switches = {};
   battle.choosing = true;
-  battle.warningUntil = null;
-  battle.stillHere = 0;
-  startStep(c, INACTIVITY_MS);
+  battle.step = c.s.nextTurnId++;
+  battle.deadline = null;
+  for (const seat of [1, 2] as const) {
+    battle.idle[seat] = { at: 0, warningUntil: null, stillHere: 0 };
+    idleIn(c, seat, INACTIVITY_MS);
+  }
   sendStates(c);
+}
+
+function idleIn(c: Ctx, seat: Seat, ms: number): void {
+  const battle = c.s.battle!;
+  battle.idle[seat].at = c.now + ms;
+  schedule(c, battle.idle[seat].at, { kind: "battle_idle", seat, step: battle.step, at: battle.idle[seat].at });
 }
 
 /**
  * Se cumplió un plazo sin que alguien eligiera. El reloj no se detiene si se cae ni se reinicia si recarga: recargar no da
  * más tiempo, y quien sigue caído lo resuelven los 30 s de gracia.
  */
-function onBattleIdle(c: Ctx): void {
+function onBattleIdle(c: Ctx, seat: Seat): void {
   const battle = c.s.battle!;
-  if (battle.warningUntil !== null || battle.stillHere >= MAX_STILL_HERE) return resolveCurrentTurn(c);
-  startStep(c, INACTIVITY_WARNING_MS);
-  battle.warningUntil = battle.deadline;
-  sendStates(c);
+  if (hasChosen(c, seat)) return;
+  const idle = battle.idle[seat];
+  if (idle.warningUntil !== null || idle.stillHere >= MAX_STILL_HERE) {
+    // Juega solo él: el rival conserva su tiempo.
+    idle.warningUntil = null;
+    battle.moves[seat] = bestMove(titularOf(c, seat), titularOf(c, otherSeat(seat)));
+    return afterChoice(c, seat);
+  }
+  idleIn(c, seat, INACTIVITY_WARNING_MS);
+  idle.warningUntil = idle.at;
+  c.fx.push({ kind: "send_state", to: seat });
+  // Quien ya eligió se entera de que el otro tarda; quien aún no, no: le diría si el rival eligió.
+  if (hasChosen(c, otherSeat(seat))) c.fx.push({ kind: "send_state", to: otherSeat(seat) });
 }
 
 const hasChosen = (c: Ctx, seat: Seat): boolean => c.s.battle!.moves[seat] !== undefined || c.s.battle!.switches[seat] !== undefined;
@@ -572,11 +591,13 @@ const hasChosen = (c: Ctx, seat: Seat): boolean => c.s.battle!.moves[seat] !== u
 function onBattleStillHere(c: Ctx, seat: Seat, turnId: number): void {
   const battle = c.s.battle!;
   if (turnId !== battle.step || !battle.choosing || hasChosen(c, seat)) return reject(c, seat, "NOT_YOUR_TURN", "Aún no es tu turno");
-  if (battle.warningUntil === null) return;
-  battle.warningUntil = null;
-  battle.stillHere++;
-  startStep(c, INACTIVITY_MS);
-  sendStates(c);
+  const idle = battle.idle[seat];
+  if (idle.warningUntil === null) return;
+  idle.warningUntil = null;
+  idle.stillHere++;
+  idleIn(c, seat, INACTIVITY_MS);
+  c.fx.push({ kind: "send_state", to: seat });
+  if (hasChosen(c, otherSeat(seat))) c.fx.push({ kind: "send_state", to: otherSeat(seat) });
 }
 
 const titularOf = (c: Ctx, seat: Seat): Fighter => {
@@ -593,6 +614,7 @@ function onMove(c: Ctx, seat: Seat, move: BattleMove): void {
   if (move === "recuperar" && battle.healed[seat]) return reject(c, seat, "INVALID_CHOICE", "Recuperar ya se usó en este asalto");
   battle.moves[seat] = move;
   delete battle.switches[seat];
+  battle.idle[seat].warningUntil = null;
   afterChoice(c, seat);
 }
 
@@ -604,6 +626,7 @@ function onSwitch(c: Ctx, seat: Seat, pokemonId: number): void {
   if (!valid) return reject(c, seat, "INVALID_CHOICE", "Ese cambio no es válido");
   battle.switches[seat] = pokemonId;
   delete battle.moves[seat];
+  battle.idle[seat].warningUntil = null;
   afterChoice(c, seat);
 }
 
@@ -641,7 +664,6 @@ function resolveCurrentTurn(c: Ctx): void {
   battle.step = c.s.nextTurnId++;
   battle.deadline = null;
   battle.choosing = false;
-  battle.warningUntil = null;
   battle.moves = {};
   battle.switches = {};
   schedule(c, c.now + TURN_ANIMATION_MS, { kind: "battle", step: battle.step });

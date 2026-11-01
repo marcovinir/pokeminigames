@@ -90,6 +90,7 @@ export type TimerId =
   | { kind: "result"; round: number }
   | { kind: "grace"; seat: Seat; graceEndsAt: number }
   | { kind: "idle"; turn: number; at: number }
+  | { kind: "battle_idle"; seat: Seat; step: number; at: number }
   | { kind: "auto_lot"; lot: number }
   | { kind: "battle"; step: number };
 

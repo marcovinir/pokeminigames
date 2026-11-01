@@ -476,7 +476,7 @@ export const BATTLE_TEXT = {
   inBattle: (name: string): string => `${name}, en combate`,
   fainted: (name: string): string => `${name}, debilitado`,
   switchTo: (name: string, percent: number): string => `Cambiar a ${name}, ${percent} % de PS`,
-  roundLabel: (round: number): string => `Asalto ${round}`,
+  roundLabel: (round: number, turn: number, maxTurns: number): string => `Asalto ${round} · Turno ${turn}/${maxTurns}`,
   resolving: "Resolviendo…",
   pauseTitle: "Pausa entre asaltos",
   pauseTimer: "Tiempo de la pausa",
